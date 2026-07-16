@@ -107,6 +107,7 @@ const CX = VW/2;
 const G  = 2000;             // gravity (units/s^2)
 const DT = 1/120;            // fixed sim step
 const REACH = 112;           // grab reach ring radius — small enough that aim is real
+const AIM_BEND = 1.45;       // how hard a mistimed release bends the launch off vertical
 const COYOTE = 0.08;         // 80ms grab forgiveness
 const HITSTOP = 0.07;        // 70ms freeze on grab
 const WIND_TIME = 0.85;      // seconds to full charge
@@ -256,9 +257,9 @@ function buildTower(){
     else if(z.name==='the spill'){ type = rnd()<0.25 ? 'plush':'plastic'; }
     STUDS.push({x:Math.max(48,Math.min(VW-48,x)), y, type});
     // helper studs thin out with altitude — the upper machine stops being polite
-    if(rnd() < (pct>55 ? 0.32 : 0.5)){ STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+70+rnd()*40,
+    if(rnd() < (pct>55 ? 0.26 : 0.42)){ STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+70+rnd()*40,
       type: (z.name==='the gallery'&&rnd()<0.42)?'glass':'plastic'}); }
-    let gap = 196 + rnd()*96;
+    let gap = 226 + rnd()*104;
     if(pct>55) gap += 30 + rnd()*26;
     if(pct>80) gap += 26 + rnd()*24;
     y += gap;
@@ -377,10 +378,12 @@ function fling(reason){
   let spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
   // launch is ALWAYS up (climbing is about power, not phase-timing a tangent);
   // the side the hand is on when you let go steers left/right on a wide, readable window.
-  const side = Math.cos(HAND.ang);           // -1..1: which side of the anchor
-  let dx = clamp(side,-1,1)*0.62, dy = 1.0;
-  if(reason==='greed'){                      // the cap popped you: weak, sideways, deserved
-    dx = (side>=0?1:-1)*1.25; dy = 0.38; spd *= 0.72;
+  const side = Math.cos(HAND.ang);           // -1..1: release phase — this IS the aim
+  // launch = up, bent by release phase. release at dead vertical → clean flight;
+  // release badly → up to ~46° of your power goes sideways. bigger spin = harder timing.
+  let dx = clamp(side,-1,1)*AIM_BEND, dy = 1.0;
+  if(reason==='greed'){                      // the cap popped you: weak, flat, deserved
+    dx = (side>=0?1:-1)*1.8; dy = 0.25; spd *= 0.65;
   }
   const inv = 1/Math.hypot(dx,dy);
   HAND.vx = dx*inv*spd; HAND.vy = dy*inv*spd;
@@ -575,6 +578,15 @@ function drawHand(){
       ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
     }
   }
+  // launch-direction tick while winding: watch it swing; it turns gold in the clean window
+  if(HAND.mode==='attach' && held && HAND.charge>0.05){
+    const sd = clamp(Math.cos(HAND.ang),-1,1);
+    let ddx=sd*AIM_BEND, ddy=1.0; const inv2=1/Math.hypot(ddx,ddy);
+    ctx.strokeStyle = Math.abs(sd)<0.19 ? '#e7c04b' : 'rgba(232,232,238,.4)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+ddx*inv2*36*S, Y-ddy*inv2*36*S); ctx.stroke();
+  }
+
   // the sticky hand
   const c = HAND.charge;
   ctx.fillStyle = c>0 ? `rgb(${231},${192-c*60|0},${75+c*40|0})` : '#e85c3c';
@@ -1111,7 +1123,8 @@ window.__thwap = {
   record:()=>JSON.parse(JSON.stringify({guide:guide, fallLog:fallLog, arch:archStatus})),
   parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
   hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
-    charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null,cause:HAND.lastCause||null}),
+    charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null,cause:HAND.lastCause||null,
+    side:HAND.mode==='attach'?+Math.cos(HAND.ang).toFixed(2):null}),
   state:()=>({mode,pct:+pctOf(HAND.y).toFixed(1),best:+bestPct.toFixed(1),handle:myHandle,frame:simFrame,
     handMode:HAND.mode,attempts:takeover?takeover.attempts:null,
     tw:takeover?+(takeover.window||0).toFixed(3):null, tsaved:takeover?takeover.saved:null,
