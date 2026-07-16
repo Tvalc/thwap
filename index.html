@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0f">
+<title>THWAP</title>
+<style>
+  :root { --machine:#0b0b0f; --glass:#11131a; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#050507; overflow:hidden; overscroll-behavior:none; }
+  body { display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; color:#e8e8ee;
+    touch-action:none; -webkit-user-select:none; user-select:none; }
+  #wrap { position:relative; height:100%; aspect-ratio:9/19.5; max-width:100vw; background:var(--machine);
+    box-shadow:0 0 0 1px #1c1e28, 0 30px 80px rgba(0,0,0,.6); overflow:hidden; }
+  @media (max-aspect-ratio:9/19.5){ #wrap{ width:100vw; height:auto; aspect-ratio:9/19.5; } }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  .layer { position:absolute; inset:0; pointer-events:none; }
+  .panel { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center; background:rgba(5,5,7,.86); backdrop-filter:blur(2px); pointer-events:auto; }
+  .panel.on { display:flex; }
+  .doc { width:100%; max-width:340px; background:#f3f0e7; color:#14140f; border-radius:6px; padding:18px 18px 16px;
+    box-shadow:0 12px 40px rgba(0,0,0,.5); text-align:left; }
+  .doc .rule { border-top:1px dashed #b9b4a4; margin:10px 0; }
+  .doc h1 { font-size:19px; font-weight:700; letter-spacing:.01em; line-height:1.15; }
+  .doc .sub { font-size:12px; color:#5b584c; margin-top:3px; line-height:1.5; }
+  .doc .big { font-size:15px; font-weight:700; }
+  .doc .dmg { color:#a3231f; font-weight:700; }
+  .doc .ok { color:#166a3d; font-weight:700; }
+  .ledger { font-size:11px; color:#5b584c; display:flex; justify-content:space-between; gap:6px; }
+  .btns { display:flex; gap:10px; margin-top:16px; width:100%; max-width:340px; }
+  .btn { flex:1; pointer-events:auto; cursor:pointer; border:none; border-radius:6px; padding:13px 10px;
+    font-family:inherit; font-size:13px; font-weight:700; letter-spacing:.02em; }
+  .btn.ghost { background:transparent; color:#c9c7cf; box-shadow:inset 0 0 0 1px #33313c; }
+  .btn.hot { background:#e8e8ee; color:#101015; }
+  .btn.wide { flex:none; width:100%; max-width:340px; margin-top:10px; }
+  .hint { font-size:11px; color:#6b6976; margin-top:14px; max-width:300px; line-height:1.6; }
+  #shareimg { width:100%; max-width:300px; border-radius:6px; margin-top:4px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  .kick { font-size:12px; letter-spacing:.22em; color:#8a8796; text-transform:uppercase; margin-bottom:8px; }
+  .tag { position:absolute; top:10px; left:12px; font-size:10px; letter-spacing:.2em; color:#3f3d49; pointer-events:none; }
+  a.raw { color:#8a8796; font-size:10px; word-break:break-all; text-decoration:none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div class="tag">THWAP · machine no. 7 · season 1 · the observation continues</div>
+
+  <div class="panel" id="p_fall">
+    <div class="doc" id="fall_doc"></div>
+    <div class="btns">
+      <button class="btn ghost" id="b_takeL">LET IT STAND</button>
+      <button class="btn hot" id="b_appeal">DISPUTE THE FOOTAGE</button>
+    </div>
+    <div class="hint">a dispute inserts a friend at your final survivable instant. identical conditions. one grab.</div>
+  </div>
+
+  <div class="panel" id="p_share">
+    <div class="kick">footage packaged for transmission</div>
+    <img id="shareimg" alt="your fall, on the record">
+    <button class="btn hot wide" id="b_copy">COPY THE FOOTAGE LINK</button>
+    <button class="btn ghost wide" id="b_back">back to the climb</button>
+    <div class="hint" id="share_note">they watch the footage. then they become you.</div>
+  </div>
+
+  <div class="panel" id="p_appeal_intro">
+    <div class="kick" id="ai_kick">incoming appeal</div>
+    <div class="doc" id="ai_doc"></div>
+    <button class="btn hot wide" id="b_watch">REVIEW THE FOOTAGE</button>
+  </div>
+
+  <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
+  <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE · №1</button>
+
+  <div class="panel" id="p_win">
+    <div class="doc" id="win_doc"></div>
+    <button class="btn hot wide" id="b_winshare">COPY THE PROOF</button>
+    <button class="btn ghost wide" id="b_wincont">return to the pit</button>
+  </div>
+
+  <div class="panel" id="p_verdict">
+    <div class="doc" id="verdict_doc"></div>
+    <button class="btn hot wide" id="b_reply">SEND THE VERDICT</button>
+    <button class="btn ghost wide" id="b_climb">start your own tower</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================ THWAP
+   one-button claw-machine climber · phone-first · deterministic world
+   HOLD to wind a stud · RELEASE to fling · TAP mid-air to grab
+   ============================================================ */
+
+/* ---------- deterministic PRNG (fixed seed → identical tower on every device) ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- fixed virtual world (units, NOT pixels) ---------- */
+const VW = 430;              // world width in units
+const CX = VW/2;
+const G  = 2000;             // gravity (units/s^2)
+const DT = 1/120;            // fixed sim step
+const REACH = 150;           // grab reach ring radius
+const COYOTE = 0.08;         // 80ms grab forgiveness
+const HITSTOP = 0.07;        // 70ms freeze on grab
+const WIND_TIME = 0.85;      // seconds to full charge
+const W0 = 5, WMAX = 11;     // angular velocity range (rad/s) — spin is a charge tell, not an aim gate
+const WRAP_CAP = 3;          // hard greed cap (wraps) → auto-release
+const R0 = 42, RMIN = 34;    // orbit radius (wound in as you charge)
+const LAUNCH_MIN = 720, LAUNCH_MAX = 1260;
+const PLUSH_RIP = 1.5;       // plush lets go after 1.5s
+const CLAW_PERIOD = 3.0;     // claw opens every 3s
+const CLAW_OPEN = 0.55;
+const NAMED_FALL_PCT = 11;   // % drop that earns a named catastrophe
+const PIT_Y = 150;           // plush pit floor
+const TOP_Y = 6150;          // the chute
+const TOWER_H = TOP_Y - PIT_Y;
+
+/* ---------- copy pools (system voice: deadpan court; never slang; roasts the decision) ---------- */
+const HANDLES = ["DARNELL","MAYA","THE OPP","DEVON","PRIYA","MASON","JAYDEN","AVA","ZOE","DEX","THE DEFENDANT",
+  "NO. 7","MARCUS","SAM","THE ACCUSED","YOUR HONOR","EXHIBIT A","THE PLAINTIFF","WASHED","THE JURY","GREGORY"];
+const ZONES = [
+  {top:8,  name:"the pit"},
+  {top:30, name:"the spill"},
+  {top:55, name:"the reef"},
+  {top:75, name:"the gallery"},
+  {top:92, name:"claw country"},
+  {top:101,name:"the cornice"},
+];
+const SEASON = { id:1, name:"SEASON 1" };
+const FALL_NAMES = [
+  "THE OPTIMIST","THE LONG GOODBYE","THE NEGOTIATION","THE SECOND OPINION",
+  "THE COMMITMENT","THE ENCORE","THE VICTORY LAP","THE SABBATICAL",
+  "THE UNDERSTUDY","THE FAREWELL TOUR","THE INVESTMENT","THE HOMECOMING",
+  "THE DOUBLE DOWN","THE EARLY RETIREMENT","THE LEASE","THE FORECAST",
+];
+const FINDINGS = {
+  greed: [
+    "The rubber trembled. The rubber squeaked. The subject wound once more. This behavior has been documented before. It has never worked.",
+    "A third wrap was attempted. The third wrap is not a secret. It is a countdown.",
+  ],
+  rip: [
+    "The plush held for its full 1.5 seconds. The subject requested more. The plush declined, as plush do.",
+    "A hold that outlasted the fauna's attention span. The fauna noticed nothing.",
+  ],
+  manual: [
+    "The survivable release is marked. The subject is visible in the footage, not taking it.",
+    "A hold that outlasted its usefulness. The stud was not consulted.",
+  ],
+};
+const CEREMONY_LINE = "The fall is not unusual. What is unusual is that it will try again.";
+const FIELD_NOTES = [
+  "The claw is scheduled the way rain is scheduled. You do not argue with it. You count.",
+  "Plastic holds forever, asks nothing, remembers no one.",
+  "The plush have noticed nothing. The plush never do.",
+  "Release early. It feels wrong every time. It is right every time.",
+  "The pit is not the bottom. The plush call it the foyer.",
+  "Every fall is footage.",
+  "The chute has been at 100% this whole time. It is in no hurry.",
+];
+const CARVINGS = [
+  {pct:11,   x:70,     t:"FALL FROM HERE, IT GETS A NAME."},
+  {pct:12.2, x:74,     t:"FALL FROM BELOW, IT'S JUST CLIMBING."},
+  {pct:50,   x:VW-64,  t:"EVERY PLAY WINS"},
+  {pct:51.2, x:VW-76,  t:"— it means us. nobody told it yet."},
+  {pct:63,   x:80,     t:"ONE. TWO. FLING."},
+];
+const ELDER = { v:1, k:'A', archive:true, from:'THE ELDER', sn:1,
+  f:{n:'FALL №1', p:79, a:91, b:12, w:3},
+  t:[[215,5610],[180,5400],[240,5100],[170,4700],[210,4300],[160,3900],[220,3500],[190,3100],[215,2850]],
+  s0:[215,2850,140,-850], L:{vs:null,c:0,g:0,d:0,dmg:0} };
+
+/* ---------- canvas / DPR ---------- */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let Wc=0, Hc=0, S=1, DPR=1;
+function resize(){
+  const r = cv.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio||1, 2.5);
+  Wc = r.width; Hc = r.height;
+  cv.width = Math.round(Wc*DPR); cv.height = Math.round(Hc*DPR);
+  S = Wc / VW;                         // world→screen scale
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+new ResizeObserver(resize).observe(cv);
+addEventListener('resize', resize);
+
+/* world→screen */
+let camY = 0;
+function sx(x){ return x*S; }
+function sy(y){ return Hc*0.62 - (y - camY)*S; }   // hero sits ~62% down the screen
+
+/* ---------- tower ---------- */
+let STUDS = [];
+function zoneAt(pct){ for(const z of ZONES){ if(pct < z.top) return z; } return ZONES[ZONES.length-1]; }
+function buildTower(){
+  STUDS = [];
+  const rnd = mulberry32(70707);      // FIXED seed → same tower everywhere
+  // plush pit: a soft floor of plush studs to always catch a fall
+  for(let i=0;i<7;i++) STUDS.push({x:60+i*52, y:PIT_Y - 10 + (i%2)*14, type:'plush', pit:true});
+  // guaranteed starter studs so the first hop lands ~80% of cold tries
+  STUDS.push({x:CX, y:PIT_Y+150, type:'plastic'});
+  STUDS.push({x:CX-70, y:PIT_Y+300, type:'plastic'});
+  STUDS.push({x:CX+80, y:PIT_Y+430, type:'plastic'});
+  let y = PIT_Y + 560;
+  let side = 1;
+  while(y < TOP_Y - 240){
+    const pct = (y-PIT_Y)/TOWER_H*100;
+    const z = zoneAt(pct);
+    // horizontal placement zig-zags; gap grows a touch with height
+    const spread = 96 + rnd()*54;
+    const x = CX + side*spread*(0.35+rnd()*0.65);
+    let type='plastic';
+    if(z.name==='the pit') type='plush';
+    else if(z.name==='the gallery'){ type = rnd()<0.42 ? 'glass' : 'plastic'; }
+    else if(z.name==='the spill'){ type = rnd()<0.25 ? 'plush':'plastic'; }
+    STUDS.push({x:Math.max(48,Math.min(VW-48,x)), y, type});
+    // sometimes a helper stud on the other side so ascents stay ~80% catchable
+    if(rnd()<0.5){ STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+70+rnd()*40,
+      type: (z.name==='the gallery'&&rnd()<0.3)?'glass':'plastic'}); }
+    y += 196 + rnd()*96;
+    side *= -1;
+  }
+  // the claw: a grabbable bar near the chute
+  CLAW = {x:CX, y:TOP_Y-960, w:120, phase:0};
+  STUDS.push({x:CX, y:TOP_Y-20, type:'plastic', chute:true});
+}
+let CLAW=null;
+
+/* ---------- game state ---------- */
+const HAND = {
+  mode:'attach',            // 'attach' | 'fly'
+  x:CX, y:PIT_Y, vx:0, vy:0,
+  anchor:null, ang:0, r:R0, w:W0, spin:1, charge:0, wraps:0, plush:0,
+  peakY:PIT_Y,              // highest established point since last safe grab
+};
+let simFrame=0, hitstop=0, slowmo=0, flash=0, clawT=0;
+let held=false, wantGrab=false, grabBufTimer=0, grabLock=0;
+let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
+let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
+let bossLine = FIELD_NOTES[0], bossLineT=0;
+
+/* fall bookkeeping */
+let fallTrack = null;       // { pts:[], lastSave:{...}, fromPct, ... } while falling
+let currentFall = null;     // the named fall being adjudicated / shared
+let ghost = null;           // appeal: sender's recorded fall for playback
+let takeover = null;        // appeal: {state0, attempts, failY}
+let incoming = null;        // parsed appeal payload
+let ledger = null;          // head-to-head running score
+let myHandle = null;
+
+/* ---------- persistence ---------- */
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem('thwap')||'{}');
+    bestPct = d.best||0; dusty = !!d.played; myHandle = d.handle||null; beaten = !!d.beaten;
+    fallCount = d.falls||0; bestFall = d.bestFall||0;
+    if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
+  }catch(e){}
+  if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
+}
+function save(){
+  try{ localStorage.setItem('thwap', JSON.stringify({
+    best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+}
+
+/* ---------- helpers ---------- */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const pctOf=y=>clamp((y-PIT_Y)/TOWER_H*100,0,100);
+function grippable(s){ return s.type!=='glass'; }
+function nearestStud(x,y,rad){
+  let best=null, bd=rad*rad;
+  for(const s of STUDS){ if(!grippable(s)) continue;
+    const dx=s.x-x, dy=s.y-y, d=dx*dx+dy*dy;
+    if(d<bd){ bd=d; best=s; } }
+  return best;
+}
+
+/* ---------- attach / fling ---------- */
+function attachTo(s, incomingVx, incomingVy){
+  HAND.mode='attach'; HAND.anchor=s;
+  HAND.r = clamp(Math.hypot(HAND.x-s.x, HAND.y-s.y), RMIN, R0);
+  HAND.ang = Math.atan2(HAND.y-s.y, HAND.x-s.x);
+  // spin direction inherits sideways momentum so the flow feels continuous
+  const tang = (-Math.sin(HAND.ang))*incomingVx + (Math.cos(HAND.ang))*incomingVy;
+  HAND.spin = tang>=0 ? 1 : -1;
+  HAND.w=W0; HAND.charge=0; HAND.wraps=0; HAND.plush = s.type==='plush'?0:-1;
+  hitstop = HITSTOP; flash = 1;
+  // establish a new "high water mark" for fall accounting when we grab higher
+  if(s.y > HAND.peakY - 4) HAND.peakY = Math.max(HAND.peakY, s.y);
+}
+function fling(reason){
+  HAND.lastCause = reason||'manual'; hasFlung = true;
+  const c = HAND.charge;
+  const spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
+  // launch is ALWAYS up (climbing is about power, not phase-timing a tangent);
+  // the side the hand is on when you let go steers left/right on a wide, readable window.
+  const side = Math.cos(HAND.ang);           // -1..1: which side of the anchor
+  let dx = clamp(side,-1,1)*0.62, dy = 1.0;
+  const inv = 1/Math.hypot(dx,dy);
+  HAND.vx = dx*inv*spd; HAND.vy = dy*inv*spd;
+  HAND.lastAnchor = HAND.anchor; HAND.lastWraps = HAND.wraps; HAND.lastSide = side;
+  HAND.anchor=null; HAND.mode='fly'; grabLock = 0.16;   // clear the launch stud before re-grabbing
+}
+
+/* ---------- named fall detection ---------- */
+function beginFallTrack(){
+  fallTrack = { pts:[], fromY:HAND.peakY, fromPct:pctOf(HAND.peakY), lastSave:null, t:0 };
+}
+function endFallAtLanding(landY){
+  const dropPct = pctOf(HAND.peakY) - pctOf(landY);
+  if(dropPct >= NAMED_FALL_PCT && fallTrack){
+    const z = zoneAt(fallTrack.fromPct);
+    fallCount++;
+    const cause = HAND.lastCause==='greed'||HAND.lastCause==='rip' ? HAND.lastCause : 'manual';
+    const pool = FINDINGS[cause];
+    const ceremony = fallCount<=3 || dropPct>bestFall;
+    if(dropPct>bestFall) bestFall = Math.round(dropPct);
+    currentFall = {
+      zone:z, no:fallCount, name:FALL_NAMES[(fallCount-1)%FALL_NAMES.length], pct:Math.round(dropPct),
+      fromPct:Math.round(fallTrack.fromPct), toPct:Math.round(pctOf(landY)),
+      wraps: HAND.lastWraps||0, ceremony:ceremony,
+      pts: fallTrack.pts.slice(-46),
+      s0: fallTrack.lastSave,
+      line: pool[(fallCount + (HAND.lastWraps||0)) % pool.length],
+    };
+    save();
+    openFallScreen();
+  }
+  HAND.peakY = landY;         // reset high-water mark to where we landed
+  fallTrack = null;
+}
+
+/* ---------- sim ---------- */
+function step(dt){
+  simFrame++;
+  clawT = (clawT + dt) % CLAW_PERIOD;
+  const clawOpen = clawT > (CLAW_PERIOD - CLAW_OPEN);
+
+  if(HAND.mode==='attach'){
+    const s = HAND.anchor;
+    // plush timer
+    if(HAND.plush>=0){ HAND.plush += dt; if(HAND.plush > PLUSH_RIP){ /* rips loose */ HAND.charge*=0.4; fling('rip'); return; } }
+    if(held){
+      HAND.charge = clamp(HAND.charge + dt/WIND_TIME, 0, 1);
+      HAND.w = W0 + (WMAX-W0)*HAND.charge;
+      HAND.r = R0 - (R0-RMIN)*HAND.charge;
+      const dAng = HAND.w*dt*HAND.spin;
+      HAND.ang += dAng; HAND.wraps += Math.abs(dAng)/(Math.PI*2);
+      if(HAND.wraps >= WRAP_CAP){ fling('greed'); return; }
+    }
+    HAND.x = s.x + Math.cos(HAND.ang)*HAND.r;
+    HAND.y = s.y + Math.sin(HAND.ang)*HAND.r;
+  } else {
+    // FLYING
+    HAND.vy -= G*dt;
+    HAND.x += HAND.vx*dt; HAND.y += HAND.vy*dt;
+    if(HAND.x<28){HAND.x=28; HAND.vx=Math.abs(HAND.vx)*0.5;}
+    if(HAND.x>VW-28){HAND.x=VW-28; HAND.vx=-Math.abs(HAND.vx)*0.5;}
+
+    // falling? start/continue tracking a potential catastrophe
+    const falling = HAND.vy < 0;
+    if(falling){
+      if(!fallTrack && HAND.y < HAND.peakY - 40) beginFallTrack();
+      if(fallTrack){
+        fallTrack.t += dt;
+        if(fallTrack.pts.length<200 && (simFrame%4===0)) fallTrack.pts.push({x:Math.round(HAND.x),y:Math.round(HAND.y)});
+        // remember the last instant a save was live (a grippable stud in reach)
+        const live = nearestStud(HAND.x, HAND.y, REACH);
+        if(live) fallTrack.lastSave = {x:HAND.x, y:HAND.y, vx:HAND.vx, vy:HAND.vy};
+      }
+    }
+
+    // grab attempt (buffered while held; coyote-forgiven; locked briefly right after a fling)
+    if(grabLock>0) grabLock -= dt;
+    if((wantGrab || grabBufTimer>0) && grabLock<=0){
+      grabBufTimer = Math.max(0, grabBufTimer-dt);
+      const s = nearestStud(HAND.x, HAND.y, REACH);
+      if(s){
+        const wasFalling = HAND.vy < -650 && fallTrack;
+        const dropSoFar = fallTrack ? (pctOf(HAND.peakY)-pctOf(HAND.y)) : 0;
+        attachTo(s, HAND.vx, HAND.vy);
+        wantGrab=false; grabBufTimer=0;
+        if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash("CAUGHT."); }   // clutch save juice
+        if(s.chute && mode==='play'){ openWinScreen(); }                     // reached the top → win
+        return;
+      }
+    }
+
+    // hit the plush pit → auto-catch (zero-friction respawn), adjudicate the fall
+    if(HAND.y <= PIT_Y + 24){
+      const landY = PIT_Y + 30;
+      HAND.y = landY; HAND.vx=0; HAND.vy=0;
+      // land already gripping a pit stud
+      let pit = STUDS.find(s=>s.pit) || {x:HAND.x,y:landY,type:'plush',pit:true};
+      const droppedFrom = HAND.peakY;
+      endFallAtLanding(landY);
+      if(mode==='play' || mode==='appeal_play'){
+        attachTo(pit, 0, 0); held=false; HAND.charge=0;
+        HAND.peakY = landY;
+      }
+    }
+  }
+
+  // track best %
+  const p = pctOf(HAND.y);
+  if(p>bestPct){ bestPct=p; }
+  if(p>=99.5 && mode==='play'){ openWinScreen(); return; }   // reached the summit
+  // camera
+  const targetCam = HAND.y + 60;
+  camY += (targetCam - camY) * Math.min(1, dt*6.5);
+}
+
+function bossFlash(t){ bossLine=t; bossLineT=1.1; }
+
+/* ---------- input ---------- */
+function down(){
+  if(mode!=='play' && mode!=='appeal_play') return;
+  held=true;
+  if(HAND.mode==='fly'){ wantGrab=true; grabBufTimer=COYOTE; }
+}
+function up(){
+  held=false; wantGrab=false;
+  if((mode==='play'||mode==='appeal_play') && HAND.mode==='attach') fling('manual');
+}
+cv.addEventListener('pointerdown', e=>{ e.preventDefault(); down(); }, {passive:false});
+addEventListener('pointerup', e=>{ up(); });
+addEventListener('pointercancel', e=>{ up(); });
+addEventListener('keydown', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); if(!e.repeat) down(); }});
+addEventListener('keyup', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); up(); }});
+
+/* ============================================================ RENDER */
+function drawStud(s){
+  const X=sx(s.x), Y=sy(s.y);
+  if(Y<-30||Y>Hc+30) return;
+  ctx.save();
+  if(s.type==='glass'){
+    ctx.fillStyle='rgba(120,170,210,.16)'; ctx.strokeStyle='rgba(150,200,240,.5)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(X,Y,8*S+3,0,7); ctx.fill(); ctx.stroke();
+  } else if(s.type==='plush'){
+    ctx.fillStyle='#c8677e';
+    ctx.beginPath(); ctx.arc(X,Y,9*S+2,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.15)'; ctx.beginPath(); ctx.arc(X-2,Y-2,3*S,0,7); ctx.fill();
+  } else {
+    ctx.fillStyle= s.chute? '#e7c04b' : '#8b8f9e';
+    ctx.beginPath(); ctx.arc(X,Y,7*S+2,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawHand(){
+  const X=sx(HAND.x), Y=sy(HAND.y);
+  ctx.save();
+  // reach ring (always visible)
+  if(HAND.mode==='fly'){
+    ctx.strokeStyle='rgba(232,232,238,.10)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(X,Y,REACH*S,0,7); ctx.stroke();
+    const t = nearestStud(HAND.x,HAND.y,REACH);
+    if(t){ const TX=sx(t.x),TY=sy(t.y);
+      ctx.strokeStyle='rgba(231,192,75,.9)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(TX,TY,13*S,0,7); ctx.stroke(); }
+  }
+  // tether when attached
+  if(HAND.mode==='attach' && HAND.anchor){
+    const AX=sx(HAND.anchor.x),AY=sy(HAND.anchor.y);
+    ctx.strokeStyle= HAND.charge>0.66?'#e7c04b':'rgba(232,232,238,.5)';
+    ctx.lineWidth = 1.5 + HAND.charge*2.5;
+    ctx.beginPath(); ctx.moveTo(AX,AY); ctx.lineTo(X,Y); ctx.stroke();
+    if(HAND.wraps>WRAP_CAP-0.5){ // tremble warning
+      ctx.strokeStyle='rgba(231,110,75,.8)'; ctx.beginPath();
+      ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
+    }
+  }
+  // the sticky hand
+  const c = HAND.charge;
+  ctx.fillStyle = c>0 ? `rgb(${231},${192-c*60|0},${75+c*40|0})` : '#e85c3c';
+  ctx.beginPath(); ctx.arc(X,Y,11*S,0,7); ctx.fill();
+  // googly eyes
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(X-4,Y-3,3.4,0,7); ctx.arc(X+4,Y-3,3.4,0,7); ctx.fill();
+  ctx.fillStyle='#111'; const lx=clamp(HAND.vx*0.001,-1.3,1.3), ly=clamp(-HAND.vy*0.001,-1.3,1.3);
+  ctx.beginPath(); ctx.arc(X-4+lx,Y-3+ly,1.5,0,7); ctx.arc(X+4+lx,Y-3+ly,1.5,0,7); ctx.fill();
+  if(dusty && !HAND._wiped){ ctx.fillStyle='rgba(200,190,150,.25)'; ctx.beginPath(); ctx.arc(X,Y,12*S,0,7); ctx.fill(); }
+  ctx.restore();
+}
+function drawClaw(){
+  if(!CLAW) return;
+  const open = clawT > (CLAW_PERIOD-CLAW_OPEN);
+  const X=sx(CLAW.x), Y=sy(CLAW.y), w=CLAW.w*S;
+  if(Y<-40||Y>Hc+40) return;
+  ctx.save(); ctx.strokeStyle= open?'#5a5e6b':'#c6cad8'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(X-w/2,Y-16); ctx.lineTo(X,Y); ctx.lineTo(X+w/2,Y-16);
+  const spread = open? 16:5;
+  ctx.moveTo(X,Y); ctx.lineTo(X-spread,Y+16);
+  ctx.moveTo(X,Y); ctx.lineTo(X+spread,Y+16); ctx.stroke();
+  ctx.restore();
+}
+
+function render(){
+  ctx.clearRect(0,0,Wc,Hc);
+  // machine interior gradient
+  const g=ctx.createLinearGradient(0,0,0,Hc); g.addColorStop(0,'#12141c'); g.addColorStop(1,'#0a0b10');
+  ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
+
+  // faint zone bands + labels
+  for(const z of ZONES){
+    const y = sy(PIT_Y + TOWER_H*(z.top/100));
+    if(y>-20&&y<Hc+20){ ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(Wc,y); ctx.stroke(); }
+  }
+  ctx.font='600 9px ui-monospace,monospace'; ctx.textAlign='left';
+  for(const cv2 of CARVINGS){ const cy2=sy(PIT_Y+TOWER_H*cv2.pct/100);
+    if(cy2>-10&&cy2<Hc+10){ ctx.fillStyle='rgba(180,183,200,.14)'; ctx.fillText(cv2.t, sx(cv2.x), cy2); } }
+
+  const zc = zoneAt(pctOf(HAND.y));
+  ctx.fillStyle='rgba(180,183,200,.18)'; ctx.font=`600 ${Math.round(11)}px ui-monospace,monospace`;
+  ctx.textAlign='left'; ctx.fillText(zc.name.toUpperCase(), 12, Hc-16);
+
+  drawClaw();
+  for(const s of STUDS) drawStud(s);
+
+  // dotted "should-have-released" receipt while a fall screen is up
+  if((mode==='fall') && currentFall && HAND.lastAnchor){
+    const a=HAND.lastAnchor; const up = nearestStud(a.x, a.y+260, 320);
+    if(up){ ctx.strokeStyle='rgba(231,192,75,.55)'; ctx.lineWidth=2; ctx.setLineDash([5,7]);
+      ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(up.x),sy(up.y)); ctx.stroke(); ctx.setLineDash([]); }
+  }
+
+  // appeal ghost playback
+  if(mode==='appeal_watch' && ghost){
+    ctx.strokeStyle='rgba(231,110,75,.5)'; ctx.lineWidth=2; ctx.beginPath();
+    for(let i=0;i<=ghost.i && i<ghost.pts.length;i++){ const p=ghost.pts[i];
+      const X=sx(p.x),Y=sy(p.y); i===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y); }
+    ctx.stroke();
+    const p=ghost.pts[Math.min(ghost.i,ghost.pts.length-1)];
+    if(p){ ctx.fillStyle='#e85c3c'; ctx.beginPath(); ctx.arc(sx(p.x),sy(p.y),11*S,0,7); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx(p.x)-4,sy(p.y)-3,3,0,7); ctx.arc(sx(p.x)+4,sy(p.y)-3,3,0,7); ctx.fill(); }
+  } else {
+    drawHand();
+  }
+
+  // flash
+  if(flash>0){ ctx.fillStyle=`rgba(255,255,255,${flash*0.5})`; ctx.fillRect(0,0,Wc,Hc); }
+
+  // HUD: giant % (reads across a room)
+  const showPct = mode==='appeal_watch'? (ghost?ghost.pct:0) : Math.round(pctOf(HAND.y));
+  ctx.textAlign='right'; ctx.fillStyle='rgba(232,232,238,.92)';
+  ctx.font=`700 ${Math.round(40)}px ui-monospace,monospace`;
+  ctx.fillText(showPct+'%', Wc-14, 52);
+  ctx.font=`600 ${Math.round(10)}px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.4)';
+  ctx.fillText('BEST '+Math.round(bestPct)+'%', Wc-14, 68);
+
+  // charge pip
+  if(HAND.mode==='attach' && HAND.charge>0.02){
+    const bw=Math.min(Wc-24,120), bx=(Wc-bw)/2, by=Hc-40;
+    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.fillRect(bx,by,bw,5);
+    ctx.fillStyle= HAND.charge>0.9?'#e76e4b':'#e7c04b'; ctx.fillRect(bx,by,bw*HAND.charge,5);
+  }
+
+  // one-line onboarding: visible until the first fling, then gone forever this session
+  if(!hasFlung && mode==='play'){
+    ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.7)';
+    ctx.font='600 13px ui-monospace,monospace';
+    ctx.fillText('HOLD to wind · LET GO to fly · TAP mid-air to grab', Wc/2, Hc*0.8);
+  }
+
+  // boss / clutch line
+  if(bossLineT>0){ ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,bossLineT);
+    ctx.fillStyle='#e7c04b'; ctx.font=`700 ${Math.round(bossLine==='CAUGHT.'?30:14)}px ui-monospace,monospace`;
+    ctx.fillText(bossLine, Wc/2, Hc*0.4); ctx.globalAlpha=1; }
+
+  // takeover prompt
+  if(mode==='appeal_play' && takeover){ ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.9)';
+    ctx.font=`700 14px ui-monospace,monospace`; ctx.fillText('SAVE IT.', Wc/2, 96);
+    ctx.font=`600 11px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.5)';
+    ctx.fillText('attempt '+(takeover.attempts+1), Wc/2, 114); }
+}
+
+/* ============================================================ MAIN LOOP */
+let last=performance.now()/1000, acc=0;
+function frame(t){
+  requestAnimationFrame(frame);
+  const now=t/1000; let real=now-last; last=now; if(real>0.2) real=0.2;
+  acc+=real;
+  while(acc>=DT){
+    // timers (real time)
+    if(hitstop>0) hitstop-=DT;
+    if(slowmo>0) slowmo-=DT;
+    if(flash>0) flash=Math.max(0,flash-DT*4);
+    if(bossLineT>0) bossLineT-=DT;
+    const active = (mode==='play'||mode==='appeal_play');
+    if(active && hitstop<=0){
+      const scale = slowmo>0?0.4:1;
+      if(mode==='appeal_play') stepTakeover(DT*scale);
+      else step(DT*scale);
+    } else if(mode==='appeal_watch'){
+      advanceGhost(DT);
+    }
+    acc-=DT;
+  }
+  render();
+}
+
+/* ============================================================ FALL / SHARE UI */
+const el = id=>document.getElementById(id);
+function openFallScreen(){
+  mode='fall';
+  if(!dusty){ dusty=false; } save();
+  const f=currentFall;
+  el('fall_doc').innerHTML =
+    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ENTERED INTO THE RECORD · ${SEASON.name}</div>`+
+    `<h1>FALL №${f.no} — “${esc(f.name)}”<br><span class="dmg">${f.fromPct}% → ${f.toPct}%</span></h1>`+
+    `<div class="sub">A descent of ${f.pct}%, from ${esc(f.zone.name)}.<br>${esc(f.line)}</div>`+
+    (f.ceremony ? `<div class="rule"></div><div class="sub">${esc(CEREMONY_LINE)}</div>` : '')+
+    `<div class="rule"></div>`+
+    `<div class="sub">greed on record: ${f.wraps>=1?Math.floor(f.wraps)+' wrap'+(Math.floor(f.wraps)===1?'':'s'):'none'} · TIME OBSERVED: not released</div>`;
+  el('p_fall').classList.add('on');
+}
+el('b_takeL').onclick=()=>{ el('p_fall').classList.remove('on'); currentFall=null; mode='play'; };
+el('b_appeal').onclick=()=>{ el('p_fall').classList.remove('on'); openShare(); };
+
+function openShare(){
+  mode='share';
+  const link = buildAppealLink(currentFall);
+  el('shareimg').src = renderShareCard(currentFall);
+  el('p_share').classList.add('on');
+  el('b_copy').onclick = ()=>doShare(link, 'appeal');
+  el('share_note').textContent = 'they watch the footage. then they become you.';
+  window.__lastLink = link;
+}
+el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=null; mode='play'; };
+
+function openWinScreen(){
+  if(mode==='win') return;
+  mode='win';
+  const firstTime = !beaten;
+  beaten = true; bestPct = 100; save();
+  el('win_doc').innerHTML =
+    `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ELEVATION: 100% · ${SEASON.name}</div>`+
+    `<h1>THE CHUTE.</h1>`+
+    `<div class="sub">nothing has ever left this machine on its own.</div>`+
+    `<div class="rule"></div>`+
+    `<div class="sub">what % are you? one hundred.${firstTime?'<br><br><b>THE RETURN MIGRATION: unlocked.</b> specimens always come back. next time, the clock is running.':''}</div>`+
+    `<div class="rule"></div>`+
+    `<div class="sub" style="text-align:center;color:#8a8796;">— end of observation —</div>`;
+  el('p_win').classList.add('on');
+  const brag = location.origin + location.pathname;
+  el('b_winshare').onclick = ()=>{
+    const txt = 'i left machine no. 7 on my own. 100%. what % are you?';
+    if(navigator.share){ navigator.share({text:txt, url:brag}).catch(()=>{}); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(txt+' '+brag).then(()=>{ el('b_winshare').textContent='COPIED — go flex'; },()=>{}); }
+    else prompt('copy this', txt+' '+brag);
+  };
+  el('b_wincont').onclick = ()=>{ el('p_win').classList.remove('on'); resetToPit(); mode='play'; };
+}
+
+function doShare(link, kind){
+  const txt = kind==='appeal' ? 'field footage. the fall is disputed. you are now me — save it: ' : 'the classification is in: ';
+  if(navigator.share){ navigator.share({text:txt, url:link}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(link).then(()=>{
+    el('b_copy').textContent='COPIED — now go send it'; },()=>{}); }
+  else { prompt('copy this link', link); }
+}
+
+/* ---------- share card (rendered to a data URL, phone-saveable) ---------- */
+function renderShareCard(f){
+  const c=document.createElement('canvas'); c.width=600; c.height=760; const x=c.getContext('2d');
+  x.fillStyle='#f3f0e7'; x.fillRect(0,0,600,760);
+  x.fillStyle='#14140f'; x.textAlign='left';
+  x.font='700 26px ui-monospace,monospace'; x.fillText('ENTERED INTO THE RECORD', 40, 70);
+  x.font='600 18px ui-monospace,monospace'; x.fillText('specimen: '+myHandle+' · '+SEASON.name, 40, 102);
+  x.strokeStyle='#b9b4a4'; x.setLineDash([6,8]); x.beginPath(); x.moveTo(40,130); x.lineTo(560,130); x.stroke(); x.setLineDash([]);
+  x.font='700 40px ui-monospace,monospace'; x.fillText('FALL №'+(f.no||'?')+' — '+f.name, 40, 190);
+  x.fillStyle='#a3231f'; x.font='700 64px ui-monospace,monospace'; x.fillText(f.fromPct+'% → '+f.toPct+'%', 40, 268);
+  // mini fall diagram
+  x.fillStyle='#14140f'; x.font='600 15px ui-monospace,monospace';
+  x.fillText('charge on record: '+f.wraps+' wrap'+(f.wraps===1?'':'s')+'   ·   fell from '+f.fromPct+'%', 40, 320);
+  // trajectory sketch
+  const bx=40,by=360,bw=520,bh=250;
+  x.strokeStyle='#d8d3c4'; x.strokeRect(bx,by,bw,bh);
+  if(f.pts&&f.pts.length){
+    let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    f.pts.forEach(p=>{minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);});
+    const sxx=v=>bx+20+((v-minX)/((maxX-minX)||1))*(bw-40);
+    const syy=v=>by+20+(1-(v-minY)/((maxY-minY)||1))*(bh-40);
+    x.strokeStyle='#a3231f'; x.lineWidth=3; x.beginPath();
+    f.pts.forEach((p,i)=>{ i?x.lineTo(sxx(p.x),syy(p.y)):x.moveTo(sxx(p.x),syy(p.y)); }); x.stroke();
+    const last=f.pts[f.pts.length-1]; x.fillStyle='#a3231f'; x.beginPath(); x.arc(sxx(last.x),syy(last.y),7,0,7); x.fill();
+  }
+  x.fillStyle='#5b584c'; x.font='600 14px ui-monospace,monospace';
+  x.fillText('TIME OBSERVED ........ not released', 40, 660);
+  x.fillStyle='#14140f'; x.font='700 22px ui-monospace,monospace';
+  x.fillText('the fall is disputed. you are now '+myHandle+'.', 40, 710);
+  return c.toDataURL('image/png');
+}
+
+/* ---------- HTML escaping ---------- */
+function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+/* ============================================================ APPEAL LINK (no backend) */
+function b64urlEncode(obj){
+  const s = JSON.stringify(obj);
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64urlDecode(str){
+  str = str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4)str+='=';
+  return JSON.parse(decodeURIComponent(escape(atob(str))));
+}
+function buildAppealLink(f){
+  // quantize trajectory to keep it ~1KB
+  const pts = f.pts.map(p=>[p.x|0, p.y|0]);
+  const s0 = f.s0 || {x:HAND.x,y:HAND.y,vx:0,vy:-400};
+  const payload = { v:1, k:'A', from:myHandle, sn:SEASON.id,
+    f:{n:'FALL №'+(f.no||'?')+' — '+f.name, p:f.pct, a:f.fromPct, b:f.toPct, w:f.wraps},
+    t:pts, s0:[Math.round(s0.x),Math.round(s0.y),Math.round(s0.vx),Math.round(s0.vy)],
+    L: ledger || {vs:null, c:0, g:0, d:0, dmg:0} };
+  const base = location.origin + location.pathname;
+  return base + '#a=' + b64urlEncode(payload);
+}
+function buildVerdictLink(v){
+  const payload = { v:1, k:'V', from:myHandle, to:incoming.from, sn:SEASON.id,
+    verdict:v.kind, n:v.attempts, pct:Math.round(bestPct),
+    orig:incoming.f, L:v.ledger };
+  const base = location.origin + location.pathname;
+  return base + '#a=' + b64urlEncode(payload);
+}
+
+/* ---------- parse an incoming link on load ---------- */
+function parseIncoming(){
+  const m = location.hash.match(/[#&]a=([^&]+)/);
+  if(!m) return null;
+  try{ return b64urlDecode(m[1]); }catch(e){ return null; }
+}
+
+/* ============================================================ APPEAL RECEIVER FLOW */
+function startAppeal(pl){
+  incoming = pl;
+  if(pl.k==='V'){ showReceivedVerdict(pl); return; }
+  // ghost playback data
+  ghost = { pts: pl.t.map(p=>({x:p[0],y:p[1]})), i:0, pct:pl.f.a, done:false };
+  el('b_archive').style.display='none';
+  el('ai_kick').textContent = pl.archive ? 'from the archive' : 'incoming field footage';
+  el('ai_doc').innerHTML =
+    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">${pl.archive?'RECONSTRUCTION №1 · SEASON 1':'THE FOOTAGE · '+(pl.sn?'SEASON '+pl.sn:SEASON.name)}</div>`+
+    `<h1>${esc(pl.from)} FELL<br>FROM ${pl.f.a}%<br><span class="dmg">${esc(pl.f.n)} · −${pl.f.p}%</span></h1>`+
+    `<div class="sub">${pl.archive?'Season 1, day 3. This footage has been survived by nothing, ever.':esc(pl.from)+' maintains that no grab existed. The footage shows one.'}</div>`+
+    `<div class="sub" style="margin-top:6px;">The footage has been wrong before. Once.</div>`+
+    `<div class="rule"></div><div class="sub big">you are about to become ${esc(pl.from)}.</div>`;
+  el('p_appeal_intro').classList.add('on');
+  mode='appeal_intro';
+  // center camera on the fall
+  if(ghost.pts.length){ camY = ghost.pts[0].y; }
+}
+el('b_watch').onclick=()=>{ el('p_appeal_intro').classList.remove('on'); mode='appeal_watch';
+  ghost.i=0; ghost.acc=0; };
+
+function advanceGhost(dt){
+  if(!ghost) return;
+  ghost.acc=(ghost.acc||0)+dt;
+  if(ghost.acc>0.045){ ghost.acc=0; ghost.i++; }
+  if(ghost.pts[ghost.i]) camY += (ghost.pts[ghost.i].y+40 - camY)*Math.min(1,dt*6);
+  if(ghost.i>=ghost.pts.length-1 && !ghost.done){ ghost.done=true; setTimeout(beginTakeover, 500); }
+}
+
+function beginTakeover(){
+  mode='appeal_play';
+  const s0 = incoming.s0;
+  HAND.mode='fly'; HAND.x=s0[0]; HAND.y=s0[1]; HAND.vx=s0[2]; HAND.vy=s0[3];
+  HAND.peakY = HAND.y + 500;
+  takeover = { attempts:0, failY: HAND.y - 460, saved:false, s0:s0.slice() };
+  held=false; wantGrab=false;
+  bossFlash('YOU ARE NOW '+incoming.from+'.');
+  const gv=el('b_giveup'); gv.style.display='block';
+  gv.onclick=()=>{ gv.style.display='none'; resolveVerdict('DENIED'); };
+}
+function stepTakeover(dt){
+  simFrame++;
+  // grab
+  if(wantGrab||grabBufTimer>0){
+    grabBufTimer=Math.max(0,grabBufTimer-dt);
+    const s=nearestStud(HAND.x,HAND.y,REACH);
+    if(s){ attachTo(s,HAND.vx,HAND.vy); slowmo=0.45; bossFlash('CAUGHT.'); wantGrab=false; grabBufTimer=0;
+      takeover.saved=true; setTimeout(()=>resolveVerdict('GRANTED'), 700); return; }
+  }
+  HAND.vy-=G*dt; HAND.x+=HAND.vx*dt; HAND.y+=HAND.vy*dt;
+  if(HAND.x<28){HAND.x=28;HAND.vx*=-0.5;} if(HAND.x>VW-28){HAND.x=VW-28;HAND.vx*=-0.5;}
+  camY += (HAND.y+60 - camY)*Math.min(1,dt*7);
+  // missed → reset to the same doomed instant, count the attempt
+  if(HAND.y < takeover.failY){
+    takeover.attempts++;
+    const s0=takeover.s0; HAND.x=s0[0];HAND.y=s0[1];HAND.vx=s0[2];HAND.vy=s0[3];
+    flash=0.6;
+  }
+}
+
+/* ---------- verdict engine + ledger ---------- */
+function resolveVerdict(kind){
+  mode='verdict';
+  el('b_giveup').style.display='none';
+  const att = takeover.attempts;
+  // update head-to-head ledger (rides inside links)
+  const L = incoming.L || {vs:null, c:0, g:0, d:0, dmg:0};
+  const newL = { vs:incoming.from, c:(L.c||0)+1, g:(L.g||0)+(kind==='GRANTED'?1:0),
+    d:(L.d||0)+(kind==='DENIED'?1:0), dmg:(L.dmg||0)+ (incoming.f? incoming.f.p:0) };
+  let title, body, klass;
+  if(incoming.archive){
+    if(kind==='DENIED'){
+      title='RECONSTRUCTION ABANDONED.<br>THE FALL STANDS.'; klass='dmg';
+      body=`sixteen seasons of attempts. the archive expected nothing less.<br><br>THE ELDER can wait. THE ELDER has been waiting since Season 1.`;
+    } else {
+      title=`THE ELDER'S FALL:<br>SURVIVED.${att===0?'<br>FIRST ATTEMPT.':''}`; klass='ok';
+      body=`nothing had ever survived this footage.<br><br>the archive has been corrected. it will not apologize. attempt count on record: ${att+1}.`;
+    }
+  } else if(kind==='DENIED'){
+    title='RECONSTRUCTION ABANDONED.<br>CLASSIFICATION: UNSURVIVABLE.'; klass='dmg';
+    body=`after ${att+1} attempt${att===0?'':'s'}, the second specimen has declined to continue. the footage is held against no one, now.<br><br>the fall is officially weather.<br>${esc(incoming.from)} has been notified, and is entitled to exactly one told-you-so, which the record will honor.`;
+  } else if(att===0){
+    title='RECONSTRUCTION COMPLETE.<br>SURVIVED. FIRST ATTEMPT.'; klass='ok';
+    body=`classification: SURVIVABLE.<br>same stud. same sky. the only variable that changed was the decision.<br><br>the record now reads, forever:<br><b>${esc(incoming.f.n)}: −${incoming.f.p}% (${esc(myHandle)} survived it in one)</b>`;
+  } else {
+    title=`RECONSTRUCTION COMPLETE.<br>attempt ${att+1}.`; klass='ok';
+    body=`classification: SURVIVABLE.<br>attempts 1 through ${att} are attached to this footage and cannot be detached.<br><br>survivable: proven. easy: the attempts disagree.`;
+  }
+  el('verdict_doc').innerHTML =
+    `<h1 class="${klass}">${title}</h1><div class="rule"></div><div class="sub">${body}</div>`+
+    (incoming.archive ? '' :
+      `<div class="rule"></div><div class="ledger"><span>${esc(myHandle)} v ${esc(incoming.from)}</span>`+
+      `<span>${newL.c} case${newL.c===1?'':'s'}</span><span class="ok">${newL.g} survivable</span><span class="dmg">${newL.d} weather</span></div>`);
+  el('p_verdict').classList.add('on');
+  if(incoming.archive){
+    el('b_reply').style.display='none';
+  } else {
+    el('b_reply').style.display='';
+    const vlink = buildVerdictLink({kind, attempts:att, ledger:newL});
+    el('b_reply').onclick = ()=>doShare(vlink, 'verdict');
+  }
+  el('b_climb').onclick = ()=>enterOwnTower();
+}
+
+/* the on-ramp: after judging, the cold receiver is DEPOSITED into their own tower */
+function enterOwnTower(){
+  el('p_verdict').classList.remove('on');
+  incoming=null; ghost=null; takeover=null;
+  history.replaceState(null,'',location.pathname);   // clear the footage from the URL
+  resetToPit();
+  mode='play';
+  el('b_archive').style.display='block';
+}
+function showReceivedVerdict(pl){
+  // the sender opening the classification they got back
+  const win = pl.verdict==='GRANTED';
+  el('verdict_doc').innerHTML =
+    `<div class="kick" style="letter-spacing:.18em;font-size:11px;color:#8a2b1f;margin-bottom:6px">RE: ${esc(pl.orig?pl.orig.n:'your footage')}</div>`+
+    `<h1 class="${win?'dmg':'ok'}">${win?'CLASSIFICATION:<br>SURVIVABLE.':'CLASSIFICATION:<br>UNSURVIVABLE.'}</h1>`+
+    `<div class="rule"></div><div class="sub">${win?`${esc(pl.from)} survived your fall on attempt ${(pl.n||0)+1}. the only variable that changed was the decision. the decision was yours.`:`${esc(pl.from)} took the same spin at the same speed and met the same plush. the fall is officially weather. you are entitled to exactly one told-you-so, which the record will honor.`}</div>`;
+  el('p_verdict').classList.add('on');
+  el('b_reply').style.display='';
+  el('b_reply').textContent='TRANSMIT NEW FOOTAGE'; el('b_reply').onclick=()=>enterOwnTower();
+  el('b_climb').onclick=()=>enterOwnTower();
+  mode='verdict';
+}
+
+/* ---------- reset ---------- */
+function resetToPit(){
+  const pit = STUDS.find(s=>s.pit);
+  HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
+  attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
+  camY = HAND.y+60;
+}
+
+/* ============================================================ BOOT */
+function boot(){
+  resize(); buildTower(); load();
+  bossLine = FIELD_NOTES[(Date.now()>>10)%FIELD_NOTES.length];
+  el('b_archive').onclick = ()=>{ if(mode==='play'){ resetToPit(); startAppeal(JSON.parse(JSON.stringify(ELDER))); } };
+  const inc = parseIncoming();
+  if(inc){ resetToPit(); startAppeal(inc); }
+  else {
+    // land on the nearest pit stud, already gripping, dusty if returning
+    resetToPit();
+    if(dusty){ setTimeout(()=>{ HAND._wiped=true; }, 900); }
+    mode='play';
+    el('b_archive').style.display='block';
+  }
+  requestAnimationFrame(frame);
+}
+
+/* one fixed-step of the sim, mirroring the main loop body (for headless driving) */
+function tickOnce(){
+  if(hitstop>0) hitstop-=DT;
+  if(slowmo>0) slowmo-=DT;
+  if(flash>0) flash=Math.max(0,flash-DT*4);
+  if(bossLineT>0) bossLineT-=DT;
+  const active = (mode==='play'||mode==='appeal_play');
+  if(active && hitstop<=0){ const scale=slowmo>0?0.4:1;
+    if(mode==='appeal_play') stepTakeover(DT*scale); else step(DT*scale); }
+  else if(mode==='appeal_watch'){ advanceGhost(DT); }
+}
+
+/* debug hooks (like his other games: __bfe etc.) */
+window.__thwap = {
+  goto:(pct)=>{ const y=PIT_Y+TOWER_H*pct/100; const s=nearestStud(CX,y,600)||{x:CX,y,type:'plastic'};
+    HAND.x=s.x;HAND.y=s.y;HAND.peakY=s.y; attachTo(s,0,0); camY=s.y+60; },
+  fall:()=>{ HAND.mode='fly'; HAND.vx=120; HAND.vy=-1500; fallTrack=null; },
+  press:()=>down(), release:()=>up(),
+  tick:(n=1)=>{ for(let i=0;i<n;i++) tickOnce(); return window.__thwap.state(); },
+  paint:()=>{ render(); return true; },        // force a frame while headless
+  studs:()=>STUDS.length,
+  towerSig:()=>STUDS.map(s=>Math.round(s.x)+':'+Math.round(s.y)+s.type[0]).join('|').length,
+  ys:()=>STUDS.filter(grippable).map(s=>Math.round(s.y)).sort((a,b)=>a-b),
+  // for each grippable stud, is there another grippable stud reachable above it?
+  climbAudit:()=>{ const g=STUDS.filter(grippable).slice().sort((a,b)=>a.y-b.y);
+    const APEX=397, RE=REACH; let worst=null, wallY=null;
+    for(const s of g){ if(s.y>TOP_Y-260) continue;
+      // best reachable higher stud: within horizontal span and vertical <= apex+reach
+      let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue;
+        const dx=Math.abs(t.x-s.x); if(dx>240) continue;
+        const need=dy - RE; if(need<best) best=need; }
+      if(best>APEX){ if(!worst||best>worst){worst=best; wallY=Math.round(s.y);} } }
+    return {climbable: worst===null, hardestNeed:worst, wallY, apexBudget:APEX+RE}; },
+  consts:()=>({REACH, apex:Math.round(LAUNCH_MAX*0.88*LAUNCH_MAX*0.88/(2*G))}),
+  handle:(h)=>{ myHandle=h; save(); },
+  link:()=>window.__lastLink,
+  makeAppeal:()=>{ // build a fake named fall and its footage link (round-trip test)
+    currentFall={zone:ZONES[2],no:7,name:'THE OPTIMIST',pct:61,fromPct:54,toPct:12,wraps:3,ceremony:true,
+      pts:[[210,3200],[190,3000],[240,2600],[160,2100],[200,1700]].map(p=>({x:p[0],y:p[1]})),
+      s0:{x:200,y:2000,vx:120,vy:-900},line:FINDINGS.manual[0]};
+    return buildAppealLink(currentFall); },
+  elder:()=>{ resetToPit(); startAppeal(JSON.parse(JSON.stringify(ELDER))); return 'elder started'; },
+  parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
+  hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
+    charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null}),
+  state:()=>({mode,pct:+pctOf(HAND.y).toFixed(1),best:+bestPct.toFixed(1),handle:myHandle,frame:simFrame,
+    handMode:HAND.mode,attempts:takeover?takeover.attempts:null}),
+};
+
+// a link dropped into an already-open tab should also fire the appeal
+addEventListener('hashchange', ()=>{
+  if(mode==='appeal_intro'||mode==='appeal_watch'||mode==='appeal_play'||mode==='verdict') return;
+  const inc = parseIncoming();
+  if(inc){ resetToPit(); startAppeal(inc); }
+});
+
+boot();
+</script>
+</body>
+</html>
