@@ -293,7 +293,7 @@ const HAND = {
   peakY:PIT_Y,              // highest established point since last safe grab
 };
 let simFrame=0, hitstop=0, slowmo=0, flash=0, clawT=0;
-let held=false, wantGrab=false, grabBufTimer=0, grabLock=0;
+let held=false, grabWin=0, whiffLock=0, grabLock=0;
 let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
 let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
 let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
@@ -374,11 +374,14 @@ function fling(reason){
     if(HAND.plush>=1.25 && HAND.plush<1.5 && HAND.charge>=0.9) recordMotion('snipe', (1.5-HAND.plush)*1000);
   }
   const c = HAND.charge;
-  const spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
+  let spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
   // launch is ALWAYS up (climbing is about power, not phase-timing a tangent);
   // the side the hand is on when you let go steers left/right on a wide, readable window.
   const side = Math.cos(HAND.ang);           // -1..1: which side of the anchor
   let dx = clamp(side,-1,1)*0.62, dy = 1.0;
+  if(reason==='greed'){                      // the cap popped you: weak, sideways, deserved
+    dx = (side>=0?1:-1)*1.25; dy = 0.38; spd *= 0.72;
+  }
   const inv = 1/Math.hypot(dx,dy);
   HAND.vx = dx*inv*spd; HAND.vy = dy*inv*spd;
   HAND.lastAnchor = HAND.anchor; HAND.lastWraps = HAND.wraps; HAND.lastSide = side;
@@ -458,16 +461,18 @@ function step(dt){
       }
     }
 
-    // grab attempt (buffered while held; coyote-forgiven; locked briefly right after a fling)
+    // grab attempt: one timed window per tap; a whiff recoils the hand before it can try again
     if(grabLock>0) grabLock -= dt;
-    if((wantGrab || grabBufTimer>0) && grabLock<=0){
-      grabBufTimer = Math.max(0, grabBufTimer-dt);
+    if(whiffLock>0) whiffLock -= dt;
+    if(grabWin>0){
+      grabWin -= dt;
       const s = nearestStud(HAND.x, HAND.y, REACH);
+      if(!s && grabWin<=0){ whiffLock = 0.24; }
       if(s){
         const wasFalling = HAND.vy < -650 && fallTrack;
         const dropSoFar = fallTrack ? (pctOf(HAND.peakY)-pctOf(HAND.y)) : 0;
         attachTo(s, HAND.vx, HAND.vy);
-        wantGrab=false; grabBufTimer=0;
+        grabWin=0; whiffLock=0;
         if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash("CAUGHT."); }   // clutch save juice
         if(mode==='play'){
           if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
@@ -514,10 +519,11 @@ function down(){
     if(takeover && !takeover.saved && takeover.window<=0){ takeover.window = 0.12; }
     return;
   }
-  if(HAND.mode==='fly'){ wantGrab=true; grabBufTimer=COYOTE; }
+  // the climb: a tap is ONE timed grab attempt; taps while recoiling or mid-launch are ignored
+  if(HAND.mode==='fly' && whiffLock<=0 && grabLock<=0 && grabWin<=0){ grabWin = 0.15; }
 }
 function up(){
-  held=false; wantGrab=false;
+  held=false;
   if((mode==='play'||mode==='appeal_play') && HAND.mode==='attach') fling('manual');
 }
 cv.addEventListener('pointerdown', e=>{ e.preventDefault(); down(); }, {passive:false});
@@ -550,7 +556,8 @@ function drawHand(){
   ctx.save();
   // reach ring (always visible)
   if(HAND.mode==='fly'){
-    ctx.strokeStyle='rgba(232,232,238,.10)'; ctx.lineWidth=1.5;
+    ctx.strokeStyle = whiffLock>0 ? 'rgba(226,75,74,.55)' : (grabWin>0 ? 'rgba(232,232,238,.45)' : 'rgba(232,232,238,.10)');
+    ctx.lineWidth = grabWin>0 ? 2.5 : 1.5;
     ctx.beginPath(); ctx.arc(X,Y,REACH*S,0,7); ctx.stroke();
     const t = nearestStud(HAND.x,HAND.y,REACH);
     if(t){ const TX=sx(t.x),TY=sy(t.y);
@@ -924,7 +931,7 @@ function beginTakeover(){
   HAND.mode='fly'; HAND.x=s0[0]; HAND.y=s0[1]; HAND.vx=s0[2]; HAND.vy=s0[3];
   HAND.peakY = HAND.y + 500;
   takeover = { attempts:0, failY: HAND.y - 620, saved:false, s0:s0.slice(), window:0 };
-  held=false; wantGrab=false;
+  held=false; grabWin=0; whiffLock=0;
   bossFlash('YOU ARE NOW '+incoming.from+'.');
   const gv=el('b_giveup'); gv.style.display='block';
   gv.onclick=()=>{ gv.style.display='none'; resolveVerdict('DENIED'); };
@@ -1104,7 +1111,7 @@ window.__thwap = {
   record:()=>JSON.parse(JSON.stringify({guide:guide, fallLog:fallLog, arch:archStatus})),
   parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
   hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
-    charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null}),
+    charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null,cause:HAND.lastCause||null}),
   state:()=>({mode,pct:+pctOf(HAND.y).toFixed(1),best:+bestPct.toFixed(1),handle:myHandle,frame:simFrame,
     handMode:HAND.mode,attempts:takeover?takeover.attempts:null,
     tw:takeover?+(takeover.window||0).toFixed(3):null, tsaved:takeover?takeover.saved:null,
