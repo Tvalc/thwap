@@ -106,7 +106,7 @@ const VW = 430;              // world width in units
 const CX = VW/2;
 const G  = 2000;             // gravity (units/s^2)
 const DT = 1/120;            // fixed sim step
-const REACH = 150;           // grab reach ring radius
+const REACH = 112;           // grab reach ring radius — small enough that aim is real
 const COYOTE = 0.08;         // 80ms grab forgiveness
 const HITSTOP = 0.07;        // 70ms freeze on grab
 const WIND_TIME = 0.85;      // seconds to full charge
@@ -192,8 +192,8 @@ const CASES = [
   { id:'elder', title:'RECONSTRUCTION №1 — THE ELDER', from:'THE ELDER',
     sub:'Season 1, day 3. Survived by nothing, ever.',
     f:{n:'FALL №1', p:79, a:91, b:12, w:3},
-    t:[[215,5610],[180,5300],[240,4900],[170,4500],[230,4100],[300,3750],[360,3400]],
-    s0:[360,3400,180,-900] },
+    t:[[215,5610],[180,5300],[240,4900],[170,4500],[230,4100],[250,3300],[270,2450]],
+    s0:[270,2450,-180,-900] },
   { id:'lullaby', title:'RECONSTRUCTION №2 — THE LULLABY', from:'PALMER',
     sub:'Season 1. A retired hand. The plush sang, allegedly.',
     f:{n:'FALL №2', p:58, a:71, b:13, w:2},
