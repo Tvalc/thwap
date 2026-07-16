@@ -71,8 +71,7 @@
   </div>
 
   <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
-  <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE · №1</button>
-  <button class="btn ghost" id="b_record" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE RECORD</button>
+  <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE</button>
 
   <div class="panel" id="p_record">
     <div class="doc" id="record_doc" style="max-height:72vh; overflow-y:auto;"></div>
@@ -189,10 +188,27 @@ const GUIDE_DEFS = {
     riddle:'concerns: a rung that was, on review, found unnecessary.',
     stamp:'two rungs, one fling. the stud in between has been notified.'},
 };
-const ELDER = { v:1, k:'A', archive:true, from:'THE ELDER', sn:1,
-  f:{n:'FALL №1', p:79, a:91, b:12, w:3},
-  t:[[215,5610],[180,5400],[240,5100],[170,4700],[210,4300],[160,3900],[220,3500],[190,3100],[215,2850]],
-  s0:[215,2850,140,-850], L:{vs:null,c:0,g:0,d:0,dmg:0} };
+const CASES = [
+  { id:'elder', title:'RECONSTRUCTION №1 — THE ELDER', from:'THE ELDER',
+    sub:'Season 1, day 3. Survived by nothing, ever.',
+    f:{n:'FALL №1', p:79, a:91, b:12, w:3},
+    t:[[215,5610],[180,5300],[240,4900],[170,4500],[230,4100],[300,3750],[360,3400]],
+    s0:[360,3400,180,-900] },
+  { id:'lullaby', title:'RECONSTRUCTION №2 — THE LULLABY', from:'PALMER',
+    sub:'Season 1. A retired hand. The plush sang, allegedly.',
+    f:{n:'FALL №2', p:58, a:71, b:13, w:2},
+    t:[[200,4400],[260,4300],[320,4180],[330,4050]],
+    s0:[330,4050,-260,-900] },
+  { id:'wedding', title:'RECONSTRUCTION №3 — THE WEDDING', from:'DUCHESS',
+    sub:'Season 1. From the cornice. Nobody speaks of the reception.',
+    f:{n:'FALL №3', p:88, a:96, b:8, w:3},
+    t:[[215,5900],[170,5750],[120,5600],[80,5480],[60,5400]],
+    s0:[60,5400,-260,-900] },
+];
+function casePayload(c){ return {v:1,k:'A',archive:true,caseId:c.id,from:c.from,sn:1,f:c.f,t:c.t,s0:c.s0.slice(),L:{vs:null,c:0,g:0,d:0,dmg:0}}; }
+function footagePayload(e){ return {v:1,k:'A',self:true,no:e.no,from:myHandle,sn:SEASON.id,
+  f:{n:'FALL №'+e.no+' — '+e.name, p:e.pct, a:e.from, b:Math.max(0,e.from-e.pct), w:0},
+  t:e.t, s0:e.s0.slice(), L:{vs:null,c:0,g:0,d:0,dmg:0}}; }
 
 /* ---------- canvas / DPR ---------- */
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -280,7 +296,7 @@ let simFrame=0, hitstop=0, slowmo=0, flash=0, clawT=0;
 let held=false, wantGrab=false, grabBufTimer=0, grabLock=0;
 let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
 let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
-let fallLog = [], pendingStamp = null, bestTime = null, runStart = null;
+let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
 let bossLine = FIELD_NOTES[0], bossLineT=0;
 
@@ -300,7 +316,7 @@ function load(){
     bestPct = d.best||0; dusty = !!d.played; myHandle = d.handle||null; beaten = !!d.beaten;
     fallCount = d.falls||0; bestFall = d.bestFall||0;
     if(d.guide) for(const k in guide){ if(d.guide[k]) guide[k]=d.guide[k]; }
-    fallLog = d.fallLog||[]; bestTime = d.bestTime||null;
+    fallLog = d.fallLog||[]; bestTime = d.bestTime||null; archStatus = d.arch||{};
     if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
   }catch(e){}
   if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
@@ -309,7 +325,7 @@ function fmtT(s){ const m=Math.floor(s/60), ss=(s%60); return m+':'+(ss<10?'0':'
 function save(){
   try{ localStorage.setItem('thwap', JSON.stringify({
     best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall,
-    guide:guide, fallLog:fallLog.slice(-10), bestTime:bestTime, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -390,7 +406,11 @@ function endFallAtLanding(landY){
       s0: fallTrack.lastSave,
       line: pool[(fallCount + (HAND.lastWraps||0)) % pool.length],
     };
-    fallLog.push({no:currentFall.no, name:currentFall.name, pct:currentFall.pct, from:currentFall.fromPct});
+    const fs0 = fallTrack.lastSave;
+    fallLog.push({no:currentFall.no, name:currentFall.name, pct:currentFall.pct, from:currentFall.fromPct,
+      saved:false, att:0,
+      s0: fs0 ? [Math.round(fs0.x),Math.round(fs0.y),Math.round(fs0.vx),Math.round(fs0.vy)] : null,
+      t: currentFall.pts.map(p=>[Math.round(p.x),Math.round(p.y)]) });
     save();
     openFallScreen();
   }
@@ -490,6 +510,10 @@ function bossFlash(t){ bossLine=t; bossLineT=1.1; }
 function down(){
   if(mode!=='play' && mode!=='appeal_play') return;
   held=true;
+  if(mode==='appeal_play'){                      // reconstructions: ONE grab per attempt, timed
+    if(takeover && !takeover.saved && takeover.window<=0){ takeover.window = 0.12; }
+    return;
+  }
   if(HAND.mode==='fly'){ wantGrab=true; grabBufTimer=COYOTE; }
 }
 function up(){
@@ -658,14 +682,15 @@ function render(){
   if(mode==='appeal_play' && takeover){ ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.9)';
     ctx.font=`700 14px ui-monospace,monospace`; ctx.fillText('SAVE IT.', Wc/2, 96);
     ctx.font=`600 11px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.5)';
-    ctx.fillText('attempt '+(takeover.attempts+1), Wc/2, 114); }
+    ctx.fillText('one grab · press at the instant · attempt '+(takeover.attempts+1), Wc/2, 114); }
 }
 
 /* ============================================================ MAIN LOOP */
-let last=performance.now()/1000, acc=0;
+let last=performance.now()/1000, acc=0, frozen=false;
 function frame(t){
   requestAnimationFrame(frame);
   const now=t/1000; let real=now-last; last=now; if(real>0.2) real=0.2;
+  if(frozen){ render(); return; }
   acc+=real;
   while(acc>=DT){
     // timers (real time)
@@ -718,28 +743,37 @@ el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=nul
 function openRecord(){
   if(mode!=='play') return;
   mode='record';
-  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">SPECIMEN FILE · ${SEASON.name}</div>`+
-    `<h1>${esc(myHandle)}</h1>`+
-    `<div class="sub">highest elevation: ${Math.round(bestPct)}% · falls on record: ${fallCount}`+
-    (bestTime!==null ? `<br>return migration, best: ${fmtT(bestTime)}` : '')+`</div>`+
-    `<div class="rule"></div>`+
-    `<div class="big" style="font-size:13px;">THE FIELD GUIDE</div>`;
-  for(const k in GUIDE_DEFS){ const def=GUIDE_DEFS[k], g=guide[k];
-    h += g.n>0
-      ? `<div class="sub" style="margin-top:6px;"><b>${def.name}</b> — filings: ${g.n} · best margin: ${g.pb}${def.unit}</div>`
-      : `<div class="sub" style="margin-top:6px;"><b>CASE [SEALED]</b> — ${esc(def.riddle)}</div>`;
-  }
-  if(fallLog.length){
-    h += `<div class="rule"></div><div class="big" style="font-size:13px;">RECENT ENTRIES</div>`;
-    fallLog.slice(-5).reverse().forEach(f=>{
-      h += `<div class="sub" style="margin-top:4px;">№${f.no} “${esc(f.name)}” — <span class="dmg">−${f.pct}%</span> from ${f.from}%</div>`;
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE ARCHIVE · ${SEASON.name}</div>`+
+    `<h1>standing footage</h1>`+
+    `<div class="sub">every entry is enterable. one grab each.</div>`+
+    `<div class="rule"></div>`;
+  CASES.forEach(c=>{
+    const st = archStatus[c.id];
+    h += `<div style="margin-top:8px;"><div class="big" style="font-size:13px;">${esc(c.title)}</div>`+
+      `<div class="sub">${esc(c.sub)}<br>`+
+      (st && st.saved ? `<span class="ok">overturned — attempt ${st.att}.</span>` : `survived by: nothing, yet.`)+`</div>`+
+      `<button class="btn hot" style="width:100%;margin-top:6px;padding:9px;font-size:12px;" onclick="__enterCase('${c.id}')">ENTER THE FOOTAGE</button></div>`;
+  });
+  const replayable = fallLog.filter(f=>f.s0).slice(-4).reverse();
+  if(replayable.length){
+    h += `<div class="rule"></div><div class="big" style="font-size:13px;">YOUR FOOTAGE</div>`;
+    replayable.forEach(f=>{
+      h += `<div class="sub" style="margin-top:7px;">№${f.no} “${esc(f.name)}” — <span class="dmg">−${f.pct}%</span> from ${f.from}%`+
+        (f.saved ? ` · <span class="ok">overturned, attempt ${f.att}</span>` : ` · unsaved`)+
+        `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__reenter(${f.no})">RE-ENTER YOUR FALL</button></div>`;
     });
   }
+  const sealed = Object.keys(GUIDE_DEFS).filter(k=>guide[k].n===0);
+  h += `<div class="rule"></div><div class="sub" style="font-size:11px;">field guide: ${5-sealed.length} of 5 behaviors documented.`+
+    (sealed.length? `<br>next sealed case ${esc(GUIDE_DEFS[sealed[0]].riddle)}`:' the guide is complete.')+`</div>`;
   el('record_doc').innerHTML = h;
   el('p_record').classList.add('on');
 }
+window.__enterCase = (id)=>{ const c=CASES.find(x=>x.id===id);
+  if(c && mode==='record'){ el('p_record').classList.remove('on'); resetToPit(); startAppeal(casePayload(c)); } };
+window.__reenter = (no)=>{ const e=fallLog.find(f=>f.no===no);
+  if(e && e.s0 && mode==='record'){ el('p_record').classList.remove('on'); resetToPit(); startAppeal(footagePayload(e)); } };
 el('b_recclose').onclick = ()=>{ el('p_record').classList.remove('on'); mode='play'; };
-el('b_record').onclick = ()=>openRecord();
 
 function openWinScreen(){
   if(mode==='win') return;
@@ -857,14 +891,17 @@ function startAppeal(pl){
   if(pl.k==='V'){ showReceivedVerdict(pl); return; }
   // ghost playback data
   ghost = { pts: pl.t.map(p=>({x:p[0],y:p[1]})), i:0, pct:pl.f.a, done:false };
-  el('b_archive').style.display='none'; el('b_record').style.display='none';
-  el('ai_kick').textContent = pl.archive ? 'from the archive' : 'incoming field footage';
+  el('b_archive').style.display='none';
+  el('ai_kick').textContent = pl.self ? 'from your own footage' : (pl.archive ? 'from the archive' : 'incoming field footage');
+  const kickLine = pl.self ? 'RE-ENTRY · '+SEASON.name : (pl.archive ? 'THE ARCHIVE · SEASON 1' : 'THE FOOTAGE · '+(pl.sn?'SEASON '+pl.sn:SEASON.name));
+  const subLine = pl.self ? 'You were there. You are about to be there again.'
+    : (pl.archive ? 'Standing footage. Survived by nothing, yet.' : esc(pl.from)+' maintains that no grab existed. The footage shows one.');
   el('ai_doc').innerHTML =
-    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">${pl.archive?'RECONSTRUCTION №1 · SEASON 1':'THE FOOTAGE · '+(pl.sn?'SEASON '+pl.sn:SEASON.name)}</div>`+
+    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">${kickLine}</div>`+
     `<h1>${esc(pl.from)} FELL<br>FROM ${pl.f.a}%<br><span class="dmg">${esc(pl.f.n)} · −${pl.f.p}%</span></h1>`+
-    `<div class="sub">${pl.archive?'Season 1, day 3. This footage has been survived by nothing, ever.':esc(pl.from)+' maintains that no grab existed. The footage shows one.'}</div>`+
+    `<div class="sub">${subLine}</div>`+
     `<div class="sub" style="margin-top:6px;">The footage has been wrong before. Once.</div>`+
-    `<div class="rule"></div><div class="sub big">you are about to become ${esc(pl.from)}.</div>`;
+    `<div class="rule"></div><div class="sub big">you are about to become ${pl.self?'yourself':esc(pl.from)}.</div>`;
   el('p_appeal_intro').classList.add('on');
   mode='appeal_intro';
   // center camera on the fall
@@ -886,30 +923,33 @@ function beginTakeover(){
   const s0 = incoming.s0;
   HAND.mode='fly'; HAND.x=s0[0]; HAND.y=s0[1]; HAND.vx=s0[2]; HAND.vy=s0[3];
   HAND.peakY = HAND.y + 500;
-  takeover = { attempts:0, failY: HAND.y - 460, saved:false, s0:s0.slice() };
+  takeover = { attempts:0, failY: HAND.y - 620, saved:false, s0:s0.slice(), window:0 };
   held=false; wantGrab=false;
   bossFlash('YOU ARE NOW '+incoming.from+'.');
   const gv=el('b_giveup'); gv.style.display='block';
   gv.onclick=()=>{ gv.style.display='none'; resolveVerdict('DENIED'); };
 }
+function toReset(msg){
+  takeover.attempts++; takeover.window=0;
+  const s0=takeover.s0; HAND.x=s0[0];HAND.y=s0[1];HAND.vx=s0[2];HAND.vy=s0[3];
+  flash=0.6; if(msg) bossFlash(msg);
+}
 function stepTakeover(dt){
   simFrame++;
-  // grab
-  if(wantGrab||grabBufTimer>0){
-    grabBufTimer=Math.max(0,grabBufTimer-dt);
+  // ONE grab: the window opens on press and lasts ~160ms; miss = attempt spent
+  if(takeover.window>0 && !takeover.saved){
+    takeover.window -= dt;
     const s=nearestStud(HAND.x,HAND.y,REACH);
-    if(s){ attachTo(s,HAND.vx,HAND.vy); slowmo=0.45; bossFlash('CAUGHT.'); wantGrab=false; grabBufTimer=0;
-      takeover.saved=true; setTimeout(()=>resolveVerdict('GRANTED'), 700); return; }
+    if(s){ attachTo(s,HAND.vx,HAND.vy); slowmo=0.45; bossFlash('CAUGHT.');
+      takeover.saved=true; takeover.window=0; setTimeout(()=>resolveVerdict('GRANTED'), 700); return; }
+    if(takeover.window<=0){ toReset('the grab met nothing.'); return; }
   }
+  if(takeover.saved) return;                        // caught: hold the frame for the verdict
   HAND.vy-=G*dt; HAND.x+=HAND.vx*dt; HAND.y+=HAND.vy*dt;
   if(HAND.x<28){HAND.x=28;HAND.vx*=-0.5;} if(HAND.x>VW-28){HAND.x=VW-28;HAND.vx*=-0.5;}
   camY += (HAND.y+60 - camY)*Math.min(1,dt*7);
-  // missed → reset to the same doomed instant, count the attempt
-  if(HAND.y < takeover.failY){
-    takeover.attempts++;
-    const s0=takeover.s0; HAND.x=s0[0];HAND.y=s0[1];HAND.vx=s0[2];HAND.vy=s0[3];
-    flash=0.6;
-  }
+  // fell past the footage → reset to the same doomed instant, count the attempt
+  if(HAND.y < takeover.failY && !takeover.saved){ toReset(null); }
 }
 
 /* ---------- verdict engine + ledger ---------- */
@@ -922,12 +962,23 @@ function resolveVerdict(kind){
   const newL = { vs:incoming.from, c:(L.c||0)+1, g:(L.g||0)+(kind==='GRANTED'?1:0),
     d:(L.d||0)+(kind==='DENIED'?1:0), dmg:(L.dmg||0)+ (incoming.f? incoming.f.p:0) };
   let title, body, klass;
-  if(incoming.archive){
+  if(incoming.self){
+    if(kind==='DENIED'){
+      title='THE FALL STANDS.'; klass='dmg';
+      body=`you have now declined it twice. the footage is patient.`;
+    } else {
+      title=`FALL №${incoming.no} — OVERTURNED.${att===0?'<br>FIRST ATTEMPT.':''}`; klass='ok';
+      body=`survivable after all. it was you both times.<br><br>the record has been amended. the fall keeps its name; you keep the last word.`;
+      const e=fallLog.find(f=>f.no===incoming.no); if(e){ e.saved=true; e.att=att+1; } save();
+    }
+  } else if(incoming.archive){
+    if(kind!=='DENIED'){ const cur=archStatus[incoming.caseId];
+      if(!cur || !cur.saved || att+1<cur.att){ archStatus[incoming.caseId]={saved:true, att:att+1}; } save(); }
     if(kind==='DENIED'){
       title='RECONSTRUCTION ABANDONED.<br>THE FALL STANDS.'; klass='dmg';
-      body=`sixteen seasons of attempts. the archive expected nothing less.<br><br>THE ELDER can wait. THE ELDER has been waiting since Season 1.`;
+      body=`the archive expected nothing less.<br><br>${esc(incoming.from)} can wait. ${esc(incoming.from)} has been waiting since Season 1.`;
     } else {
-      title=`THE ELDER'S FALL:<br>SURVIVED.${att===0?'<br>FIRST ATTEMPT.':''}`; klass='ok';
+      title=`${esc(incoming.from)}'S FALL:<br>SURVIVED.${att===0?'<br>FIRST ATTEMPT.':''}`; klass='ok';
       body=`nothing had ever survived this footage.<br><br>the archive has been corrected. it will not apologize. attempt count on record: ${att+1}.`;
     }
   } else if(kind==='DENIED'){
@@ -942,11 +993,11 @@ function resolveVerdict(kind){
   }
   el('verdict_doc').innerHTML =
     `<h1 class="${klass}">${title}</h1><div class="rule"></div><div class="sub">${body}</div>`+
-    (incoming.archive ? '' :
+    (incoming.archive||incoming.self ? '' :
       `<div class="rule"></div><div class="ledger"><span>${esc(myHandle)} v ${esc(incoming.from)}</span>`+
       `<span>${newL.c} case${newL.c===1?'':'s'}</span><span class="ok">${newL.g} survivable</span><span class="dmg">${newL.d} weather</span></div>`);
   el('p_verdict').classList.add('on');
-  if(incoming.archive){
+  if(incoming.archive || incoming.self){
     el('b_reply').style.display='none';
   } else {
     el('b_reply').style.display='';
@@ -963,7 +1014,7 @@ function enterOwnTower(){
   history.replaceState(null,'',location.pathname);   // clear the footage from the URL
   resetToPit();
   mode='play';
-  el('b_archive').style.display='block'; el('b_record').style.display='block';
+  el('b_archive').style.display='block';
 }
 function showReceivedVerdict(pl){
   // the sender opening the classification they got back
@@ -991,7 +1042,7 @@ function resetToPit(){
 function boot(){
   resize(); buildTower(); load();
   bossLine = FIELD_NOTES[(Date.now()>>10)%FIELD_NOTES.length];
-  el('b_archive').onclick = ()=>{ if(mode==='play'){ resetToPit(); startAppeal(JSON.parse(JSON.stringify(ELDER))); } };
+  el('b_archive').onclick = ()=>openRecord();
   const inc = parseIncoming();
   if(inc){ resetToPit(); startAppeal(inc); }
   else {
@@ -999,7 +1050,7 @@ function boot(){
     resetToPit();
     if(dusty){ setTimeout(()=>{ HAND._wiped=true; }, 900); }
     mode='play';
-    el('b_archive').style.display='block'; el('b_record').style.display='block';
+    el('b_archive').style.display='block';
   }
   requestAnimationFrame(frame);
 }
@@ -1046,14 +1097,18 @@ window.__thwap = {
       pts:[[210,3200],[190,3000],[240,2600],[160,2100],[200,1700]].map(p=>({x:p[0],y:p[1]})),
       s0:{x:200,y:2000,vx:120,vy:-900},line:FINDINGS.manual[0]};
     return buildAppealLink(currentFall); },
-  elder:()=>{ resetToPit(); startAppeal(JSON.parse(JSON.stringify(ELDER))); return 'elder started'; },
+  caseStart:(id)=>{ resetToPit(); startAppeal(casePayload(CASES.find(c=>c.id===id)||CASES[0])); return 'case '+id; },
+  freeze:(v)=>{ frozen=!!v; return frozen; },
+  grippableStuds:()=>STUDS.filter(grippable).map(s=>[Math.round(s.x),Math.round(s.y)]),
   motion:(k,m)=>{ recordMotion(k,m); return {guide:guide[k], pending:pendingStamp}; },
-  record:()=>JSON.parse(JSON.stringify(guide)),
+  record:()=>JSON.parse(JSON.stringify({guide:guide, fallLog:fallLog, arch:archStatus})),
   parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
   hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
     charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null}),
   state:()=>({mode,pct:+pctOf(HAND.y).toFixed(1),best:+bestPct.toFixed(1),handle:myHandle,frame:simFrame,
-    handMode:HAND.mode,attempts:takeover?takeover.attempts:null}),
+    handMode:HAND.mode,attempts:takeover?takeover.attempts:null,
+    tw:takeover?+(takeover.window||0).toFixed(3):null, tsaved:takeover?takeover.saved:null,
+    ty:takeover?Math.round(HAND.y-takeover.failY):null}),
 };
 
 // a link dropped into an already-open tab should also fire the appeal
