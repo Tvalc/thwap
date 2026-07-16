@@ -72,6 +72,12 @@
 
   <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
   <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE · №1</button>
+  <button class="btn ghost" id="b_record" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE RECORD</button>
+
+  <div class="panel" id="p_record">
+    <div class="doc" id="record_doc" style="max-height:72vh; overflow-y:auto;"></div>
+    <button class="btn ghost wide" id="b_recclose">back to the climb</button>
+  </div>
 
   <div class="panel" id="p_win">
     <div class="doc" id="win_doc"></div>
@@ -166,6 +172,23 @@ const CARVINGS = [
   {pct:51.2, x:VW-76,  t:"— it means us. nobody told it yet."},
   {pct:63,   x:80,     t:"ONE. TWO. FLING."},
 ];
+const GUIDE_DEFS = {
+  dead:   {name:'THE DEAD RELEASE', better:'lower', unit:'ms',
+    riddle:'concerns: the two instants per revolution when the machine cannot tell left from right.',
+    stamp:'released at dead vertical. the machine checked the angle twice. there was no angle.'},
+  wrap:   {name:'THE THIRD WRAP', better:'lower', unit:'ms',
+    riddle:'concerns: property released moments before repossession.',
+    stamp:'filed {m}ms before the cap. the cap was already reaching.'},
+  snipe:  {name:'THE RIP SNIPE', better:'lower', unit:'ms',
+    riddle:'concerns: leaving a soft thing precisely before it leaves you.',
+    stamp:'left the plush {m}ms before it left you.'},
+  cushion:{name:'THE CUSHION', better:'lower', unit:'%',
+    riddle:'concerns: falls that never made the record, and why the record resents them.',
+    stamp:'drop trimmed to {m}%. nothing will be named today. the record is disappointed.'},
+  skip:   {name:'THE SKIP', better:'higher', unit:'u',
+    riddle:'concerns: a rung that was, on review, found unnecessary.',
+    stamp:'two rungs, one fling. the stud in between has been notified.'},
+};
 const ELDER = { v:1, k:'A', archive:true, from:'THE ELDER', sn:1,
   f:{n:'FALL №1', p:79, a:91, b:12, w:3},
   t:[[215,5610],[180,5400],[240,5100],[170,4700],[210,4300],[160,3900],[220,3500],[190,3100],[215,2850]],
@@ -208,22 +231,41 @@ function buildTower(){
     const pct = (y-PIT_Y)/TOWER_H*100;
     const z = zoneAt(pct);
     // horizontal placement zig-zags; gap grows a touch with height
-    const spread = 96 + rnd()*54;
+    const spread = 96 + rnd()*54 + (pct>55?26:0);
     const x = CX + side*spread*(0.35+rnd()*0.65);
     let type='plastic';
     if(z.name==='the pit') type='plush';
-    else if(z.name==='the gallery'){ type = rnd()<0.42 ? 'glass' : 'plastic'; }
+    else if(z.name==='the gallery'){ type = rnd()<0.52 ? 'glass' : 'plastic'; }
+    else if(z.name==='claw country'){ type = rnd()<0.28 ? 'glass' : 'plastic'; }
     else if(z.name==='the spill'){ type = rnd()<0.25 ? 'plush':'plastic'; }
     STUDS.push({x:Math.max(48,Math.min(VW-48,x)), y, type});
-    // sometimes a helper stud on the other side so ascents stay ~80% catchable
-    if(rnd()<0.5){ STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+70+rnd()*40,
-      type: (z.name==='the gallery'&&rnd()<0.3)?'glass':'plastic'}); }
-    y += 196 + rnd()*96;
+    // helper studs thin out with altitude — the upper machine stops being polite
+    if(rnd() < (pct>55 ? 0.32 : 0.5)){ STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+70+rnd()*40,
+      type: (z.name==='the gallery'&&rnd()<0.42)?'glass':'plastic'}); }
+    let gap = 196 + rnd()*96;
+    if(pct>55) gap += 30 + rnd()*26;
+    if(pct>80) gap += 26 + rnd()*24;
+    y += gap;
     side *= -1;
   }
   // the claw: a grabbable bar near the chute
   CLAW = {x:CX, y:TOP_Y-960, w:120, phase:0};
   STUDS.push({x:CX, y:TOP_Y-20, type:'plastic', chute:true});
+  // service pass: the machine is hostile, never impossible — rivet in plastic where no route exists
+  const APEX=397; let safety=0;
+  while(safety++<60){
+    const g = STUDS.filter(grippable).sort((a,b)=>a.y-b.y);
+    let wall=null;
+    for(const s of g){ if(s.y>TOP_Y-260) continue;
+      let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue;
+        if(Math.abs(t.x-s.x)>240) continue;
+        const need=dy-REACH; if(need<best) best=need; }
+      if(best>APEX){ wall=s; break; } }
+    if(!wall) break;
+    STUDS.push({x:Math.max(48,Math.min(VW-48, wall.x + (wall.x<CX?90:-90))),
+      y:wall.y+APEX+REACH-90, type:'plastic'});
+  }
 }
 let CLAW=null;
 
@@ -237,6 +279,8 @@ const HAND = {
 let simFrame=0, hitstop=0, slowmo=0, flash=0, clawT=0;
 let held=false, wantGrab=false, grabBufTimer=0, grabLock=0;
 let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
+let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
+let fallLog = [], pendingStamp = null, bestTime = null, runStart = null;
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
 let bossLine = FIELD_NOTES[0], bossLineT=0;
 
@@ -255,13 +299,17 @@ function load(){
     const d = JSON.parse(localStorage.getItem('thwap')||'{}');
     bestPct = d.best||0; dusty = !!d.played; myHandle = d.handle||null; beaten = !!d.beaten;
     fallCount = d.falls||0; bestFall = d.bestFall||0;
+    if(d.guide) for(const k in guide){ if(d.guide[k]) guide[k]=d.guide[k]; }
+    fallLog = d.fallLog||[]; bestTime = d.bestTime||null;
     if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
   }catch(e){}
   if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
 }
+function fmtT(s){ const m=Math.floor(s/60), ss=(s%60); return m+':'+(ss<10?'0':'')+ss.toFixed(1); }
 function save(){
   try{ localStorage.setItem('thwap', JSON.stringify({
-    best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall,
+    guide:guide, fallLog:fallLog.slice(-10), bestTime:bestTime, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -289,8 +337,26 @@ function attachTo(s, incomingVx, incomingVy){
   // establish a new "high water mark" for fall accounting when we grab higher
   if(s.y > HAND.peakY - 4) HAND.peakY = Math.max(HAND.peakY, s.y);
 }
+function recordMotion(key, margin){
+  const def = GUIDE_DEFS[key], g = guide[key];
+  const val = Math.round(margin*10)/10;
+  g.n++;
+  const isFirst = g.n===1;
+  const isPB = g.pb===null || (def.better==='lower' ? val<g.pb : val>g.pb);
+  if(isPB) g.pb = val;
+  if(isFirst){ pendingStamp = def.name+' — '+def.stamp.replace('{m}', val); }
+  else if(isPB){ pendingStamp = def.name+' — new margin: '+val+def.unit+'.'; }
+  save();
+}
 function fling(reason){
   HAND.lastCause = reason||'manual'; hasFlung = true;
+  // field-guide release motions (detection only, play mode, manual releases)
+  if(mode==='play' && reason==='manual' && HAND.anchor){
+    const side = Math.abs(Math.cos(HAND.ang));
+    if(side<=0.12 && HAND.charge>=0.92) recordMotion('dead', side/HAND.w*1000);
+    if(HAND.wraps>=2.7 && HAND.wraps<3) recordMotion('wrap', (3-HAND.wraps)*2*Math.PI/HAND.w*1000);
+    if(HAND.plush>=1.25 && HAND.plush<1.5 && HAND.charge>=0.9) recordMotion('snipe', (1.5-HAND.plush)*1000);
+  }
   const c = HAND.charge;
   const spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
   // launch is ALWAYS up (climbing is about power, not phase-timing a tangent);
@@ -324,6 +390,7 @@ function endFallAtLanding(landY){
       s0: fallTrack.lastSave,
       line: pool[(fallCount + (HAND.lastWraps||0)) % pool.length],
     };
+    fallLog.push({no:currentFall.no, name:currentFall.name, pct:currentFall.pct, from:currentFall.fromPct});
     save();
     openFallScreen();
   }
@@ -382,6 +449,11 @@ function step(dt){
         attachTo(s, HAND.vx, HAND.vy);
         wantGrab=false; grabBufTimer=0;
         if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash("CAUGHT."); }   // clutch save juice
+        if(mode==='play'){
+          if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
+          if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
+          if(pendingStamp){ bossFlash(pendingStamp); bossLineT=2.2; pendingStamp=null; }
+        }
         if(s.chute && mode==='play'){ openWinScreen(); }                     // reached the top → win
         return;
       }
@@ -402,8 +474,9 @@ function step(dt){
     }
   }
 
-  // track best %
+  // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
+  if(p<2 && HAND.mode==='attach') runStart = simFrame;
   if(p>bestPct){ bestPct=p; }
   if(p>=99.5 && mode==='play'){ openWinScreen(); return; }   // reached the summit
   // camera
@@ -549,6 +622,19 @@ function render(){
   ctx.font=`600 ${Math.round(10)}px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.4)';
   ctx.fillText('BEST '+Math.round(bestPct)+'%', Wc-14, 68);
 
+  // the loss, live: watch your progress drain while you fall
+  if(fallTrack && HAND.mode==='fly' && mode==='play'){
+    const d = pctOf(HAND.peakY)-pctOf(HAND.y);
+    if(d>1.5){ ctx.fillStyle='#e24b4a';
+      ctx.font=`700 ${Math.min(34, Math.round(13+d*0.55))}px ui-monospace,monospace`;
+      ctx.fillText('−'+Math.floor(d)+'%', Wc-14, 98); }
+  }
+  // return-migration clock (only shown once you've cleared the tower once)
+  if(beaten && runStart!==null && mode==='play' && pctOf(HAND.y)>=2){
+    ctx.fillStyle='rgba(231,192,75,.75)'; ctx.font='600 12px ui-monospace,monospace'; ctx.textAlign='left';
+    ctx.fillText('RM '+fmtT((simFrame-runStart)/120), 12, 52); ctx.textAlign='right';
+  }
+
   // charge pip
   if(HAND.mode==='attach' && HAND.charge>0.02){
     const bw=Math.min(Wc-24,120), bx=(Wc-bw)/2, by=Hc-40;
@@ -629,10 +715,43 @@ function openShare(){
 }
 el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=null; mode='play'; };
 
+function openRecord(){
+  if(mode!=='play') return;
+  mode='record';
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">SPECIMEN FILE · ${SEASON.name}</div>`+
+    `<h1>${esc(myHandle)}</h1>`+
+    `<div class="sub">highest elevation: ${Math.round(bestPct)}% · falls on record: ${fallCount}`+
+    (bestTime!==null ? `<br>return migration, best: ${fmtT(bestTime)}` : '')+`</div>`+
+    `<div class="rule"></div>`+
+    `<div class="big" style="font-size:13px;">THE FIELD GUIDE</div>`;
+  for(const k in GUIDE_DEFS){ const def=GUIDE_DEFS[k], g=guide[k];
+    h += g.n>0
+      ? `<div class="sub" style="margin-top:6px;"><b>${def.name}</b> — filings: ${g.n} · best margin: ${g.pb}${def.unit}</div>`
+      : `<div class="sub" style="margin-top:6px;"><b>CASE [SEALED]</b> — ${esc(def.riddle)}</div>`;
+  }
+  if(fallLog.length){
+    h += `<div class="rule"></div><div class="big" style="font-size:13px;">RECENT ENTRIES</div>`;
+    fallLog.slice(-5).reverse().forEach(f=>{
+      h += `<div class="sub" style="margin-top:4px;">№${f.no} “${esc(f.name)}” — <span class="dmg">−${f.pct}%</span> from ${f.from}%</div>`;
+    });
+  }
+  el('record_doc').innerHTML = h;
+  el('p_record').classList.add('on');
+}
+el('b_recclose').onclick = ()=>{ el('p_record').classList.remove('on'); mode='play'; };
+el('b_record').onclick = ()=>openRecord();
+
 function openWinScreen(){
   if(mode==='win') return;
   mode='win';
   const firstTime = !beaten;
+  let tLine='';
+  if(!firstTime && runStart!==null){
+    const t=(simFrame-runStart)/120;
+    const rec = bestTime===null || t<bestTime;
+    if(rec) bestTime=t;
+    tLine = `<div class="rule"></div><div class="sub">THE RETURN MIGRATION: ${fmtT(t)}${rec?' — the literature has been updated.':' · best: '+fmtT(bestTime)}</div>`;
+  }
   beaten = true; bestPct = 100; save();
   el('win_doc').innerHTML =
     `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ELEVATION: 100% · ${SEASON.name}</div>`+
@@ -640,6 +759,7 @@ function openWinScreen(){
     `<div class="sub">nothing has ever left this machine on its own.</div>`+
     `<div class="rule"></div>`+
     `<div class="sub">what % are you? one hundred.${firstTime?'<br><br><b>THE RETURN MIGRATION: unlocked.</b> specimens always come back. next time, the clock is running.':''}</div>`+
+    tLine+
     `<div class="rule"></div>`+
     `<div class="sub" style="text-align:center;color:#8a8796;">— end of observation —</div>`;
   el('p_win').classList.add('on');
@@ -737,7 +857,7 @@ function startAppeal(pl){
   if(pl.k==='V'){ showReceivedVerdict(pl); return; }
   // ghost playback data
   ghost = { pts: pl.t.map(p=>({x:p[0],y:p[1]})), i:0, pct:pl.f.a, done:false };
-  el('b_archive').style.display='none';
+  el('b_archive').style.display='none'; el('b_record').style.display='none';
   el('ai_kick').textContent = pl.archive ? 'from the archive' : 'incoming field footage';
   el('ai_doc').innerHTML =
     `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">${pl.archive?'RECONSTRUCTION №1 · SEASON 1':'THE FOOTAGE · '+(pl.sn?'SEASON '+pl.sn:SEASON.name)}</div>`+
@@ -843,7 +963,7 @@ function enterOwnTower(){
   history.replaceState(null,'',location.pathname);   // clear the footage from the URL
   resetToPit();
   mode='play';
-  el('b_archive').style.display='block';
+  el('b_archive').style.display='block'; el('b_record').style.display='block';
 }
 function showReceivedVerdict(pl){
   // the sender opening the classification they got back
@@ -879,7 +999,7 @@ function boot(){
     resetToPit();
     if(dusty){ setTimeout(()=>{ HAND._wiped=true; }, 900); }
     mode='play';
-    el('b_archive').style.display='block';
+    el('b_archive').style.display='block'; el('b_record').style.display='block';
   }
   requestAnimationFrame(frame);
 }
@@ -927,6 +1047,8 @@ window.__thwap = {
       s0:{x:200,y:2000,vx:120,vy:-900},line:FINDINGS.manual[0]};
     return buildAppealLink(currentFall); },
   elder:()=>{ resetToPit(); startAppeal(JSON.parse(JSON.stringify(ELDER))); return 'elder started'; },
+  motion:(k,m)=>{ recordMotion(k,m); return {guide:guide[k], pending:pendingStamp}; },
+  record:()=>JSON.parse(JSON.stringify(guide)),
   parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
   hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
     charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null}),
