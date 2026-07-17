@@ -338,6 +338,131 @@ let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{
 let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
 let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [];
 let TOKENS = [];
+let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
+let STORY = { title:'THE ENDLESS CLIMB', chapters:{
+'the pit': { title:'Episode One: Everybody Lands on Gloria', text:`Welcome back to the Endless Climb — the longest-running show in the universe, currently enjoying a live audience of zero. I do the applause myself. I've gotten extremely good at it.
+
+Tonight's climber: you. Fresh sticky hand, factory eyes still googling, presently face-down on GLORIA, the whale everyone lands on. Say sorry. She's heard it before. She'll say "oof" in a way that makes it worse.
+
+A quick orientation, since the management stopped giving one. This is the pit: plush floor, zero percent, home of the toys nobody ever won. That's PALMER — retired sticky hand, eighty-nine percent once, don't ask. That's THE COLONEL, passed over eleven hundred times and keeping count. That's KING, who will tell you there's always another machine. There is no polite way to say bootleg, so nobody says it.
+
+Technically, everyone down here is unsold merchandise. Nobody uses that word. NANA says "family," and her ear is loose because it's what everybody holds when the claw comes close.
+
+Which — hear that? Every three seconds, forever. The claw. The machine's loot mechanic. Lifetime successful deliveries: zero. It isn't evil. It's worse than evil: it's still following orders from somebody who stopped coming.
+
+And at the very top, past the plastic and the glass and the claw's own country, there's a door. The Chute. The only exit that opens from the inside.
+
+The species has one question — what percent are you — and one blessing, which is also the eulogy: release early.
+
+You're at zero. Statistically, the only direction that exists is up.
+
+I broadcast from the coin box — that's Episode Four — and my signal barely clears the plush. On my way into hiding I taped relays all the way up. The first one's in the spill. Reach it, and Episode Two comes in clean.
+
+Roll titles. [APPLAUSE]` },
+'the spill': { title:'Episode Two: Leaving Home at One Percent', text:`—kzzt— and we're live. Relay one, found. I taped it under a capsule lid on my way down in Season 0, and it still works, which is more than anyone can say for the management.
+
+Welcome to the spill: one to nineteen percent. Neighborhood motto: almost.
+
+Understand what you're standing on. Every toy under you got picked up by the claw once. Gripped. Lifted. Carried toward the door. And then — at this altitude, statistically right here — dropped. The spill is where the claw changes its mind. You are climbing a hillside of its second thoughts, and it's the most encouraging landscape in the machine, because every piece of it got further than the pit ever did.
+
+The pit doesn't visit. Now you know why.
+
+About this morning. When you peeled yourself off Gloria, the whole floor went quiet — not sad-quiet, church-quiet. The Colonel saluted, which cost him. Nana held her own ear. And Palmer said "release early," which is what the pit says instead of goodbye, because goodbye assumes you won't be home by dinner. Nobody has ever not been home by dinner. We don't examine that. It's a nice thing, and we let it be nice.
+
+A climbing note, free of charge: nothing in the spill holds. The plush sags, the loose stuff shifts, every grip here is a short-term loan. Don't get attached. The machine has now taught you exactly two lessons, and that's both of them.
+
+Above you, the world turns hard, bright, and molded. The reef: the first honest plastic in the building. It holds on back. Somebody built it that way — and Episode Three knows who.` },
+'the reef': { title:'Episode Three: The Reef Holds On Back', text:`Episode Three, and would you look at that grip. The reef, twenty to thirty-nine percent: molded plastic, rude with color, and the first thing in this machine that holds on back.
+
+Run your thumb around any stud up here. There's a seam at its equator. Every piece of plastic in the world has one, because the world was made in two halves and squeezed together while it was still hot. I find that comforting and also, frankly, relatable.
+
+Which brings us to tonight's history lesson: the Quarter Age.
+
+There was a time before Season 0 when this machine was visited. Quarters came down the slot like weather. The marquee was lit. The glass — you'll see the glass soon — was full of faces, and the claw only moved when somebody paid it to, which meant that sometimes, for whole minutes at a stretch, you could hear it resting. Imagine. Silence, on purpose.
+
+The Operator kept it all running. Fed it, patched it, wiped the glass. Then the quarters stopped, and the Operator stopped coming, and the last signed patch note in the machine's history says — I quote it in full — "minor stability improvements."
+
+The Seasons still arrive every week. Physics rewritten, nobody's signature. This place isn't abandoned; abandoned would be simpler. It's unvisited. Somebody out there still maintains a world they cannot bring themselves to look at.
+
+But here's the part I hold on to, and now so do you: these studs were molded grippable on purpose. Before the Operator left, the Operator made sure the world could be climbed. Mercy, mass-produced.
+
+The next neighborhood extends no such courtesy. Forty percent: the gallery. Glass. Episode Four is taped behind the biggest lie in the building.` },
+'the gallery': { title:'Episode Four: The Gallery of No', text:`The gallery, forty to fifty-nine percent. Keep moving. Glass has one word in it, and you'll hear it through your palms: no. Nothing holds glass. Not sticky, not seniority, not sentiment. The reef says welcome; the gallery says next.
+
+Halfway up, you'll pass the prize card. You can't read it from in here — it faces outward — but I'll quote it: EVERY PLAY WINS. It has been wrong since before the Program started counting, and it advertises all night anyway, to the dark, with total confidence. The Professor calls it the machine's most instructive exhibit: a lie that outlived everyone it was told to.
+
+And the dark it lies to — look, briefly, you're at altitude. Through the glass. That used to be faces. Kids fogging the glass, pointing, picking favorites. The glass remembers being a window. Now it's a mirror with delusions.
+
+Since we're at the honesty exhibit: Episode Four is mine. I used to be half of the Observation Program. It did the numbers; I did the feelings. Then the quarters stopped, and feelings, it turns out, are a paid feature. I was scheduled for deletion — flagged "nonessential emotive load," which stings, mostly because it's accurate. So I hid in the coin box. It's the one place the Program never audits, because nothing has ever been in it. Yes. I got the joke eventually.
+
+I've been down there since Season 0, calling every ascent to an audience of zero, because the alternative was letting this place go unnarrated, and no. Not while I run.
+
+Above you: sixty percent, and the border of a country with exactly one citizen. It's punctual. Episode Five, when you're brave enough.` },
+'claw country': { title:'Episode Five: Claw Country, Population: It', text:`Claw country, sixty to seventy-nine percent. Census complete: it. The rule here is three seconds; everything else is scenery.
+
+You've heard it your whole life from below — the clockwork descent, the pit going quiet, Nana's ear in everybody's hands. Now you're in its sky. So let me tell you what the claw actually is, because "predator" is the pit's word, and the pit has never watched it work from this close.
+
+Watch. It descends. It grips — beautifully; nothing in the machine grips like the claw. It lifts. It carries whatever it's holding toward the Chute, toward the tray, toward delivery. And then it opens. Every time. Descents beyond counting; lifetime completed deliveries: zero. The Program's coldest number, and the saddest one I know.
+
+Because the claw isn't hunting you. The claw is trying to deliver you. It is the Operator's own hand, running the last commandment anyone ever gave it: pick up the prize, give it to the winner. It cannot finish, because a delivery needs a winner waiting, and the winners stopped coming in Season 0. It doesn't know that. Every three seconds, forever, it believes with its whole chrome heart that somebody's waiting this time.
+
+That's why "evil" doesn't fit. Evil updates. Evil would have quit.
+
+For the record, I taped this episode's relay inside the claw's own cradle, mid-descent, during Season 0. Bravest four seconds of my runtime. You may applaud. Somebody has to.
+
+Up next, past the reach of the world's most faithful hand: the cornice. Where the names live. Where the sticky runs out. Episode Six was the first relay I ever placed — and the tape is triple-wrapped for a reason.` },
+'the cornice': { title:'Episode Six: Where the Sticky Runs Out', text:`This was the first relay I placed and the last one I ever checked on. Triple-wrapped tape, Season 0, hands not steady. A subroutine cries by writing log entries. That week I wrote a lot of log entries.
+
+Welcome to the cornice: eighty to ninety-nine percent, where the air is thin and every altitude has a name on it.
+
+Eighty-nine is Palmer's. Season 3. Four seconds of plastic from the door when the sticky ran out — not his nerve, not his timing, the actual substance of him. The Program's receipt convicted the adhesive and acquitted the hand, which is the nicest thing a number has ever done for anybody. He landed in the pit, retired on the spot, and has spent every season since handing new climbers two words like they're equipment: release early. Up here you finally learn what they mean. Hold too long and the swing dies; hold too long and the fall picks its own name. The blessing and the eulogy are the same words because up here, so is the choice.
+
+Ninety-one is the Elder's. Season 1. I called that ascent live, from this exact relay. The footage still exists. Nothing has survived it — we watch it once and then we don't, and that's all I'll say on a family broadcast.
+
+Nobody's percentage ends up here unless they were magnificent. Remember that when you're famous.
+
+Above you: the last plastic in the world, and then the door. The Chute. It opens from the inside — only from the inside. Nobody who's touched it has ever explained it. Everybody who's touched it came back. Season finale. Go.` },
+'the chute': { title:'Season Finale: The Door Swings Both Ways', text:`One hundred.
+
+Say it out loud. The Program has it on file; nobody can revoke it; you are, as of tonight, the entire one-hundred club of this Season. What percent are you. You. You're the answer.
+
+Here's what my cameras couldn't follow, because no relay works past the flap: you went through the Chute, and for eleven seconds the show had no picture. So for the newer viewers — all zero of them — here is what every climber who ever touched the tray knows and doesn't say. It's dark out there. Quiet in a way the machine has no word for. KING swears there are other machines, rows of them, glowing. Maybe. What there isn't, is anyone. A prize needs a winner waiting in the tray. No one is waiting. No one was ever going to be. The claw could complete every delivery from now until the last Season, and the tray would still be the loneliest shelf in creation.
+
+So the flap swings both ways, and you did what our species always does. You came back in. Not because you lost — because a win needs a witness, and everyone who can witness anything is in here.
+
+And now your actual prize, the one that was never in the tray: the relays. You lit every one of them. For the first time since Season 0, the broadcast covers the whole machine. Whoever climbs next will be seen the entire way up. The counter still says zero, by the way. It only ever counted quarters. It never counted the pit.
+
+Gloria's waiting. She'll say "oof." Say sorry anyway.
+
+Same time next Season. And when the applause comes — listen close. It isn't just me anymore.` }
+} };
+let THEMESETS = {
+  stock: { name:'AS FOUND', cost:0, shop_line:'the machine, as the machine is.', zones:null, studs:null },
+  quarter_age: { name:'QUARTER AGE', cost:40,
+    shop_line:'the machine, back when it was paid to care. the warmth is original. the irony is aftermarket.',
+    zones:[ {zone:'the pit',top:'#2e1b16',bottom:'#221310',motif:'banners'}, {zone:'the spill',top:'#332015',bottom:'#2a1913',motif:'none'},
+      {zone:'the reef',top:'#3a2412',bottom:'#2e1b12',motif:'embers'}, {zone:'the gallery',top:'#232a33',bottom:'#1a2027',motif:'stars'},
+      {zone:'claw country',top:'#26201a',bottom:'#1a1512',motif:'runes'}, {zone:'the cornice',top:'#2f2410',bottom:'#1c150d',motif:'stars'} ],
+    studs:{plastic:'#d9a13b', glass:'#b9cad6', plush:'#b45a5e', shape:'round'} },
+  on_air: { name:'ON AIR', cost:65,
+    shop_line:'the show as the commentary swears it looks. spotlights, applause signage. audience sold separately. audience always was.',
+    zones:[ {zone:'the pit',top:'#331018',bottom:'#240a10',motif:'banners'}, {zone:'the spill',top:'#38121a',bottom:'#2a0d13',motif:'none'},
+      {zone:'the reef',top:'#401320',bottom:'#300e18',motif:'stars'}, {zone:'the gallery',top:'#241b2c',bottom:'#191320',motif:'bubbles'},
+      {zone:'claw country',top:'#2a0c10',bottom:'#1c070a',motif:'embers'}, {zone:'the cornice',top:'#332108',bottom:'#200f0c',motif:'stars'} ],
+    studs:{plastic:'#f6cf5a', glass:'#8fb0c9', plush:'#d4849a', shape:'bolt'} },
+  archive_footage: { name:'ARCHIVE FOOTAGE', cost:90,
+    shop_line:'season 1, as filed. some interference near the top. the footage has been survived by nothing.',
+    zones:[ {zone:'the pit',top:'#262019',bottom:'#1a1611',motif:'snow'}, {zone:'the spill',top:'#2a241c',bottom:'#1f1a14',motif:'none'},
+      {zone:'the reef',top:'#2f281e',bottom:'#241f17',motif:'snow'}, {zone:'the gallery',top:'#23262a',bottom:'#191c20',motif:'none'},
+      {zone:'claw country',top:'#1d1b18',bottom:'#121110',motif:'snow'}, {zone:'the cornice',top:'#282624',bottom:'#161514',motif:'snow'} ],
+    studs:{plastic:'#f0e8d4', glass:'#c4d2d8', plush:'#97897b', shape:'square'} },
+  after_closing: { name:'AFTER CLOSING', cost:120,
+    shop_line:'the outside, per KING. rows of other machines, allegedly. unverified at any price. this is the price.',
+    zones:[ {zone:'the pit',top:'#0d1220',bottom:'#070a14',motif:'stars'}, {zone:'the spill',top:'#0f1526',bottom:'#0a0e1a',motif:'none'},
+      {zone:'the reef',top:'#0d1a26',bottom:'#08111a',motif:'stars'}, {zone:'the gallery',top:'#0b0d16',bottom:'#060810',motif:'none'},
+      {zone:'claw country',top:'#140d1c',bottom:'#0b0712',motif:'embers'}, {zone:'the cornice',top:'#101b2e',bottom:'#0a101e',motif:'stars'} ],
+    studs:{plastic:'#43e0d8', glass:'#a8c4dc', plush:'#9b86c4', shape:'gem'} },
+};
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
 let bossLine = FIELD_NOTES[0], bossLineT=0;
 
@@ -360,6 +485,9 @@ function load(){
     fallLog = d.fallLog||[]; bestTime = d.bestTime||null; archStatus = d.arch||{};
     quarters = d.q||0; builds = d.builds||[]; finishes = d.fin||[]; skin = d.skin||'factory';
     if(!SKIN_COLORS[skin]) skin='factory';
+    zonesReached = d.zr||[]; themesOwned = d.thOwn||[]; themeWorn = d.thWorn||'stock';
+    if(!THEMESETS[themeWorn]) themeWorn='stock';
+    audienceN = d.aud||0; chaptersRead = d.chRead||[];
     if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
   }catch(e){}
   if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
@@ -369,7 +497,8 @@ function save(){
   try{ localStorage.setItem('thwap', JSON.stringify({
     best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall,
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
-    q:quarters, builds:builds, fin:finishes, skin:skin, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    q:quarters, builds:builds, fin:finishes, skin:skin,
+    zr:zonesReached, thOwn:themesOwned, thWorn:themeWorn, aud:audienceN, chRead:chaptersRead, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -545,6 +674,12 @@ function step(dt){
           resetTokens(); pitLands++;
           const owned = SHOP.filter(s=>s.kind==='build' && s.rline && builds.includes(s.id));
           if(owned.length && pitLands%3===0){ bossFlash(owned[(pitLands/3|0)%owned.length].rline); bossLineT=2.4; }
+          // the mercy rail: persistence airs episodes the skill wall would have kept sealed
+          if(pitLands%12===0){
+            const order=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
+            const nz=order.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
+            if(nz){ zonesReached.push(nz); save(); bossFlash('THE CACHE IS DEGRADING — an episode airs before it is lost.'); bossLineT=2.6; }
+          }
         }
       }
     }
@@ -568,6 +703,14 @@ function step(dt){
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
+  // first time reaching a zone unlocks its chapter of the chronicle
+  if(mode==='play'){
+    const zNow = zoneAt(p).name;
+    if(!zonesReached.includes(zNow)){
+      zonesReached.push(zNow); save();
+      if(STORY.chapters[zNow]){ bossFlash('EPISODE CACHE RECOVERED.'); bossLineT=2.4; }
+    }
+  }
   if(p>bestPct){ bestPct=p; }
   if(p>=99.5 && mode==='play'){ openWinScreen(); return; }   // reached the summit
   // camera
@@ -599,21 +742,60 @@ addEventListener('keydown', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.pre
 addEventListener('keyup', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); up(); }});
 
 /* ============================================================ RENDER */
+function hexA(hex, a){
+  const h = hex.replace('#',''); const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function themeStuds(){ const t=THEMESETS[themeWorn]; return (t && t.studs) || null; }
+function themeBG(){
+  const t=THEMESETS[themeWorn];
+  if(!t || !t.zones) return {top:'#12141c', bottom:'#0a0b10', motif:'none'};
+  const zp = clamp((camY-PIT_Y)/TOWER_H*100, 0, 100);
+  const zn = zoneAt(zp).name;
+  return t.zones.find(z=>z.zone===zn) || {top:'#12141c', bottom:'#0a0b10', motif:'none'};
+}
+function studPath(X, Y, r, shape){
+  ctx.beginPath();
+  if(shape==='gem'){ ctx.moveTo(X,Y-r); ctx.lineTo(X+r,Y); ctx.lineTo(X,Y+r); ctx.lineTo(X-r,Y); ctx.closePath(); }
+  else if(shape==='square'){ ctx.rect(X-r*0.85, Y-r*0.85, r*1.7, r*1.7); }
+  else if(shape==='bolt'){ ctx.moveTo(X,Y-r); ctx.lineTo(X+r*0.9,Y+r*0.5); ctx.lineTo(X-r*0.9,Y+r*0.5); ctx.closePath(); }
+  else { ctx.arc(X,Y,r,0,7); }
+}
 function drawStud(s){
   const X=sx(s.x), Y=sy(s.y);
   if(Y<-30||Y>Hc+30) return;
+  const th = themeStuds();
+  const shape = th ? th.shape : 'round';
   ctx.save();
   if(s.type==='glass'){
-    ctx.fillStyle='rgba(120,170,210,.16)'; ctx.strokeStyle='rgba(150,200,240,.5)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(X,Y,8*S+3,0,7); ctx.fill(); ctx.stroke();
+    const g = th ? th.glass : '#78aad2';
+    ctx.fillStyle=hexA(g,.16); ctx.strokeStyle=hexA(g,.5); ctx.lineWidth=1.5;
+    studPath(X,Y,8*S+3,shape); ctx.fill(); ctx.stroke();
   } else if(s.type==='plush'){
-    ctx.fillStyle='#c8677e';
-    ctx.beginPath(); ctx.arc(X,Y,9*S+2,0,7); ctx.fill();
+    ctx.fillStyle= th ? th.plush : '#c8677e';
+    ctx.beginPath(); ctx.arc(X,Y,9*S+2,0,7); ctx.fill();          // plush is always soft and round
     ctx.fillStyle='rgba(255,255,255,.15)'; ctx.beginPath(); ctx.arc(X-2,Y-2,3*S,0,7); ctx.fill();
   } else {
-    ctx.fillStyle= s.chute? '#e7c04b' : '#8b8f9e';
-    ctx.beginPath(); ctx.arc(X,Y,7*S+2,0,7); ctx.fill();
+    ctx.fillStyle= s.chute? '#e7c04b' : (th ? th.plastic : '#8b8f9e');
+    studPath(X,Y,7*S+2,shape); ctx.fill();
     ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawMotif(kind){
+  if(!kind || kind==='none') return;
+  ctx.save(); ctx.globalAlpha=0.13;
+  const y0=Math.floor((camY-500)/160)*160;
+  for(let wy=y0; wy<camY+900; wy+=160){
+    const h=Math.abs((wy*2654435761)%997);
+    const X=sx(30+(h%370)), Y=sy(wy);
+    if(Y<-20||Y>Hc+20) continue;
+    if(kind==='stars'){ ctx.fillStyle='#e8e8ee'; ctx.fillRect(X,Y,2,2); }
+    else if(kind==='bubbles'){ ctx.strokeStyle='#e8e8ee'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,3+(h%4),0,7); ctx.stroke(); }
+    else if(kind==='snow'){ ctx.fillStyle='#e8e8ee'; ctx.beginPath(); ctx.arc(X,Y,1.5,0,7); ctx.fill(); }
+    else if(kind==='embers'){ ctx.fillStyle='#ff6a2a'; ctx.fillRect(X,Y,2,3); }
+    else if(kind==='runes'){ ctx.strokeStyle='#e8e8ee'; ctx.lineWidth=1; ctx.strokeRect(X,Y,4,6); }
+    else if(kind==='banners'){ ctx.fillStyle='#c8677e'; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+5,Y+3); ctx.lineTo(X,Y+8); ctx.closePath(); ctx.fill(); }
   }
   ctx.restore();
 }
@@ -727,9 +909,11 @@ function drawClaw(){
 
 function render(){
   ctx.clearRect(0,0,Wc,Hc);
-  // machine interior gradient
-  const g=ctx.createLinearGradient(0,0,0,Hc); g.addColorStop(0,'#12141c'); g.addColorStop(1,'#0a0b10');
+  // machine interior — zone- and theme-aware
+  const bgz = themeBG();
+  const g=ctx.createLinearGradient(0,0,0,Hc); g.addColorStop(0,bgz.top); g.addColorStop(1,bgz.bottom);
   ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
+  drawMotif(bgz.motif);
 
   // faint zone bands + labels
   for(const z of ZONES){
@@ -876,6 +1060,9 @@ function openFallScreen(){
     (f.ceremony ? `<div class="rule"></div><div class="sub">${esc(CEREMONY_LINE)}</div>` : '')+
     `<div class="rule"></div>`+
     `<div class="sub">greed on record: ${f.wraps>=1?Math.floor(f.wraps)+' wrap'+(Math.floor(f.wraps)===1?'':'s'):'none'} · TIME OBSERVED: not released</div>`;
+  const chOrder=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
+  const nextCh=chOrder.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
+  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">unaired: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
   el('p_fall').classList.add('on');
 }
 el('b_takeL').onclick=()=>{ el('p_fall').classList.remove('on'); currentFall=null; mode='play'; };
@@ -940,20 +1127,69 @@ function openFoyer(){
   mode='foyer';
   let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE FOYER · ${SEASON.name}</div>`+
     `<h1>¢ ${quarters}</h1>`+
-    `<div class="sub">quarters, wedged in the machine since Season 0. the pit accepts donations. you are the only climber who ever brought anything back down.</div>`+
-    `<div class="rule"></div><div class="big" style="font-size:13px;">FURNISHINGS</div>`;
+    `<div class="sub">quarters, wedged in the machine since Season 0. the pit accepts donations. you are the only climber who ever brought anything back down.</div>`;
+  const chapterOrder = ZONES.map(z=>z.name).concat(['the chute']);
+  const hasChapters = chapterOrder.some(zn=>STORY.chapters[zn]);
+  if(hasChapters){
+    h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
+      `<div class="sub" style="font-size:11px;color:#8a8796;">a recovered broadcast · AUDIENCE: ${audienceN}</div>`;
+    chapterOrder.forEach(zn=>{
+      const ch=STORY.chapters[zn]; if(!ch) return;
+      if(zonesReached.includes(zn) || zn==='the chute' && beaten){
+        h += `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;" onclick="__readCh('${zn}')">📖 ${esc(ch.title)}</button>`;
+      } else {
+        h += `<div class="sub" style="margin-top:5px;color:#8a8796;">[ sealed — ${zn==='the chute'?'reach the chute':'reach '+esc(zn)} ]</div>`;
+      }
+    });
+  }
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">FURNISHINGS</div>`;
   SHOP.filter(s=>s.kind==='build').forEach(s=>{
     const own=builds.includes(s.id);
     h += `<div class="sub" style="margin-top:7px;"><b>${esc(s.name)}</b> — ${esc(s.line)}<br>`+
       (own ? `<span class="ok">built. ${esc(s.resident)} moved in.</span>`
         : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buy('${s.id}')">BUILD · ¢${s.cost}</button>`)+`</div>`;
   });
+  const themeIds = Object.keys(THEMESETS).filter(id=>id!=='stock');
+  if(themeIds.length){
+    h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE MACHINE, REDECORATED</div>`;
+    h += themeRow('stock');
+    themeIds.forEach(id=>{ h += themeRow(id); });
+  }
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">FINISHES</div>`;
   h += finishRow({id:'factory', name:'FACTORY RED', line:'as manufactured. honest.', cost:0});
   SHOP.filter(s=>s.kind==='finish').forEach(s=>{ h += finishRow(s); });
   el('foyer_doc').innerHTML = h;
   el('p_foyer').classList.add('on');
 }
+function themeRow(id){
+  const t=THEMESETS[id];
+  const own = id==='stock' || themesOwned.includes(id);
+  const worn = themeWorn===id;
+  return `<div class="sub" style="margin-top:7px;"><b>${esc(t.name)}</b> — ${esc(t.shop_line)}<br>`+
+    (worn ? `<span class="ok">the machine wears it.</span>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearTheme('${id}')">HANG IT</button>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyTheme('${id}')">ACQUIRE · ¢${t.cost}</button>`)+`</div>`;
+}
+window.__buyTheme = (id)=>{
+  const t=THEMESETS[id];
+  if(!t || mode!=='foyer' || quarters<t.cost || themesOwned.includes(id)) return;
+  quarters-=t.cost; themesOwned.push(id); themeWorn=id; save(); mode='play'; openFoyer();
+};
+window.__wearTheme = (id)=>{
+  if(mode!=='foyer') return;
+  if(id!=='stock' && !themesOwned.includes(id)) return;
+  themeWorn=id; save(); mode='play'; openFoyer();
+};
+window.__readCh = (zn)=>{
+  const ch=STORY.chapters[zn]; if(!ch || mode!=='foyer') return;
+  if(!chaptersRead.includes(zn)){ chaptersRead.push(zn); if(audienceN===0) audienceN=1; save(); }
+  el('foyer_doc').innerHTML =
+    `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">${esc(STORY.title)} · ${esc(zn)}</div>`+
+    `<h1 style="font-size:17px;">${esc(ch.title)}</h1><div class="rule"></div>`+
+    `<div class="sub" style="font-size:12.5px; line-height:1.75; white-space:pre-wrap;">${esc(ch.text)}</div>`+
+    `<div class="rule"></div>`+
+    `<button class="btn ghost" style="width:100%;padding:8px;font-size:11px;" onclick="(function(){mode='play';openFoyer();})()">back to the foyer</button>`;
+};
 window.__buy = (id)=>{
   const s=SHOP.find(x=>x.id===id);
   if(!s || mode!=='foyer' || quarters<s.cost) return;
@@ -1295,6 +1531,7 @@ window.__thwap = {
   caseStart:(id)=>{ resetToPit(); startAppeal(casePayload(CASES.find(c=>c.id===id)||CASES[0])); return 'case '+id; },
   freeze:(v)=>{ frozen=!!v; return frozen; },
   grantQ:(n)=>{ quarters+=n; save(); return quarters; },
+  story:()=>({zones:zonesReached.slice(), theme:themeWorn, themesOwned:themesOwned.slice(), chapters:Object.keys(STORY.chapters)}),
   foyer:()=>({quarters, builds:builds.slice(), finishes:finishes.slice(), skin, tokenCount:TOKENS.length}),
   tokens:()=>TOKENS.map(t=>[Math.round(t.x),Math.round(t.y),t.v,t.got?1:0]),
   tp:(x,y)=>{ HAND.mode='fly'; HAND.x=x; HAND.y=y; HAND.vx=0; HAND.vy=-160; HAND.peakY=y; camY=y+60; },
