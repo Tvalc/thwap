@@ -274,13 +274,16 @@ function zoneAt(pct){ for(const z of ZONES){ if(pct < z.top) return z; } return 
 function buildTower(){
   STUDS = [];
   const rnd = mulberry32(70707);      // FIXED seed → same tower everywhere
-  // plush pit: a soft floor of plush studs to always catch a fall
-  for(let i=0;i<7;i++) STUDS.push({x:60+i*52, y:PIT_Y - 10 + (i%2)*14, type:'plush', pit:true});
-  // guaranteed starter studs so the first hop lands ~80% of cold tries
-  STUDS.push({x:CX, y:PIT_Y+150, type:'plastic'});
-  STUDS.push({x:CX-70, y:PIT_Y+300, type:'plastic'});
-  STUDS.push({x:CX+80, y:PIT_Y+430, type:'plastic'});
-  let y = PIT_Y + 560;
+  // plush pit: a soft floor that catches any fall — these NEVER rip, so you can rest at the bottom
+  for(let i=0;i<6;i++) STUDS.push({x:56+i*64, y:PIT_Y - 8 + (i%2)*12, type:'plush', pit:true});
+  // the starting perch: a stable plastic block you spawn on; wind from it at your own pace, no pressure
+  STUDS.push({x:CX, y:PIT_Y+40, type:'plastic', perch:true});
+  // gentle on-ramp: a centered plastic ladder. the first hops are gimmes; the machine turns mean higher up
+  STUDS.push({x:CX,    y:PIT_Y+175, type:'plastic'});
+  STUDS.push({x:CX-38, y:PIT_Y+345, type:'plastic'});
+  STUDS.push({x:CX+44, y:PIT_Y+520, type:'plastic'});
+  STUDS.push({x:CX-28, y:PIT_Y+700, type:'plastic'});
+  let y = PIT_Y + 890;
   let side = 1;
   while(y < TOP_Y - 240){
     const pct = (y-PIT_Y)/TOWER_H*100;
@@ -500,7 +503,7 @@ function attachTo(s, incomingVx, incomingVy){
   // spin direction inherits sideways momentum so the flow feels continuous
   const tang = (-Math.sin(HAND.ang))*incomingVx + (Math.cos(HAND.ang))*incomingVy;
   HAND.spin = tang>=0 ? 1 : -1;
-  HAND.w=W0; HAND.charge=0; HAND.wraps=0; HAND.plush = s.type==='plush'?0:-1;
+  HAND.w=W0; HAND.charge=0; HAND.wraps=0; HAND.plush = (s.type==='plush' && !s.pit) ? 0 : -1;
   hitstop = HITSTOP; flash = 1;
   // establish a new "high water mark" for fall accounting when we grab higher
   if(s.y > HAND.peakY - 4) HAND.peakY = Math.max(HAND.peakY, s.y);
@@ -644,7 +647,7 @@ function step(dt){
       const landY = PIT_Y + 30;
       HAND.y = landY; HAND.vx=0; HAND.vy=0;
       // land already gripping a pit stud
-      let pit = STUDS.find(s=>s.pit) || {x:HAND.x,y:landY,type:'plush',pit:true};
+      let pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit) || {x:HAND.x,y:landY,type:'plastic',perch:true};
       const droppedFrom = HAND.peakY;
       endFallAtLanding(landY);
       if(mode==='play' || mode==='appeal_play'){
@@ -1505,7 +1508,7 @@ function showReceivedVerdict(pl){
 
 /* ---------- reset ---------- */
 function resetToPit(){
-  const pit = STUDS.find(s=>s.pit);
+  const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
   camY = HAND.y+60;
