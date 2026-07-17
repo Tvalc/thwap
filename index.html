@@ -192,13 +192,24 @@ const SHOP = [
     resident:'THE COLONEL', rline:'"Eleven hundred passes, zero couches. Now look at us." — THE COLONEL'},
   {id:'radio',  kind:'build', cost:50, name:'THE RADIO', line:'it only picks up the machine\'s hum. the pit calls it music. the program declines to rule.',
     resident:'DOT', rline:'"It\'s the same note forever. I\'ve started to hear parts." — DOT'},
-  {id:'midnight', kind:'finish', cost:25, name:'MIDNIGHT FINISH', line:'for climbing unobserved. the program notes this is impossible.'},
-  {id:'banana',   kind:'finish', cost:25, name:'BANANA FINISH', line:'the machine will mistake you for stock. briefly.'},
-  {id:'ghost',    kind:'finish', cost:40, name:'GHOST FINISH', line:'translucent. the glass approves. the glass has never approved of anything.'},
-  {id:'ember',    kind:'finish', cost:40, name:'EMBER FINISH', line:'leaves a trace. the record approves. the record has never approved of anything either.'},
-  {id:'gilded',   kind:'finish', cost:75, name:'GILDED FINISH', line:'the claw has excellent taste. climb accordingly.'},
 ];
-const SKIN_COLORS = { factory:'#e85c3c', midnight:'#39406b', banana:'#e7c04b', ghost:'rgba(232,232,238,0.38)', ember:'#ff6a2a', gilded:'#d9b23a' };
+// hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
+const FINISHES = {
+  factory: { name:'FACTORY RED', cost:0, body:'#e85c3c', body2:'#b23a1e', eye:'googly', trail:null, glow:null,
+    line:'as manufactured. honest.' },
+  midnight:{ name:'MIDNIGHT', cost:25, body:'#3b447a', body2:'#1c2140', eye:'glint', trail:'stars', trailCol:'#cdd6ff', glow:null,
+    line:'for climbing unobserved. the program notes this is impossible.' },
+  banana:  { name:'BANANA', cost:25, body:'#ecc24a', body2:'#b98a1f', eye:'cyclops', trail:null, glow:null,
+    line:'one eye, entirely committed. the machine will mistake you for stock. briefly.' },
+  ghost:   { name:'GHOST', cost:40, body:'rgba(208,214,230,0.42)', body2:null, eye:'hollow', trail:'after', trailCol:'rgba(208,214,230,0.5)', glow:null,
+    line:'translucent, and leaves itself behind. the glass approves. the glass has never approved of anything.' },
+  ember:   { name:'EMBER', cost:45, body:'#ff6a2a', body2:'#b8300f', eye:'googly', trail:'fire', trailCol:'#ff7a33', glow:'#ff5a1e',
+    line:'burns a trace all the way down. the record approves of nothing, and it approves of this.' },
+  gilded:  { name:'GILDED', cost:80, body:'#f0cf62', body2:'#a6791d', eye:'rimmed', rim:'#8a6510', trail:'sparkle', trailCol:'#ffe9a0', glow:'#e7c04b',
+    line:'the claw has excellent taste. climb accordingly.' },
+  chrome:  { name:"THE OPERATOR'S OWN", cost:120, body:'#e2e8ef', body2:'#5b6470', metal:true, eye:'rimmed', rim:'#7d8894', trail:'after', trailCol:'rgba(226,232,239,0.55)', glow:'#f0f5fb',
+    line:"the operator's own hand, borrowed. it still remembers the last commandment. so, now, do you." },
+};
 const GUIDE_DEFS = {
   dead:   {name:'THE DEAD RELEASE', better:'lower', unit:'ms',
     riddle:'concerns: the two instants per revolution when the machine cannot tell left from right.',
@@ -336,7 +347,7 @@ let held=false, grabWin=0, whiffLock=0, grabLock=0;
 let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
 let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
 let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
-let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [];
+let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
 let TOKENS = [];
 let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
 let STORY = { title:'THE ENDLESS CLIMB', chapters:{
@@ -484,7 +495,7 @@ function load(){
     if(d.guide) for(const k in guide){ if(d.guide[k]) guide[k]=d.guide[k]; }
     fallLog = d.fallLog||[]; bestTime = d.bestTime||null; archStatus = d.arch||{};
     quarters = d.q||0; builds = d.builds||[]; finishes = d.fin||[]; skin = d.skin||'factory';
-    if(!SKIN_COLORS[skin]) skin='factory';
+    if(!FINISHES[skin]) skin='factory';
     zonesReached = d.zr||[]; themesOwned = d.thOwn||[]; themeWorn = d.thWorn||'stock';
     if(!THEMESETS[themeWorn]) themeWorn='stock';
     audienceN = d.aud||0; chaptersRead = d.chRead||[];
@@ -648,6 +659,7 @@ function step(dt){
         const dropSoFar = fallTrack ? (pctOf(HAND.peakY)-pctOf(HAND.y)) : 0;
         attachTo(s, HAND.vx, HAND.vy);
         grabWin=0; whiffLock=0;
+        bursts.push({x:s.x, y:s.y, f:simFrame, col:(FINISHES[skin]&&(FINISHES[skin].glow||FINISHES[skin].body))||'#fff'});
         if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash("CAUGHT."); }   // clutch save juice
         if(mode==='play'){
           if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
@@ -696,8 +708,9 @@ function step(dt){
       }
     }
   }
-  if(skin==='ember' && HAND.mode==='fly' && (simFrame%3===0)){
-    trail.push({x:HAND.x,y:HAND.y}); if(trail.length>14) trail.shift();
+  const _fin = FINISHES[skin];
+  if(_fin && _fin.trail && HAND.mode==='fly' && (simFrame%2===0)){
+    trail.push({x:HAND.x,y:HAND.y}); if(trail.length>16) trail.shift();
   }
 
   // track best % + the return-migration clock (armed while resting in the pit)
@@ -799,6 +812,34 @@ function drawMotif(kind){
   }
   ctx.restore();
 }
+function paintEyes(g, X, Y, r, style, vx, vy, fin){
+  const lx=clamp(vx*0.001,-1.3,1.3), ly=clamp(-vy*0.001,-1.3,1.3);
+  const ew=r*0.31, ex=r*0.36, ey=-r*0.26, pr=r*0.15;
+  if(style==='cyclops'){
+    g.fillStyle='#fff'; g.beginPath(); g.arc(X,Y+ey,r*0.42,0,7); g.fill();
+    g.fillStyle='#111'; g.beginPath(); g.arc(X+lx,Y+ey+ly,r*0.2,0,7); g.fill(); return;
+  }
+  [X-ex, X+ex].forEach(cx=>{
+    if(style==='hollow'){ g.strokeStyle='rgba(255,255,255,0.7)'; g.lineWidth=1.3; g.beginPath(); g.arc(cx,Y+ey,ew,0,7); g.stroke(); return; }
+    g.fillStyle='#fff'; g.beginPath(); g.arc(cx,Y+ey,ew,0,7); g.fill();
+    if(style==='rimmed' && fin && fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=1.1; g.stroke(); }
+    g.fillStyle='#111'; g.beginPath(); g.arc(cx+lx,Y+ey+ly,pr,0,7); g.fill();
+    if(style==='glint'){ g.fillStyle='rgba(255,255,255,0.9)'; g.beginPath(); g.arc(cx+ew*0.42,Y+ey-ew*0.42,r*0.06+0.5,0,7); g.fill(); }
+  });
+}
+function paintHand(g, X, Y, r, fin, vx, vy){
+  if(fin.glow){ g.save(); g.globalAlpha=0.4; g.fillStyle=fin.glow; g.beginPath(); g.arc(X,Y,r*1.65,0,7); g.fill(); g.restore(); }
+  if(fin.body2){
+    const grd=g.createRadialGradient(X-r*0.35,Y-r*0.42,r*0.15, X,Y,r*1.05);
+    if(fin.metal){ grd.addColorStop(0,'#ffffff'); grd.addColorStop(0.55,fin.body); grd.addColorStop(1,fin.body2); }
+    else { grd.addColorStop(0,fin.body); grd.addColorStop(1,fin.body2); }
+    g.fillStyle=grd;
+  } else { g.fillStyle=fin.body; }
+  g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
+  if(fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=Math.max(1,r*0.09); g.beginPath(); g.arc(X,Y,r,0,7); g.stroke(); }
+  g.save(); g.globalAlpha=0.30; g.fillStyle='#fff'; g.beginPath(); g.arc(X-r*0.34,Y-r*0.36,r*0.24,0,7); g.fill(); g.restore();
+  paintEyes(g, X, Y, r, fin.eye, vx||0, vy||0, fin);
+}
 function drawHand(){
   const X=sx(HAND.x), Y=sy(HAND.y);
   ctx.save();
@@ -832,20 +873,30 @@ function drawHand(){
     ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+ddx*inv2*36*S, Y-ddy*inv2*36*S); ctx.stroke();
   }
 
-  // ember trail
-  if(skin==='ember' && trail.length){
-    trail.forEach((tp,i)=>{ ctx.globalAlpha=(i/trail.length)*0.35; ctx.fillStyle='#ff6a2a';
-      ctx.beginPath(); ctx.arc(sx(tp.x), sy(tp.y), 4, 0, 7); ctx.fill(); });
+  // finish trail
+  const fin = FINISHES[skin] || FINISHES.factory;
+  if(fin.trail && trail.length){
+    const col = fin.trailCol || fin.body;
+    trail.forEach((tp,i)=>{
+      const a=(i+1)/trail.length; let rr=3.4, rise=0;
+      if(fin.trail==='after'){ rr = 9*S*a; }
+      else if(fin.trail==='fire'){ rr = 2.5+a*3.2; rise=(1-a)*12; }
+      else if(fin.trail==='sparkle'){ rr = ((i+(simFrame>>1))%3===0)?3:1.3; }
+      else if(fin.trail==='stars'){ rr=1.6; }
+      ctx.globalAlpha = a*(fin.trail==='after'?0.3:0.5); ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(sx(tp.x), sy(tp.y)-rise, rr, 0, 7); ctx.fill();
+    });
     ctx.globalAlpha=1;
   }
-  // the sticky hand
-  const c = HAND.charge;
-  ctx.fillStyle = c>0 ? `rgb(${231},${192-c*60|0},${75+c*40|0})` : (SKIN_COLORS[skin]||'#e85c3c');
-  ctx.beginPath(); ctx.arc(X,Y,11*S,0,7); ctx.fill();
-  // googly eyes
-  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(X-4,Y-3,3.4,0,7); ctx.arc(X+4,Y-3,3.4,0,7); ctx.fill();
-  ctx.fillStyle='#111'; const lx=clamp(HAND.vx*0.001,-1.3,1.3), ly=clamp(-HAND.vy*0.001,-1.3,1.3);
-  ctx.beginPath(); ctx.arc(X-4+lx,Y-3+ly,1.5,0,7); ctx.arc(X+4+lx,Y-3+ly,1.5,0,7); ctx.fill();
+  // the sticky hand, wearing its finish
+  paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
+  // charge as a warming rim — finish stays visible the whole wind
+  if(HAND.mode==='attach' && HAND.charge>0.02){
+    const c2=HAND.charge;
+    ctx.strokeStyle = c2>0.7 ? '#e7c04b' : `rgba(240,${180-c2*70|0},${120-c2*50|0},${0.45+c2*0.55})`;
+    ctx.lineWidth = 1.5 + c2*3;
+    ctx.beginPath(); ctx.arc(X,Y,11*S+2+c2*2,0,7); ctx.stroke();
+  }
   if(dusty && !HAND._wiped){ ctx.fillStyle='rgba(200,190,150,.25)'; ctx.beginPath(); ctx.arc(X,Y,12*S,0,7); ctx.fill(); }
   ctx.restore();
 }
@@ -944,6 +995,13 @@ function render(){
     const a=1-(simFrame-pk.f)/50;
     ctx.globalAlpha=Math.max(0,a); ctx.fillStyle='#e7c04b'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='center';
     ctx.fillText('+'+pk.v+'¢', sx(pk.x), sy(pk.y)-(1-a)*26); ctx.globalAlpha=1;
+  }
+  // grab-impact ring, tinted to the worn finish
+  bursts = bursts.filter(b=>simFrame-b.f<16);
+  for(const b of bursts){
+    const a=(simFrame-b.f)/16;
+    ctx.globalAlpha=(1-a)*0.85; ctx.strokeStyle=b.col; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.arc(sx(b.x), sy(b.y), (5+a*20)*S, 0, 7); ctx.stroke(); ctx.globalAlpha=1;
   }
 
   // dotted "should-have-released" receipt while a fall screen is up
@@ -1114,13 +1172,23 @@ window.__reenter = (no)=>{ const e=fallLog.find(f=>f.no===no);
   if(e && e.s0 && mode==='record'){ el('p_record').classList.remove('on'); resetToPit(); startAppeal(footagePayload(e)); } };
 el('b_recclose').onclick = ()=>{ el('p_record').classList.remove('on'); mode='play'; };
 
-function finishRow(s){
-  const own = s.id==='factory' || finishes.includes(s.id);
-  const worn = skin===s.id;
-  return `<div class="sub" style="margin-top:7px;"><b>${esc(s.name)}</b> — ${esc(s.line)}<br>`+
-    (worn ? `<span class="ok">worn.</span>`
-      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wear('${s.id}')">WEAR</button>`
-      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buy('${s.id}')">BUY · ¢${s.cost}</button>`)+`</div>`;
+function finishRow(id){
+  const f=FINISHES[id];
+  const own = id==='factory' || finishes.includes(id);
+  const worn = skin===id;
+  return `<div class="sub" style="margin-top:9px;display:flex;gap:10px;align-items:flex-start;">`+
+    `<canvas class="finprev" data-fin="${id}" width="48" height="48" style="width:40px;height:40px;flex:none;background:#0c0d12;border-radius:9px;"></canvas>`+
+    `<div style="flex:1;min-width:0;"><b>${esc(f.name)}</b> — ${esc(f.line)}`+
+    (worn ? `<div class="ok" style="margin-top:4px;">worn.</div>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wear('${id}')">WEAR</button>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyFin('${id}')">BUY · ¢${f.cost}</button>`)+
+    `</div></div>`;
+}
+function renderFinishPreviews(){
+  document.querySelectorAll('canvas.finprev').forEach(cv2=>{
+    const g=cv2.getContext('2d'); g.clearRect(0,0,48,48);
+    paintHand(g, 24, 25, 14, FINISHES[cv2.dataset.fin]||FINISHES.factory, 0, 0);
+  });
 }
 function openFoyer(){
   if(mode!=='play') return;
@@ -1156,16 +1224,18 @@ function openFoyer(){
     themeIds.forEach(id=>{ h += themeRow(id); });
   }
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">FINISHES</div>`;
-  h += finishRow({id:'factory', name:'FACTORY RED', line:'as manufactured. honest.', cost:0});
-  SHOP.filter(s=>s.kind==='finish').forEach(s=>{ h += finishRow(s); });
+  Object.keys(FINISHES).forEach(id=>{ h += finishRow(id); });
   el('foyer_doc').innerHTML = h;
+  renderFinishPreviews();
   el('p_foyer').classList.add('on');
 }
 function themeRow(id){
   const t=THEMESETS[id];
   const own = id==='stock' || themesOwned.includes(id);
   const worn = themeWorn===id;
-  return `<div class="sub" style="margin-top:7px;"><b>${esc(t.name)}</b> — ${esc(t.shop_line)}<br>`+
+  const sw = t.zones ? [t.zones[0].bottom, t.studs.plastic, t.studs.glass, t.studs.plush] : ['#0a0b10','#8b8f9e','#78aad2','#c8677e'];
+  const swatch = `<div style="display:flex;gap:4px;margin:5px 0;">`+sw.map(c=>`<span style="width:26px;height:14px;border-radius:3px;background:${c};display:inline-block;"></span>`).join('')+`</div>`;
+  return `<div class="sub" style="margin-top:7px;"><b>${esc(t.name)}</b> — ${esc(t.shop_line)}`+swatch+
     (worn ? `<span class="ok">the machine wears it.</span>`
       : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearTheme('${id}')">HANG IT</button>`
       : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyTheme('${id}')">ACQUIRE · ¢${t.cost}</button>`)+`</div>`;
@@ -1197,6 +1267,11 @@ window.__buy = (id)=>{
   if(s.kind==='build'){ if(!builds.includes(id)) builds.push(id); }
   else { if(!finishes.includes(id)) finishes.push(id); skin=id; trail=[]; }
   save(); mode='play'; openFoyer();
+};
+window.__buyFin = (id)=>{
+  const f=FINISHES[id];
+  if(!f || mode!=='foyer' || finishes.includes(id) || quarters<f.cost) return;
+  quarters-=f.cost; finishes.push(id); skin=id; trail=[]; save(); mode='play'; openFoyer();
 };
 window.__wear = (id)=>{
   if(mode!=='foyer') return;
