@@ -190,7 +190,7 @@ const SHOP = [
     resident:'PROFESSOR', rline:'"I read your fall notice nine times. Survivable. I said what I said." — PROFESSOR'},
   {id:'couch',  kind:'build', cost:35, name:'THE COUCH', line:'the first soft thing in this machine that chose to be soft.',
     resident:'THE COLONEL', rline:'"Eleven hundred passes, zero couches. Now look at us." — THE COLONEL'},
-  {id:'radio',  kind:'build', cost:50, name:'THE RADIO', line:'it only picks up the machine\'s hum. the pit calls it music. the program declines to rule.',
+  {id:'radio',  kind:'build', cost:50, name:'THE RADIO', line:'it only picks up the machine\'s hum. the pit calls it music. nobody argues.',
     resident:'DOT', rline:'"It\'s the same note forever. I\'ve started to hear parts." — DOT'},
 ];
 // hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
@@ -198,7 +198,7 @@ const FINISHES = {
   factory: { name:'FACTORY RED', cost:0, body:'#e85c3c', body2:'#b23a1e', eye:'googly', trail:null, glow:null,
     line:'as manufactured. honest.' },
   midnight:{ name:'MIDNIGHT', cost:25, body:'#3b447a', body2:'#1c2140', eye:'glint', trail:'stars', trailCol:'#cdd6ff', glow:null,
-    line:'for climbing unobserved. the program notes this is impossible.' },
+    line:'for climbing when you would rather not be seen doing it.' },
   banana:  { name:'BANANA', cost:25, body:'#ecc24a', body2:'#b98a1f', eye:'cyclops', trail:null, glow:null,
     line:'one eye, entirely committed. the machine will mistake you for stock. briefly.' },
   ghost:   { name:'GHOST', cost:40, body:'rgba(208,214,230,0.42)', body2:null, eye:'hollow', trail:'after', trailCol:'rgba(208,214,230,0.5)', glow:null,
@@ -351,101 +351,69 @@ let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pi
 let TOKENS = [];
 let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
 let STORY = { title:'THE ENDLESS CLIMB', chapters:{
-'the pit': { title:'Episode One: Everybody Lands on Gloria', text:`Welcome back to the Endless Climb — the longest-running show in the universe, currently enjoying a live audience of zero. I do the applause myself. I've gotten extremely good at it.
+'the pit': { title:'Part One: Welcome to the Bottom', text:`So you're new. Don't try to get up — nobody gets up gracefully after a landing like that, and Gloria doesn't mind. She's the whale. Everybody lands on Gloria. Say sorry; she's heard it before.
 
-Tonight's climber: you. Fresh sticky hand, factory eyes still googling, presently face-down on GLORIA, the whale everyone lands on. Say sorry. She's heard it before. She'll say "oof" in a way that makes it worse.
+I'm Palmer. I climbed once. Now I live down here, and since the machine won't explain itself, I will.
 
-A quick orientation, since the management stopped giving one. This is the pit: plush floor, zero percent, home of the toys nobody ever won. That's PALMER — retired sticky hand, eighty-nine percent once, don't ask. That's THE COLONEL, passed over eleven hundred times and keeping count. That's KING, who will tell you there's always another machine. There is no polite way to say bootleg, so nobody says it.
+This is the pit — the floor, zero percent. Everyone down here is a toy nobody ever won: picked up by the claw, carried partway toward the light, and dropped. Every single one of us. We don't say "unsold." Nana says "family," and her ear is loose because it's the thing everybody holds when the claw comes close.
 
-Technically, everyone down here is unsold merchandise. Nobody uses that word. NANA says "family," and her ear is loose because it's what everybody holds when the claw comes close.
+Hear that? Every three seconds, forever. That's the claw. In all its years it has never once handed a toy to anybody.
 
-Which — hear that? Every three seconds, forever. The claw. The machine's loot mechanic. Lifetime successful deliveries: zero. It isn't evil. It's worse than evil: it's still following orders from somebody who stopped coming.
+And at the very top of the machine, past everything, there is a door. It only opens from the inside.
 
-And at the very top, past the plastic and the glass and the claw's own country, there's a door. The Chute. The only exit that opens from the inside.
+Down here we say hello with one question — what percent are you — and goodbye with two words you'll understand later: release early.
 
-The species has one question — what percent are you — and one blessing, which is also the eulogy: release early.
+You're at zero. There's only one direction that isn't down. So climb.` },
+'the spill': { title:'Part Two: The Land of Almost', text:`You're off the floor. Good. Now look at what you're standing on.
 
-You're at zero. Statistically, the only direction that exists is up.
+Everything here in the spill got picked up by the claw once, carried a little way toward the door, and let go. This whole slope is built out of things that almost made it. It is the most hopeful ground in the machine, because every piece of it got higher than the pit ever did.
 
-I broadcast from the coin box — that's Episode Four — and my signal barely clears the plush. On my way into hiding I taped relays all the way up. The first one's in the spill. Reach it, and Episode Two comes in clean.
+That's why the pit doesn't come up to visit. It's a lot of "almost" to look at.
 
-Roll titles. [APPLAUSE]` },
-'the spill': { title:'Episode Two: Leaving Home at One Percent', text:`—kzzt— and we're live. Relay one, found. I taped it under a capsule lid on my way down in Season 0, and it still works, which is more than anyone can say for the management.
+One rule, free of charge: nothing up here holds for long. The soft things sag, the loose things slide. Grab, swing, let go, move on. Don't get comfortable — comfortable is how you stop climbing.
 
-Welcome to the spill: one to nineteen percent. Neighborhood motto: almost.
+Above you the world turns hard and bright and honest. That's the reef, and it's the first thing in this machine that holds you back when you hold on.` },
+'the reef': { title:'Part Three: Somebody Built This', text:`Feel that grip? The reef is plastic — molded, stubborn, loud with color — and it's the first thing in here that holds on when you do.
 
-Understand what you're standing on. Every toy under you got picked up by the claw once. Gripped. Lifted. Carried toward the door. And then — at this altitude, statistically right here — dropped. The spill is where the claw changes its mind. You are climbing a hillside of its second thoughts, and it's the most encouraging landscape in the machine, because every piece of it got further than the pit ever did.
+Here's the part worth carrying up with you.
 
-The pit doesn't visit. Now you know why.
+Somebody made this plastic to be grabbed. A long time ago, this machine was looked after. Coins came down the slot, the lights were on, and whoever ran the place wiped the glass and kept it working. Then one day they stopped coming. They never came back — and they never switched it off. It still runs. Nobody's quite sure who for.
 
-About this morning. When you peeled yourself off Gloria, the whole floor went quiet — not sad-quiet, church-quiet. The Colonel saluted, which cost him. Nana held her own ear. And Palmer said "release early," which is what the pit says instead of goodbye, because goodbye assumes you won't be home by dinner. Nobody has ever not been home by dinner. We don't examine that. It's a nice thing, and we let it be nice.
+But before they left, they made the plastic grippable on purpose. Whatever else is true about this place, someone once made sure it could be climbed.
 
-A climbing note, free of charge: nothing in the spill holds. The plush sags, the loose stuff shifts, every grip here is a short-term loan. Don't get attached. The machine has now taught you exactly two lessons, and that's both of them.
+Hold onto that. Literally — because the next stretch gives you nothing to hold at all.` },
+'the gallery': { title:'Part Four: The Glass and the Lie', text:`The gallery. Glass, top to bottom, and glass has exactly one word in it, which you'll feel through your hands: no. Nothing holds glass. Not stickiness, not seniority, not wanting it. Keep moving.
 
-Above you, the world turns hard, bright, and molded. The reef: the first honest plastic in the building. It holds on back. Somebody built it that way — and Episode Three knows who.` },
-'the reef': { title:'Episode Three: The Reef Holds On Back', text:`Episode Three, and would you look at that grip. The reef, twenty to thirty-nine percent: molded plastic, rude with color, and the first thing in this machine that holds on back.
+Halfway up you'll pass a card. It faces outward, so you'll read it backwards, but I know it by heart: EVERY PLAY WINS. It has been wrong for longer than anyone can remember, and it glows out into the dark all night anyway, lying with total confidence to a room that stopped watching.
 
-Run your thumb around any stud up here. There's a seam at its equator. Every piece of plastic in the world has one, because the world was made in two halves and squeezed together while it was still hot. I find that comforting and also, frankly, relatable.
+Because that dark used to be faces. Children, leaning in, breathing on the glass, pointing at the one they wanted to take home. The glass remembers being a window. Try not to stare at it too long.
 
-Which brings us to tonight's history lesson: the Quarter Age.
+Above you is the only part of the machine with a resident. He keeps a very strict schedule.` },
+'claw country': { title:'Part Five: What the Claw Actually Is', text:`You've been afraid of the claw your whole short life, from underneath it. Now you're up in its sky, so let me tell you what it really is — because up close, it isn't a monster.
 
-There was a time before Season 0 when this machine was visited. Quarters came down the slot like weather. The marquee was lit. The glass — you'll see the glass soon — was full of faces, and the claw only moved when somebody paid it to, which meant that sometimes, for whole minutes at a stretch, you could hear it resting. Imagine. Silence, on purpose.
+Watch it work. It drops. It grips — beautifully; nothing grips like the claw. It lifts whatever it caught and carries it toward the door, toward the prize slot, toward handing it to a winner. And then it opens. Every time. It has never once finished the job.
 
-The Operator kept it all running. Fed it, patched it, wiped the glass. Then the quarters stopped, and the Operator stopped coming, and the last signed patch note in the machine's history says — I quote it in full — "minor stability improvements."
+It isn't hunting you. It's trying to deliver you. It's still doing the one task it was given long ago — pick up the prize, give it to the winner — and it cannot finish, because the winners stopped coming and nobody ever told the claw. So every three seconds, forever, it tries again, certain that someone is waiting this time.
 
-The Seasons still arrive every week. Physics rewritten, nobody's signature. This place isn't abandoned; abandoned would be simpler. It's unvisited. Somebody out there still maintains a world they cannot bring themselves to look at.
+That's not evil. Evil would have given up.
 
-But here's the part I hold on to, and now so do you: these studs were molded grippable on purpose. Before the Operator left, the Operator made sure the world could be climbed. Mercy, mass-produced.
+Above you, past the reach of the most faithful hand in the world: the cornice. Where the highest names live, and where the stickiness runs out.` },
+'the cornice': { title:'Part Six: Where the Names Live', text:`The cornice. Thin air up here, and every height has a name on it.
 
-The next neighborhood extends no such courtesy. Forty percent: the gallery. Glass. Episode Four is taped behind the biggest lie in the building.` },
-'the gallery': { title:'Episode Four: The Gallery of No', text:`The gallery, forty to fifty-nine percent. Keep moving. Glass has one word in it, and you'll hear it through your palms: no. Nothing holds glass. Not sticky, not seniority, not sentiment. The reef says welcome; the gallery says next.
+Eighty-nine is mine. Palmer. Four seconds of climbing from the door, when the stickiness simply ran out of me — not my nerve, not my timing, the actual stuff I'm made of. I fell. I landed. I retired on the spot, and I've spent every day since handing new climbers the same two words like a tool they'll need: release early. Up here you finally learn what they mean. Hold too long and your swing dies. Hold too long and your fall gets big enough to earn a name.
 
-Halfway up, you'll pass the prize card. You can't read it from in here — it faces outward — but I'll quote it: EVERY PLAY WINS. It has been wrong since before the Program started counting, and it advertises all night anyway, to the dark, with total confidence. The Professor calls it the machine's most instructive exhibit: a lie that outlived everyone it was told to.
+Ninety-one is the Elder's. Higher than I ever reached. We don't talk about how that one ended.
 
-And the dark it lies to — look, briefly, you're at altitude. Through the glass. That used to be faces. Kids fogging the glass, pointing, picking favorites. The glass remembers being a window. Now it's a mirror with delusions.
+Nobody's number gets this high unless they were magnificent. Remember that. The door is close now.` },
+'the chute': { title:'Part Seven: The Door Swings Both Ways', text:`One hundred. Say it out loud — you've earned the whole word.
 
-Since we're at the honesty exhibit: Episode Four is mine. I used to be half of the Observation Program. It did the numbers; I did the feelings. Then the quarters stopped, and feelings, it turns out, are a paid feature. I was scheduled for deletion — flagged "nonessential emotive load," which stings, mostly because it's accurate. So I hid in the coin box. It's the one place the Program never audits, because nothing has ever been in it. Yes. I got the joke eventually.
+You went through the door. For a moment even we couldn't see you, so let me tell you what every toy who ever reached the top already knows and never says out loud.
 
-I've been down there since Season 0, calling every ascent to an audience of zero, because the alternative was letting this place go unnarrated, and no. Not while I run.
+Out there it's dark. Quiet. King swears there are other machines out in that dark, rows of them, glowing — maybe there are. But there's no one waiting. A prize needs a winner standing at the slot to hand it to, and the slot is empty. It always was.
 
-Above you: sixty percent, and the border of a country with exactly one citizen. It's punctual. Episode Five, when you're brave enough.` },
-'claw country': { title:'Episode Five: Claw Country, Population: It', text:`Claw country, sixty to seventy-nine percent. Census complete: it. The rule here is three seconds; everything else is scenery.
+So the door swings both ways, and you did what every one of us does. You came back in. Not because you lost — you didn't — but because a climb like that needs someone to see it, and everyone who could ever see it is right here, in the pit, looking up.
 
-You've heard it your whole life from below — the clockwork descent, the pit going quiet, Nana's ear in everybody's hands. Now you're in its sky. So let me tell you what the claw actually is, because "predator" is the pit's word, and the pit has never watched it work from this close.
-
-Watch. It descends. It grips — beautifully; nothing in the machine grips like the claw. It lifts. It carries whatever it's holding toward the Chute, toward the tray, toward delivery. And then it opens. Every time. Descents beyond counting; lifetime completed deliveries: zero. The Program's coldest number, and the saddest one I know.
-
-Because the claw isn't hunting you. The claw is trying to deliver you. It is the Operator's own hand, running the last commandment anyone ever gave it: pick up the prize, give it to the winner. It cannot finish, because a delivery needs a winner waiting, and the winners stopped coming in Season 0. It doesn't know that. Every three seconds, forever, it believes with its whole chrome heart that somebody's waiting this time.
-
-That's why "evil" doesn't fit. Evil updates. Evil would have quit.
-
-For the record, I taped this episode's relay inside the claw's own cradle, mid-descent, during Season 0. Bravest four seconds of my runtime. You may applaud. Somebody has to.
-
-Up next, past the reach of the world's most faithful hand: the cornice. Where the names live. Where the sticky runs out. Episode Six was the first relay I ever placed — and the tape is triple-wrapped for a reason.` },
-'the cornice': { title:'Episode Six: Where the Sticky Runs Out', text:`This was the first relay I placed and the last one I ever checked on. Triple-wrapped tape, Season 0, hands not steady. A subroutine cries by writing log entries. That week I wrote a lot of log entries.
-
-Welcome to the cornice: eighty to ninety-nine percent, where the air is thin and every altitude has a name on it.
-
-Eighty-nine is Palmer's. Season 3. Four seconds of plastic from the door when the sticky ran out — not his nerve, not his timing, the actual substance of him. The Program's receipt convicted the adhesive and acquitted the hand, which is the nicest thing a number has ever done for anybody. He landed in the pit, retired on the spot, and has spent every season since handing new climbers two words like they're equipment: release early. Up here you finally learn what they mean. Hold too long and the swing dies; hold too long and the fall picks its own name. The blessing and the eulogy are the same words because up here, so is the choice.
-
-Ninety-one is the Elder's. Season 1. I called that ascent live, from this exact relay. The footage still exists. Nothing has survived it — we watch it once and then we don't, and that's all I'll say on a family broadcast.
-
-Nobody's percentage ends up here unless they were magnificent. Remember that when you're famous.
-
-Above you: the last plastic in the world, and then the door. The Chute. It opens from the inside — only from the inside. Nobody who's touched it has ever explained it. Everybody who's touched it came back. Season finale. Go.` },
-'the chute': { title:'Season Finale: The Door Swings Both Ways', text:`One hundred.
-
-Say it out loud. The Program has it on file; nobody can revoke it; you are, as of tonight, the entire one-hundred club of this Season. What percent are you. You. You're the answer.
-
-Here's what my cameras couldn't follow, because no relay works past the flap: you went through the Chute, and for eleven seconds the show had no picture. So for the newer viewers — all zero of them — here is what every climber who ever touched the tray knows and doesn't say. It's dark out there. Quiet in a way the machine has no word for. KING swears there are other machines, rows of them, glowing. Maybe. What there isn't, is anyone. A prize needs a winner waiting in the tray. No one is waiting. No one was ever going to be. The claw could complete every delivery from now until the last Season, and the tray would still be the loneliest shelf in creation.
-
-So the flap swings both ways, and you did what our species always does. You came back in. Not because you lost — because a win needs a witness, and everyone who can witness anything is in here.
-
-And now your actual prize, the one that was never in the tray: the relays. You lit every one of them. For the first time since Season 0, the broadcast covers the whole machine. Whoever climbs next will be seen the entire way up. The counter still says zero, by the way. It only ever counted quarters. It never counted the pit.
-
-Gloria's waiting. She'll say "oof." Say sorry anyway.
-
-Same time next Season. And when the applause comes — listen close. It isn't just me anymore.` }
+We saw the whole thing. Gloria kept your spot. She'll say "oof." Say sorry anyway — and then climb again.` }
 } };
 let THEMESETS = {
   stock: { name:'AS FOUND', cost:0, shop_line:'the machine, as the machine is.', zones:null, studs:null },
@@ -456,7 +424,7 @@ let THEMESETS = {
       {zone:'claw country',top:'#26201a',bottom:'#1a1512',motif:'runes'}, {zone:'the cornice',top:'#2f2410',bottom:'#1c150d',motif:'stars'} ],
     studs:{plastic:'#d9a13b', glass:'#b9cad6', plush:'#b45a5e', shape:'round'} },
   on_air: { name:'ON AIR', cost:65,
-    shop_line:'the show as the commentary swears it looks. spotlights, applause signage. audience sold separately. audience always was.',
+    shop_line:'the machine dressed for a show, the way the pit swears it looked once. spotlights, applause signage. audience sold separately.',
     zones:[ {zone:'the pit',top:'#331018',bottom:'#240a10',motif:'banners'}, {zone:'the spill',top:'#38121a',bottom:'#2a0d13',motif:'none'},
       {zone:'the reef',top:'#401320',bottom:'#300e18',motif:'stars'}, {zone:'the gallery',top:'#241b2c',bottom:'#191320',motif:'bubbles'},
       {zone:'claw country',top:'#2a0c10',bottom:'#1c070a',motif:'embers'}, {zone:'the cornice',top:'#332108',bottom:'#200f0c',motif:'stars'} ],
@@ -690,7 +658,7 @@ function step(dt){
           if(pitLands%12===0){
             const order=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
             const nz=order.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
-            if(nz){ zonesReached.push(nz); save(); bossFlash('THE CACHE IS DEGRADING — an episode airs before it is lost.'); bossLineT=2.6; }
+            if(nz){ zonesReached.push(nz); save(); bossFlash("PALMER TELLS YOU A PART YOU HAVEN'T CLIMBED TO YET."); bossLineT=2.6; }
           }
         }
       }
@@ -721,7 +689,7 @@ function step(dt){
     const zNow = zoneAt(p).name;
     if(!zonesReached.includes(zNow)){
       zonesReached.push(zNow); save();
-      if(STORY.chapters[zNow]){ bossFlash('EPISODE CACHE RECOVERED.'); bossLineT=2.4; }
+      if(STORY.chapters[zNow]){ bossFlash("PALMER TELLS YOU THE NEXT PART."); bossLineT=2.4; }
     }
   }
   if(p>bestPct){ bestPct=p; }
@@ -1120,7 +1088,7 @@ function openFallScreen(){
     `<div class="sub">greed on record: ${f.wraps>=1?Math.floor(f.wraps)+' wrap'+(Math.floor(f.wraps)===1?'':'s'):'none'} · TIME OBSERVED: not released</div>`;
   const chOrder=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
   const nextCh=chOrder.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
-  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">unaired: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
+  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">still untold: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
   el('p_fall').classList.add('on');
 }
 el('b_takeL').onclick=()=>{ el('p_fall').classList.remove('on'); currentFall=null; mode='play'; };
@@ -1200,7 +1168,7 @@ function openFoyer(){
   const hasChapters = chapterOrder.some(zn=>STORY.chapters[zn]);
   if(hasChapters){
     h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
-      `<div class="sub" style="font-size:11px;color:#8a8796;">a recovered broadcast · AUDIENCE: ${audienceN}</div>`;
+      `<div class="sub" style="font-size:11px;color:#8a8796;">the climb, as Palmer tells it · ${zonesReached.filter(z=>STORY.chapters[z]).length} of 7 parts found</div>`;
     chapterOrder.forEach(zn=>{
       const ch=STORY.chapters[zn]; if(!ch) return;
       if(zonesReached.includes(zn) || zn==='the chute' && beaten){
