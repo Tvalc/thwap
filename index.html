@@ -72,7 +72,7 @@
 
   <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
   <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE</button>
-  <button class="btn ghost" id="b_foyer" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE FOYER</button>
+  <button class="btn ghost" id="b_foyer" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE MACHINE</button>
 
   <div class="panel" id="p_foyer">
     <div class="doc" id="foyer_doc" style="max-height:72vh; overflow-y:auto;"></div>
@@ -179,20 +179,7 @@ const CARVINGS = [
   {pct:63,   x:80,     t:"ONE. TWO. FLING."},
 ];
 const TOKEN_R = 44;
-const SHOP = [
-  {id:'lamp',   kind:'build', cost:10, name:'THE LAMP', line:'a light, for the pit. the machine never noticed it was dark. the plush noticed immediately.',
-    resident:'BUTTONS', rline:'"I can see the falls coming now. Still not warning anybody." — BUTTONS'},
-  {id:'lights', kind:'build', cost:15, name:'STRING LIGHTS', line:'salvaged from a christmas the machine slept through. GLORIA calls them the stars. nobody corrects her.',
-    resident:'GLORIA', rline:'"Land on me, baby. Everybody does. Now there\'s mood lighting." — GLORIA'},
-  {id:'kettle', kind:'build', cost:20, name:'THE KETTLE', line:'it does not work. nothing in the pit works. attendance is excellent.',
-    resident:'NANA', rline:'"The kettle doesn\'t work. We gather anyway. That\'s most of it, really." — NANA'},
-  {id:'board',  kind:'build', cost:25, name:'THE NOTICE BOARD', line:'your named falls, posted where everyone lands. the pit reads slowly and remembers forever.',
-    resident:'PROFESSOR', rline:'"I read your fall notice nine times. Survivable. I said what I said." — PROFESSOR'},
-  {id:'couch',  kind:'build', cost:35, name:'THE COUCH', line:'the first soft thing in this machine that chose to be soft.',
-    resident:'THE COLONEL', rline:'"Eleven hundred passes, zero couches. Now look at us." — THE COLONEL'},
-  {id:'radio',  kind:'build', cost:50, name:'THE RADIO', line:'it only picks up the machine\'s hum. the pit calls it music. nobody argues.',
-    resident:'DOT', rline:'"It\'s the same note forever. I\'ve started to hear parts." — DOT'},
-];
+// (pit furnishings deleted — cosmetics now only change the machine you climb through)
 // hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
 const FINISHES = {
   factory: { name:'FACTORY RED', cost:0, body:'#e85c3c', body2:'#b23a1e', eye:'googly', trail:null, glow:null,
@@ -350,9 +337,10 @@ let held=false, grabWin=0, whiffLock=0, grabLock=0;
 let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
 let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
 let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
-let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
+let quarters = 0, finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
 let TOKENS = [];
-let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
+let zonesReached = [], audienceN = 0, chaptersRead = [];
+let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top of the machine, and it takes toys and does not give them back. Second: you never, ever climb toward it.
 
@@ -453,6 +441,28 @@ let THEMESETS = {
       {zone:'claw country',top:'#140d1c',bottom:'#0b0712',motif:'embers'}, {zone:'the cornice',top:'#101b2e',bottom:'#0a101e',motif:'stars'} ],
     studs:{plastic:'#43e0d8', glass:'#a8c4dc', plush:'#9b86c4', shape:'gem'} },
 };
+// cosmetics, reimagined: everything changes the machine you climb through, and you see it every second.
+// backdrops and studs are DECOUPLED so they mix — far more looks from the same content.
+const BACKDROPS = {
+  stock:      { name:'AS FOUND',    cost:0,   line:'the machine as the machine is.', zones:null },
+  quarter:    { name:'QUARTER AGE', cost:35,  line:'back when the machine was still paid to care.', zones:THEMESETS.quarter_age.zones },
+  showtime:   { name:'SHOWTIME',    cost:45,  line:'dressed up for a night nobody came to.', zones:THEMESETS.on_air.zones },
+  oldfootage: { name:'OLD FOOTAGE', cost:55,  line:'sepia and static, the way the first climbs got remembered.', zones:THEMESETS.archive_footage.zones },
+  afterhours: { name:'AFTER HOURS', cost:70,  line:'the arcade at three in the morning, seen from the inside.', zones:THEMESETS.after_closing.zones },
+  deep:       { name:'THE DEEP',    cost:85,  line:'somebody filled it with water. nobody has explained why.',
+    zones:[ {zone:'the pit',top:'#08222c',bottom:'#04141c',motif:'bubbles'}, {zone:'the spill',top:'#082a34',bottom:'#05181f',motif:'bubbles'},
+      {zone:'the reef',top:'#06303a',bottom:'#041d24',motif:'none'}, {zone:'the gallery',top:'#052a38',bottom:'#03181f',motif:'bubbles'},
+      {zone:'claw country',top:'#04222e',bottom:'#02141b',motif:'none'}, {zone:'the cornice',top:'#062e3e',bottom:'#031a24',motif:'bubbles'} ] },
+};
+const STUDSETS = {
+  stock:   { name:'AS FOUND',   cost:0,   line:'factory plastic. honest.', studs:null },
+  gum:     { name:'GUMDROPS',   cost:30,  line:'the machine, if it had sold candy instead of promises.', studs:{plastic:'#ff7bac', glass:'#9fd8e8', plush:'#e2607f', shape:'round'} },
+  bone:    { name:'BONE',       cost:40,  line:'pale, dry, and faintly rude about it.',                  studs:{plastic:'#e8e2d0', glass:'#c2d0d8', plush:'#b09a94', shape:'square'} },
+  circuit: { name:'CIRCUIT',    cost:55,  line:'somebody wired the inside for a purpose nobody remembers.', studs:{plastic:'#4ce07a', glass:'#7fd6e8', plush:'#a77bd0', shape:'bolt'} },
+  coral:   { name:'CORAL',      cost:65,  line:'the reef, taken literally.',                             studs:{plastic:'#ff8c5a', glass:'#8fd0dd', plush:'#e0708f', shape:'round'} },
+  ice:     { name:'ICE',        cost:80,  line:'every hold looks like it might not forgive you.',        studs:{plastic:'#bfe6f5', glass:'#8fb8d8', plush:'#a8c2d8', shape:'gem'} },
+  gold:    { name:'SOLID GOLD', cost:110, line:'the whole machine upgraded into a prize nobody can win.', studs:{plastic:'#f0c64a', glass:'#d8c890', plush:'#c9a05a', shape:'gem'} },
+};
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
 let bossLine = FIELD_NOTES[0], bossLineT=0, bossBig=false;
 let reveal=null, zonesThisRun=[];
@@ -475,10 +485,13 @@ function load(){
     fallCount = d.falls||0; bestFall = d.bestFall||0;
     if(d.guide) for(const k in guide){ if(d.guide[k]) guide[k]=d.guide[k]; }
     fallLog = d.fallLog||[]; bestTime = d.bestTime||null; archStatus = d.arch||{};
-    quarters = d.q||0; builds = d.builds||[]; finishes = d.fin||[]; skin = d.skin||'factory';
+    quarters = d.q||0; finishes = d.fin||[]; skin = d.skin||'factory';
     if(!FINISHES[skin]) skin='factory';
-    zonesReached = d.zr||[]; themesOwned = d.thOwn||[]; themeWorn = d.thWorn||'stock';
-    if(!THEMESETS[themeWorn]) themeWorn='stock';
+    zonesReached = d.zr||[];
+    bgOwned = d.bgOwn||[]; bgWorn = d.bgWorn||'stock';
+    studOwned = d.stOwn||[]; studWorn = d.stWorn||'stock';
+    if(!BACKDROPS[bgWorn]) bgWorn='stock';
+    if(!STUDSETS[studWorn]) studWorn='stock';
     audienceN = d.aud||0; chaptersRead = d.chRead||[];
     if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
   }catch(e){}
@@ -489,8 +502,9 @@ function save(){
   try{ localStorage.setItem('thwap', JSON.stringify({
     best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall,
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
-    q:quarters, builds:builds, fin:finishes, skin:skin,
-    zr:zonesReached, thOwn:themesOwned, thWorn:themeWorn, aud:audienceN, chRead:chaptersRead, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    q:quarters, fin:finishes, skin:skin, zr:zonesReached,
+    bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
+    aud:audienceN, chRead:chaptersRead, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -665,8 +679,6 @@ function step(dt){
         HAND.peakY = landY;
         if(mode==='play'){
           resetTokens(); pitLands++; zonesThisRun=[];
-          const owned = SHOP.filter(s=>s.kind==='build' && s.rline && builds.includes(s.id));
-          if(owned.length && pitLands%3===0){ bossFlash(owned[(pitLands/3|0)%owned.length].rline); bossLineT=2.4; }
           // the mercy rail: persistence airs episodes the skill wall would have kept sealed
           if(pitLands%12===0){
             const order=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
@@ -742,9 +754,9 @@ function hexA(hex, a){
   const h = hex.replace('#',''); const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
   return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
 }
-function themeStuds(){ const t=THEMESETS[themeWorn]; return (t && t.studs) || null; }
+function themeStuds(){ const t=STUDSETS[studWorn]; return (t && t.studs) || null; }
 function themeBG(){
-  const t=THEMESETS[themeWorn];
+  const t=BACKDROPS[bgWorn];
   if(!t || !t.zones) return {top:'#12141c', bottom:'#0a0b10', motif:'none'};
   const zp = clamp((camY-PIT_Y)/TOWER_H*100, 0, 100);
   const zn = zoneAt(zp).name;
@@ -890,51 +902,6 @@ function drawHand(){
   if(dusty && !HAND._wiped){ ctx.fillStyle='rgba(200,190,150,.25)'; ctx.beginPath(); ctx.arc(X,Y,12*S,0,7); ctx.fill(); }
   ctx.restore();
 }
-function drawFoyer(){
-  if(!builds.length) return;
-  if(sy(PIT_Y)<-80 || sy(PIT_Y)>Hc+160) return;
-  const has=id=>builds.includes(id);
-  const B=100;                                  // furniture baseline, below the plush
-  if(has('lamp')){
-    ctx.fillStyle='rgba(231,192,75,.09)'; ctx.beginPath(); ctx.arc(sx(335), sy(B+40), 46, 0, 7); ctx.fill();
-    ctx.strokeStyle='#8b8f9e'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(sx(335), sy(B)); ctx.lineTo(sx(335), sy(B+38)); ctx.stroke();
-    ctx.fillStyle='#e7c04b'; ctx.beginPath(); ctx.arc(sx(335), sy(B+42), 4.5, 0, 7); ctx.fill();
-  }
-  if(has('lights')) for(let i=0;i<9;i++){
-    ctx.fillStyle=['#e7c04b','#c8677e','#5dcaa5','#78aad2'][i%4];
-    ctx.beginPath(); ctx.arc(sx(50+i*41), sy(B+58)+((i%2)*5), 2.5, 0, 7); ctx.fill();
-  }
-  if(has('kettle')){
-    ctx.fillStyle='#b4b2a9'; ctx.fillRect(sx(96), sy(B+12), 14, 10);
-    ctx.strokeStyle='#b4b2a9'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(sx(110), sy(B+14)); ctx.lineTo(sx(117), sy(B+18)); ctx.stroke();
-  }
-  if(has('board')){
-    ctx.strokeStyle='#8b8f9e'; ctx.lineWidth=1.5; ctx.strokeRect(sx(236), sy(B+42), 46, 32);
-    const last=fallLog[fallLog.length-1];
-    ctx.fillStyle='rgba(232,232,238,.4)'; ctx.font='600 7px ui-monospace,monospace'; ctx.textAlign='left';
-    ctx.fillText(last?('№'+last.no+' −'+last.pct+'%'):'no notices', sx(240), sy(B+30));
-  }
-  if(has('couch')){
-    ctx.fillStyle='#7a5b8f';
-    ctx.fillRect(sx(148), sy(B+16), 54, 11);
-    ctx.fillRect(sx(148), sy(B+5), 8, 11); ctx.fillRect(sx(194), sy(B+5), 8, 11);
-  }
-  if(has('radio')){
-    ctx.fillStyle='#444441'; ctx.fillRect(sx(300), sy(B+14), 20, 13);
-    ctx.strokeStyle='#8b8f9e'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(sx(318), sy(B+14)); ctx.lineTo(sx(325), sy(B+26)); ctx.stroke();
-  }
-  const owned = SHOP.filter(s=>s.kind==='build' && s.resident && builds.includes(s.id));
-  owned.forEach((s,i)=>{
-    const bx=sx(78+i*50), by=sy(B+22);
-    ctx.fillStyle=['#c8677e','#8fb573','#c2a24e','#7a9ec2','#b58fb0','#9aa387'][i%6];
-    ctx.beginPath(); ctx.arc(bx, by, 8, 0, 7); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(bx-2.5,by-2,2,0,7); ctx.arc(bx+2.5,by-2,2,0,7); ctx.fill();
-    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(bx-2.5,by-2,1,0,7); ctx.arc(bx+2.5,by-2,1,0,7); ctx.fill();
-  });
-}
 function drawClaw(){
   if(!CLAW) return;
   const open = clawT > (CLAW_PERIOD-CLAW_OPEN);
@@ -970,7 +937,6 @@ function render(){
   ctx.fillStyle='rgba(180,183,200,.18)'; ctx.font=`600 ${Math.round(11)}px ui-monospace,monospace`;
   ctx.textAlign='left'; ctx.fillText(zc.name.toUpperCase(), 12, Hc-16);
 
-  drawFoyer();
   drawClaw();
   for(const s of STUDS) drawStud(s);
   for(const t of TOKENS){
@@ -1038,7 +1004,7 @@ function render(){
     ctx.fillText('RM '+fmtT((simFrame-runStart)/120), 12, 52); ctx.textAlign='right';
   }
   // the quarter count
-  if(quarters>0 || builds.length || finishes.length){
+  if(quarters>0 || finishes.length || bgOwned.length || studOwned.length){
     ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='left';
     ctx.fillText('¢ '+quarters, 12, 76); ctx.textAlign='right';
   }
@@ -1200,13 +1166,13 @@ function wrapLines(g, text, maxW){
   if(cur) lines.push(cur); return lines;
 }
 function unreadChapters(){ return zonesReached.filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length + ((beaten && STORY.chapters['the chute'] && !chaptersRead.includes('the chute'))?1:0); }
-function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE FOYER'+(unreadChapters()>0?' ●':''); }
+function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE MACHINE'+(unreadChapters()>0?' ●':''); }
 function openFoyer(){
   if(mode!=='play') return;
   mode='foyer';
-  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE FOYER · ${SEASON.name}</div>`+
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE MACHINE</div>`+
     `<h1>¢ ${quarters}</h1>`+
-    `<div class="sub">quarters, wedged in the machine since Season 0. the pit accepts donations. you are the only climber who ever brought anything back down.</div>`;
+    `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
   const chapterOrder = ZONES.map(z=>z.name).concat(['the chute']);
   const hasChapters = chapterOrder.some(zn=>STORY.chapters[zn]);
   if(hasChapters){
@@ -1222,46 +1188,73 @@ function openFoyer(){
       }
     });
   }
-  h += `<div class="rule"></div><div class="big" style="font-size:13px;">FURNISHINGS</div>`;
-  SHOP.filter(s=>s.kind==='build').forEach(s=>{
-    const own=builds.includes(s.id);
-    h += `<div class="sub" style="margin-top:7px;"><b>${esc(s.name)}</b> — ${esc(s.line)}<br>`+
-      (own ? `<span class="ok">built. ${esc(s.resident)} moved in.</span>`
-        : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buy('${s.id}')">BUILD · ¢${s.cost}</button>`)+`</div>`;
-  });
-  const themeIds = Object.keys(THEMESETS).filter(id=>id!=='stock');
-  if(themeIds.length){
-    h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE MACHINE, REDECORATED</div>`;
-    h += themeRow('stock');
-    themeIds.forEach(id=>{ h += themeRow(id); });
-  }
-  h += `<div class="rule"></div><div class="big" style="font-size:13px;">FINISHES</div>`;
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE HOLDS <span style="color:#8a8796;font-weight:400;">— what you grab</span></div>`;
+  Object.keys(STUDSETS).forEach(id=>{ h += studRow(id); });
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE MACHINE <span style="color:#8a8796;font-weight:400;">— what you climb through</span></div>`;
+  Object.keys(BACKDROPS).forEach(id=>{ h += bgRow(id); });
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">YOUR HAND</div>`;
   Object.keys(FINISHES).forEach(id=>{ h += finishRow(id); });
   el('foyer_doc').innerHTML = h;
   renderFinishPreviews();
+  renderStudPreviews();
   el('p_foyer').classList.add('on');
 }
-function themeRow(id){
-  const t=THEMESETS[id];
-  const own = id==='stock' || themesOwned.includes(id);
-  const worn = themeWorn===id;
-  const sw = t.zones ? [t.zones[0].bottom, t.studs.plastic, t.studs.glass, t.studs.plush] : ['#0a0b10','#8b8f9e','#78aad2','#c8677e'];
-  const swatch = `<div style="display:flex;gap:4px;margin:5px 0;">`+sw.map(c=>`<span style="width:26px;height:14px;border-radius:3px;background:${c};display:inline-block;"></span>`).join('')+`</div>`;
-  return `<div class="sub" style="margin-top:7px;"><b>${esc(t.name)}</b> — ${esc(t.shop_line)}`+swatch+
-    (worn ? `<span class="ok">the machine wears it.</span>`
-      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearTheme('${id}')">HANG IT</button>`
-      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyTheme('${id}')">ACQUIRE · ¢${t.cost}</button>`)+`</div>`;
+function studRow(id){
+  const t=STUDSETS[id];
+  const own = id==='stock' || studOwned.includes(id);
+  const worn = studWorn===id;
+  return `<div class="sub" style="margin-top:9px;display:flex;gap:10px;align-items:flex-start;">`+
+    `<canvas class="studprev" data-set="${id}" width="56" height="48" style="width:46px;height:40px;flex:none;background:#0c0d12;border-radius:9px;"></canvas>`+
+    `<div style="flex:1;min-width:0;"><b>${esc(t.name)}</b> — ${esc(t.line)}`+
+    (worn ? `<div class="ok" style="margin-top:4px;">in the machine.</div>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearStuds('${id}')">FIT THEM</button>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyStuds('${id}')">BUY · ¢${t.cost}</button>`)+
+    `</div></div>`;
 }
-window.__buyTheme = (id)=>{
-  const t=THEMESETS[id];
-  if(!t || mode!=='foyer' || quarters<t.cost || themesOwned.includes(id)) return;
-  quarters-=t.cost; themesOwned.push(id); themeWorn=id; save(); mode='play'; openFoyer();
-};
-window.__wearTheme = (id)=>{
-  if(mode!=='foyer') return;
-  if(id!=='stock' && !themesOwned.includes(id)) return;
-  themeWorn=id; save(); mode='play'; openFoyer();
-};
+function bgRow(id){
+  const t=BACKDROPS[id];
+  const own = id==='stock' || bgOwned.includes(id);
+  const worn = bgWorn===id;
+  const sw = t.zones ? t.zones.slice(0,5).map(z=>z.bottom) : ['#12141c','#0f1119','#0a0b10','#0f1119','#12141c'];
+  const swatch = `<div style="display:flex;gap:3px;margin:5px 0;">`+sw.map(c=>`<span style="flex:1;height:16px;border-radius:3px;background:${c};display:inline-block;"></span>`).join('')+`</div>`;
+  return `<div class="sub" style="margin-top:8px;"><b>${esc(t.name)}</b> — ${esc(t.line)}`+swatch+
+    (worn ? `<span class="ok">hung.</span>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearBg('${id}')">HANG IT</button>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyBg('${id}')">BUY · ¢${t.cost}</button>`)+`</div>`;
+}
+function renderStudPreviews(){
+  document.querySelectorAll('canvas.studprev').forEach(cv2=>{
+    const g=cv2.getContext('2d'); g.clearRect(0,0,56,48);
+    const th=(STUDSETS[cv2.dataset.set]||{}).studs;
+    const shape = th? th.shape : 'round';
+    const P = th? th.plastic : '#8b8f9e', GL = th? th.glass : '#78aad2', PL = th? th.plush : '#c8677e';
+    // plastic (solid), glass (translucent), plush (always soft + round) — legibility law holds in every set
+    g.fillStyle=P; studPathOn(g, 14, 17, 8, shape); g.fill();
+    g.strokeStyle='rgba(0,0,0,.35)'; g.lineWidth=1.5; g.stroke();
+    g.fillStyle=hexA(GL,.16); g.strokeStyle=hexA(GL,.5); g.lineWidth=1.5; studPathOn(g, 34, 17, 9, shape); g.fill(); g.stroke();
+    g.fillStyle=PL; g.beginPath(); g.arc(24, 35, 9, 0, 7); g.fill();
+    g.fillStyle='rgba(255,255,255,.15)'; g.beginPath(); g.arc(21, 32, 3, 0, 7); g.fill();
+  });
+}
+function studPathOn(g, X, Y, r, shape){
+  g.beginPath();
+  if(shape==='gem'){ g.moveTo(X,Y-r); g.lineTo(X+r,Y); g.lineTo(X,Y+r); g.lineTo(X-r,Y); g.closePath(); }
+  else if(shape==='square'){ g.rect(X-r*0.85, Y-r*0.85, r*1.7, r*1.7); }
+  else if(shape==='bolt'){ g.moveTo(X,Y-r); g.lineTo(X+r*0.9,Y+r*0.5); g.lineTo(X-r*0.9,Y+r*0.5); g.closePath(); }
+  else { g.arc(X,Y,r,0,7); }
+}
+window.__buyStuds = (id)=>{ const t=STUDSETS[id];
+  if(!t || mode!=='foyer' || quarters<t.cost || studOwned.includes(id)) return;
+  quarters-=t.cost; studOwned.push(id); studWorn=id; save(); mode='play'; openFoyer(); };
+window.__wearStuds = (id)=>{ if(mode!=='foyer') return;
+  if(id!=='stock' && !studOwned.includes(id)) return;
+  studWorn=id; save(); mode='play'; openFoyer(); };
+window.__buyBg = (id)=>{ const t=BACKDROPS[id];
+  if(!t || mode!=='foyer' || quarters<t.cost || bgOwned.includes(id)) return;
+  quarters-=t.cost; bgOwned.push(id); bgWorn=id; save(); mode='play'; openFoyer(); };
+window.__wearBg = (id)=>{ if(mode!=='foyer') return;
+  if(id!=='stock' && !bgOwned.includes(id)) return;
+  bgWorn=id; save(); mode='play'; openFoyer(); };
 window.__readCh = (zn)=>{
   const ch=STORY.chapters[zn]; if(!ch || mode!=='foyer') return;
   if(!chaptersRead.includes(zn)){ chaptersRead.push(zn); if(audienceN===0) audienceN=1; save(); updateFoyerBadge(); }
@@ -1271,14 +1264,6 @@ window.__readCh = (zn)=>{
     `<div class="sub" style="font-size:12.5px; line-height:1.75; white-space:pre-wrap;">${esc(ch.text)}</div>`+
     `<div class="rule"></div>`+
     `<button class="btn ghost" style="width:100%;padding:8px;font-size:11px;" onclick="(function(){mode='play';openFoyer();})()">back to the foyer</button>`;
-};
-window.__buy = (id)=>{
-  const s=SHOP.find(x=>x.id===id);
-  if(!s || mode!=='foyer' || quarters<s.cost) return;
-  quarters -= s.cost;
-  if(s.kind==='build'){ if(!builds.includes(id)) builds.push(id); }
-  else { if(!finishes.includes(id)) finishes.push(id); skin=id; trail=[]; }
-  save(); mode='play'; openFoyer();
 };
 window.__buyFin = (id)=>{
   const f=FINISHES[id];
@@ -1620,8 +1605,8 @@ window.__thwap = {
   caseStart:(id)=>{ resetToPit(); startAppeal(casePayload(CASES.find(c=>c.id===id)||CASES[0])); return 'case '+id; },
   freeze:(v)=>{ frozen=!!v; return frozen; },
   grantQ:(n)=>{ quarters+=n; save(); return quarters; },
-  story:()=>({zones:zonesReached.slice(), theme:themeWorn, themesOwned:themesOwned.slice(), chapters:Object.keys(STORY.chapters)}),
-  foyer:()=>({quarters, builds:builds.slice(), finishes:finishes.slice(), skin, tokenCount:TOKENS.length}),
+  story:()=>({zones:zonesReached.slice(), chapters:Object.keys(STORY.chapters), read:chaptersRead.slice()}),
+  foyer:()=>({quarters, finishes:finishes.slice(), skin, bgWorn, studWorn, bgOwned:bgOwned.slice(), studOwned:studOwned.slice(), tokenCount:TOKENS.length}),
   tokens:()=>TOKENS.map(t=>[Math.round(t.x),Math.round(t.y),t.v,t.got?1:0]),
   tp:(x,y)=>{ HAND.mode='fly'; HAND.x=x; HAND.y=y; HAND.vx=0; HAND.vy=-160; HAND.peakY=y; camY=y+60; },
   grippableStuds:()=>STUDS.filter(grippable).map(s=>[Math.round(s.x),Math.round(s.y)]),
