@@ -50,24 +50,24 @@
   <div class="panel" id="p_fall">
     <div class="doc" id="fall_doc"></div>
     <div class="btns">
-      <button class="btn ghost" id="b_takeL">LET IT STAND</button>
-      <button class="btn hot" id="b_appeal">DISPUTE THE FOOTAGE</button>
+      <button class="btn ghost" id="b_takeL">TAKE THE FALL</button>
+      <button class="btn hot" id="b_appeal">CALL A HAND</button>
     </div>
-    <div class="hint">a dispute inserts a friend at your final survivable instant. identical conditions. one grab.</div>
+    <div class="hint">drop a friend into your exact last second — the grab you missed. one hand, one shot. reachable, or not?</div>
   </div>
 
   <div class="panel" id="p_share">
-    <div class="kick">footage packaged for transmission</div>
+    <div class="kick">a hand, called</div>
     <img id="shareimg" alt="your fall, on the record">
-    <button class="btn hot wide" id="b_copy">COPY THE FOOTAGE LINK</button>
+    <button class="btn hot wide" id="b_copy">COPY THE CALL</button>
     <button class="btn ghost wide" id="b_back">back to the climb</button>
-    <div class="hint" id="share_note">they watch the footage. then they become you.</div>
+    <div class="hint" id="share_note">they get one shot at the grab you missed. send it.</div>
   </div>
 
   <div class="panel" id="p_appeal_intro">
     <div class="kick" id="ai_kick">incoming appeal</div>
     <div class="doc" id="ai_doc"></div>
-    <button class="btn hot wide" id="b_watch">REVIEW THE FOOTAGE</button>
+    <button class="btn hot wide" id="b_watch">TAKE THE SHOT</button>
   </div>
 
   <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
@@ -353,48 +353,64 @@ let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archSta
 let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
 let TOKENS = [];
 let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
-let STORY = { title:'EVERY PLAY WINS', chapters:{
-'the pit': { title:'Round One: Live from the Bottom', text:`LIVE — from the bottom of a machine that nobody is watching — it's EVERY PLAY WINS!
+let STORY = { title:'EVERYBODY GOES HOME', chapters:{
+'the pit': { title:'The Thing at the Top', text:`The pit agrees on two things. One: there is a monster at the top of the machine, and it takes toys and never gives them back. Two: you do not climb toward it.
 
-Tonight's contestant: you. Fresh sticky hand, face-down on Gloria the whale. She says "oof." That, folks, is showbiz.
+You are going to climb toward it.
 
-The rules are simple. That door at the very top? The Winner's Circle. Everybody down here is trying to reach it. Nobody's made it in ages.
+Because before it was a monster, it was Moose — one eye, enormous, wrong about very nearly everything — and he taught a small, frightened sticky hand how to wind, how to let go, and how not to get grabbed. Then the claw took him. His eye rolled all the way down to you. You kept it.
 
-You're up, Seven. CLIMB!` },
-'the spill': { title:'Round Two: The Slope of Almost', text:`ROUND TWO — you're off the floor, and the crowd goes mild!
+You've gotten good since. HANDS UP, kid. Up you go.` },
+'the spill': { title:'His Handwriting', text:`Nobody mentioned that the monster leaves notes.
 
-This wobbly slope you're standing on? Every piece of it is a toy the claw picked up and then dropped. A whole hillside of ALMOST. Very inspiring. Try not to think about it too hard.
+Halfway up the Spill — the long slope of everything the claw ever lifted and dropped — there's writing scratched into a stud, in big soft letters you would know anywhere:
 
-Nothing up here holds for long, Seven. Keep moving. Keep MOVING—` },
-'the reef': { title:'Round Three: Now We Grip', text:`ROUND THREE, and NOW we're cooking — real plastic, holds on when you hold on!
+KEEP GOING, KID. DON'T LOOK DOWN, IT'S TACKY.
 
-Fun fact the sponsors made me read: somebody BUILT this stuff to be climbed, back when this machine had lights and coins and, believe it or not, viewers. Then they left. Never turned the show off.
+Monsters, in your experience, do not write DON'T LOOK DOWN, IT'S TACKY.
 
-Which is exactly why I'm still here! CLIMB!` },
-'the gallery': { title:'Round Four: The Big Glass Lie', text:`ROUND FOUR: the glass. Bad news, Seven — glass holds NOTHING. Do not grab it. I have watched careers end on that glass.
+So you keep going. You do not look down. It is, in fact, tacky.` },
+'the reef': { title:'The Ones It Kept', text:`The Reef is plastic, and plastic holds — the first honest thing this machine has ever offered you.
 
-Halfway up you'll pass our famous slogan, printed nice and big for the whole world to see: EVERY PLAY WINS.
+It's also where you meet the others. Toys the claw carried up and simply left, snagged on the studs, facing the ceiling, still waiting to be handed to a child who is never coming.
 
-It's a lie. It's been a lie for years. We keep it up because it tests well. Onward!` },
-'claw country': { title:'Round Five: Here Comes the Claw', text:`ROUND FIVE — CLAW COUNTRY! Every three seconds, folks, our leading man drops in: THE CLAAAW.
+So here is the rule the whole pit got wrong: the claw is not a monster. It is a machine that takes things, and cannot, for the life of it, give them back.
 
-Little secret we don't tell the contestants: it isn't trying to grab you. It's trying to WIN you — scoop you up, hand you to a prize-winner. There aren't any prize-winners. So it just keeps trying. Forever.
+Something like that took Moose. Keep climbing. You're going to meet it.` },
+'the gallery': { title:'Out', text:`The Gallery is glass, and glass holds nothing — but for the first time, you can see out.
 
-Anyway — DODGE IT!` },
-'the cornice': { title:'Round Six: The Big Names', text:`ROUND SIX. Thin air, big names — every height up here belongs to a legend.
+Out is an arcade with the lights off. No coins. No children. No winners. The great dream of every toy in the pit — to be Won, lifted through the top into somebody's arms — leads, it turns out, to a dark room and a locked door.
 
-Eighty-nine percent: Palmer. Four seconds from the door when his grip gave out. Lovely guy. Do not bring it up.
+Good. You were never climbing to get out. You are climbing to get UP. Today, that is the only difference that matters.` },
+'claw country': { title:'The Hand of God, Malfunctioning', text:`Welcome to Claw Country, where the monster lives. Except it doesn't. There is only the Claw — and now you're close enough to see it properly.
 
-Ninety-one: the Elder. We do not rerun that footage.
+It isn't hunting you. It comes down every three seconds and grabs whatever is there, because grabbing whatever is there is the only thought it has ever had.
 
-You're higher than almost anybody now, Seven. Don't let it go to your googly little head. The door's right there!` },
-'the chute': { title:'The Winner\'s Circle', text:`ONE HUNDRED PERCENT! THE WINNER'S CIRCLE! Seven — you actually did it!
+But watch it a while. Between the grabs, it keeps reaching higher — for something that keeps dodging. Has done, apparently, for years.
 
-...Okay. Between us? There's no prize up here. No audience. There never was. The arcade closed years ago and I, uh, just kept hosting.
+Whatever the pit calls its monster: the Claw has been trying to catch it this whole time.` },
+'the cornice': { title:'Who It Actually Is', text:`Up here, near the very top, someone has been living. Tally marks. A small nest. And a big soft shape that turns when it hears you coming — one eye, enormous, unmistakable.
 
-But you climbed the whole thing, and I saw every second of it. That's the show. That was always the show.
+The monster the whole pit feared for years is Moose. He has spent all of it doing the one thing he was ever good at: catching the toys the claw drops, while they scream past him, certain he is the thing that eats them.
 
-Gloria saved your spot. Same time tomorrow, champ. Now — CLIMB AGAIN!` }
+He is very tired. And somewhere in all those years, quietly, he decided you had grown up and forgotten him.
+
+He is about to be extremely wrong about that. One more climb.` },
+'the chute': { title:'Hands Up, Kid', text:`One hundred percent. The top. Moose.
+
+He looks at you the way you look at a thing you have decided not to hope for. "Figured you forgot," he says. "Everybody forgets."
+
+Then he sees what you're holding. His eye — the one that rolled down to you a lifetime ago. You carried it up an entire machine.
+
+"...you kept it?"
+
+The Claw comes down one last time, for both of you. And this time you do not run the way he taught you. You catch it. You wind, you let go, and you send the machine to deliver the one thing it is allowed to: itself. Down the chute. Gone.
+
+Two eyes again. Whole.
+
+You don't leave through the top — out is the dark, locked room. You go home the other way. Down. Together.
+
+HANDS UP, kid. You were always coming.` }
 } };
 let THEMESETS = {
   stock: { name:'AS FOUND', cost:0, shop_line:'the machine, as the machine is.', zones:null, studs:null },
@@ -640,7 +656,7 @@ function step(dt){
           if(pitLands%12===0){
             const order=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
             const nz=order.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
-            if(nz){ zonesReached.push(nz); save(); bossFlash("THE HOST AIRS A ROUND YOU HAVEN'T REACHED YET."); bossLineT=2.6; }
+            if(nz){ zonesReached.push(nz); save(); bossFlash("THE CLIMB SHOWS YOU A HEIGHT YOU HAVEN'T REACHED."); bossLineT=2.6; }
           }
         }
       }
@@ -671,7 +687,7 @@ function step(dt){
     const zNow = zoneAt(p).name;
     if(!zonesReached.includes(zNow)){
       zonesReached.push(zNow); save();
-      if(STORY.chapters[zNow]){ bossFlash("AND WE'RE INTO A NEW ROUND, FOLKS!"); bossLineT=2.4; }
+      if(STORY.chapters[zNow]){ bossFlash("THE CLIMB TELLS YOU SOMETHING TRUE."); bossLineT=2.4; }
     }
   }
   if(p>bestPct){ bestPct=p; }
@@ -840,6 +856,13 @@ function drawHand(){
   }
   // the sticky hand, wearing its finish
   paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
+  // the eye you carry — Moose's, kept since the day the claw took him
+  if(mode==='play'){
+    const ex=X+11*S*0.66, ey=Y+11*S*0.62;
+    ctx.fillStyle='#f2efe6'; ctx.beginPath(); ctx.arc(ex,ey,3.1,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=0.8; ctx.stroke();
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(ex+0.5,ey+0.4,1.35,0,7); ctx.fill();
+  }
   // charge as a warming rim — finish stays visible the whole wind
   if(HAND.mode==='attach' && HAND.charge>0.02){
     const c2=HAND.charge;
@@ -1062,15 +1085,15 @@ function openFallScreen(){
   if(!dusty){ dusty=false; } save();
   const f=currentFall;
   el('fall_doc').innerHTML =
-    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ENTERED INTO THE RECORD · ${SEASON.name}</div>`+
+    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">THE CLAW HAS YOU</div>`+
     `<h1>FALL №${f.no} — “${esc(f.name)}”<br><span class="dmg">${f.fromPct}% → ${f.toPct}%</span></h1>`+
-    `<div class="sub">A descent of ${f.pct}%, from ${esc(f.zone.name)}.<br>${esc(f.line)}</div>`+
+    `<div class="sub">A drop of ${f.pct}%, out of ${esc(f.zone.name)}.<br>${esc(f.line)}</div>`+
     (f.ceremony ? `<div class="rule"></div><div class="sub">${esc(CEREMONY_LINE)}</div>` : '')+
     `<div class="rule"></div>`+
-    `<div class="sub">greed on record: ${f.wraps>=1?Math.floor(f.wraps)+' wrap'+(Math.floor(f.wraps)===1?'':'s'):'none'} · TIME OBSERVED: not released</div>`;
+    `<div class="sub" style="color:#8a8796;">it took you at ${f.toPct}%. the same way it took him. get up. climb.</div>`;
   const chOrder=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
   const nextCh=chOrder.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
-  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">up next on the show: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
+  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">still above you: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
   el('p_fall').classList.add('on');
 }
 el('b_takeL').onclick=()=>{ el('p_fall').classList.remove('on'); currentFall=null; mode='play'; };
@@ -1082,7 +1105,7 @@ function openShare(){
   el('shareimg').src = renderShareCard(currentFall);
   el('p_share').classList.add('on');
   el('b_copy').onclick = ()=>doShare(link, 'appeal');
-  el('share_note').textContent = 'they watch the footage. then they become you.';
+  el('share_note').textContent = 'they get one shot at the grab you missed. send it.';
   window.__lastLink = link;
 }
 el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=null; mode='play'; };
@@ -1150,7 +1173,7 @@ function openFoyer(){
   const hasChapters = chapterOrder.some(zn=>STORY.chapters[zn]);
   if(hasChapters){
     h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
-      `<div class="sub" style="font-size:11px;color:#8a8796;">a game show nobody is watching · ${zonesReached.filter(z=>STORY.chapters[z]).length} of 7 rounds aired</div>`;
+      `<div class="sub" style="font-size:11px;color:#8a8796;">the way up to Moose · ${zonesReached.filter(z=>STORY.chapters[z]).length} of 7</div>`;
     chapterOrder.forEach(zn=>{
       const ch=STORY.chapters[zn]; if(!ch) return;
       if(zonesReached.includes(zn) || zn==='the chute' && beaten){
@@ -1243,14 +1266,13 @@ function openWinScreen(){
   }
   beaten = true; bestPct = 100; save();
   el('win_doc').innerHTML =
-    `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ELEVATION: 100% · ${SEASON.name}</div>`+
-    `<h1>THE CHUTE.</h1>`+
-    `<div class="sub">nothing has ever left this machine on its own.</div>`+
-    `<div class="rule"></div>`+
-    `<div class="sub">what % are you? one hundred.${firstTime?'<br><br><b>THE RETURN MIGRATION: unlocked.</b> specimens always come back. next time, the clock is running.':''}</div>`+
+    `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ONE HUNDRED PERCENT · THE TOP</div>`+
+    `<h1>MOOSE.</h1>`+
+    `<div class="sub">He turns. "Figured you forgot," he says — then he sees his own eye, in your hand, carried up an entire machine. "...you kept it?"<br><br>The Claw comes down one last time. You don't run. You catch it, and send it to deliver the one thing it's allowed to: itself. Down the chute.<br><br>Two eyes again. You go home the other way — down, together. HANDS UP, kid.</div>`+
+    (firstTime?`<div class="rule"></div><div class="sub"><b>Somewhere above, another motor just kicked on.</b> Another toy at another ceiling its pit has turned into a monster. You know better now. Climb — be the hand that comes for it.</div>`:'')+
     tLine+
     `<div class="rule"></div>`+
-    `<div class="sub" style="text-align:center;color:#8a8796;">— end of observation —</div>`;
+    `<div class="sub" style="text-align:center;color:#8a8796;">— the marquee flickers: EVERYBODY GOES HOME —</div>`;
   el('p_win').classList.add('on');
   const brag = location.origin + location.pathname;
   el('b_winshare').onclick = ()=>{
@@ -1263,7 +1285,7 @@ function openWinScreen(){
 }
 
 function doShare(link, kind){
-  const txt = kind==='appeal' ? 'field footage. the fall is disputed. you are now me — save it: ' : 'the classification is in: ';
+  const txt = kind==='appeal' ? "i couldn't reach him. catch the grab i missed: " : 'the call came back: ';
   if(navigator.share){ navigator.share({text:txt, url:link}).catch(()=>{}); }
   else if(navigator.clipboard){ navigator.clipboard.writeText(link).then(()=>{
     el('b_copy').textContent='COPIED — now go send it'; },()=>{}); }
@@ -1298,7 +1320,7 @@ function renderShareCard(f){
   x.fillStyle='#5b584c'; x.font='600 14px ui-monospace,monospace';
   x.fillText('TIME OBSERVED ........ not released', 40, 660);
   x.fillStyle='#14140f'; x.font='700 22px ui-monospace,monospace';
-  x.fillText('the fall is disputed. you are now '+myHandle+'.', 40, 710);
+  x.fillText('catch the grab '+myHandle+' missed.', 40, 710);
   return c.toDataURL('image/png');
 }
 
@@ -1347,16 +1369,16 @@ function startAppeal(pl){
   // ghost playback data
   ghost = { pts: pl.t.map(p=>({x:p[0],y:p[1]})), i:0, pct:pl.f.a, done:false };
   el('b_archive').style.display='none'; el('b_foyer').style.display='none';
-  el('ai_kick').textContent = pl.self ? 'from your own footage' : (pl.archive ? 'from the archive' : 'incoming field footage');
-  const kickLine = pl.self ? 'RE-ENTRY · '+SEASON.name : (pl.archive ? 'THE ARCHIVE · SEASON 1' : 'THE FOOTAGE · '+(pl.sn?'SEASON '+pl.sn:SEASON.name));
+  el('ai_kick').textContent = pl.self ? 'your own last second' : (pl.archive ? 'the fall nothing has caught' : 'a hand, called');
+  const kickLine = pl.self ? 'YOUR FALL, AGAIN' : (pl.archive ? 'THE ELDER · nobody has ever caught this one' : esc(pl.from)+' CALLED YOUR HAND');
   const subLine = pl.self ? 'You were there. You are about to be there again.'
-    : (pl.archive ? 'Standing footage. Survived by nothing, yet.' : esc(pl.from)+' maintains that no grab existed. The footage shows one.');
+    : (pl.archive ? 'Nothing has ever caught this fall. Your hand. One shot.' : esc(pl.from)+" reached for the grab and missed. Now it's your hand.");
   el('ai_doc').innerHTML =
     `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">${kickLine}</div>`+
     `<h1>${esc(pl.from)} FELL<br>FROM ${pl.f.a}%<br><span class="dmg">${esc(pl.f.n)} · −${pl.f.p}%</span></h1>`+
     `<div class="sub">${subLine}</div>`+
-    `<div class="sub" style="margin-top:6px;">The footage has been wrong before. Once.</div>`+
-    `<div class="rule"></div><div class="sub big">you are about to become ${pl.self?'yourself':esc(pl.from)}.</div>`;
+    `<div class="sub" style="margin-top:6px;">One hand. One shot. Was the grab there, or not?</div>`+
+    `<div class="rule"></div><div class="sub big">your hand now.</div>`;
   el('p_appeal_intro').classList.add('on');
   mode='appeal_intro';
   // center camera on the fall
@@ -1380,7 +1402,7 @@ function beginTakeover(){
   HAND.peakY = HAND.y + 500;
   takeover = { attempts:0, failY: HAND.y - 620, saved:false, s0:s0.slice(), window:0 };
   held=false; grabWin=0; whiffLock=0;
-  bossFlash('YOU ARE NOW '+incoming.from+'.');
+  bossFlash('YOUR HAND NOW. CATCH IT.');
   const gv=el('b_giveup'); gv.style.display='block';
   gv.onclick=()=>{ gv.style.display='none'; resolveVerdict('DENIED'); };
 }
@@ -1437,20 +1459,20 @@ function resolveVerdict(kind){
       body=`nothing had ever survived this footage.<br><br>the archive has been corrected. it will not apologize. attempt count on record: ${att+1}.`;
     }
   } else if(kind==='DENIED'){
-    title='RECONSTRUCTION ABANDONED.<br>CLASSIFICATION: UNSURVIVABLE.'; klass='dmg';
-    body=`after ${att+1} attempt${att===0?'':'s'}, the second specimen has declined to continue. the footage is held against no one, now.<br><br>the fall is officially weather.<br>${esc(incoming.from)} has been notified, and is entitled to exactly one told-you-so, which the record will honor.`;
+    title='NO HAND COULD\'VE.'; klass='dmg';
+    body=`${att+1} tr${att===0?'y':'ies'}, and nobody reaches that. the claw just had ${esc(incoming.from)}.<br><br>${esc(incoming.from)} is cleared. it wasn't their grip — it was the machine.`;
   } else if(att===0){
-    title='RECONSTRUCTION COMPLETE.<br>SURVIVED. FIRST ATTEMPT.'; klass='ok';
-    body=`classification: SURVIVABLE.<br>same stud. same sky. the only variable that changed was the decision.<br><br>the record now reads, forever:<br><b>${esc(incoming.f.n)}: −${incoming.f.p}% (${esc(myHandle)} survived it in one)</b>`;
+    title='CAUGHT IT.<br>FIRST TRY.'; klass='ok';
+    body=`the grab was right there the whole time. ${esc(incoming.from)} just missed it.<br><br>it's on the record now:<br><b>${esc(incoming.f.n)}: −${incoming.f.p}% (${esc(myHandle)} caught it in one)</b>`;
   } else {
-    title=`RECONSTRUCTION COMPLETE.<br>attempt ${att+1}.`; klass='ok';
-    body=`classification: SURVIVABLE.<br>attempts 1 through ${att} are attached to this footage and cannot be detached.<br><br>survivable: proven. easy: the attempts disagree.`;
+    title=`CAUGHT IT.<br>try ${att+1}.`; klass='ok';
+    body=`reachable — proven. easy — the ${att} miss${att===1?'':'es'} before it beg to differ.`;
   }
   el('verdict_doc').innerHTML =
     `<h1 class="${klass}">${title}</h1><div class="rule"></div><div class="sub">${body}</div>`+
     (incoming.archive||incoming.self ? '' :
       `<div class="rule"></div><div class="ledger"><span>${esc(myHandle)} v ${esc(incoming.from)}</span>`+
-      `<span>${newL.c} case${newL.c===1?'':'s'}</span><span class="ok">${newL.g} survivable</span><span class="dmg">${newL.d} weather</span></div>`);
+      `<span>${newL.c} call${newL.c===1?'':'s'}</span><span class="ok">${newL.g} caught</span><span class="dmg">${newL.d} unreachable</span></div>`);
   el('p_verdict').classList.add('on');
   if(incoming.archive || incoming.self){
     el('b_reply').style.display='none';
@@ -1476,11 +1498,11 @@ function showReceivedVerdict(pl){
   const win = pl.verdict==='GRANTED';
   el('verdict_doc').innerHTML =
     `<div class="kick" style="letter-spacing:.18em;font-size:11px;color:#8a2b1f;margin-bottom:6px">RE: ${esc(pl.orig?pl.orig.n:'your footage')}</div>`+
-    `<h1 class="${win?'dmg':'ok'}">${win?'CLASSIFICATION:<br>SURVIVABLE.':'CLASSIFICATION:<br>UNSURVIVABLE.'}</h1>`+
-    `<div class="rule"></div><div class="sub">${win?`${esc(pl.from)} survived your fall on attempt ${(pl.n||0)+1}. the only variable that changed was the decision. the decision was yours.`:`${esc(pl.from)} took the same spin at the same speed and met the same plush. the fall is officially weather. you are entitled to exactly one told-you-so, which the record will honor.`}</div>`;
+    `<h1 class="${win?'dmg':'ok'}">${win?'THEY CAUGHT IT.':'NO HAND COULD.'}</h1>`+
+    `<div class="rule"></div><div class="sub">${win?`${esc(pl.from)} caught the grab you missed, on try ${(pl.n||0)+1}. it was reachable the whole time. that one's on you.`:`${esc(pl.from)} reached for it and missed too. the claw had you. you're cleared — nobody was catching that.`}</div>`;
   el('p_verdict').classList.add('on');
   el('b_reply').style.display='';
-  el('b_reply').textContent='TRANSMIT NEW FOOTAGE'; el('b_reply').onclick=()=>enterOwnTower();
+  el('b_reply').textContent='CALL ANOTHER HAND'; el('b_reply').onclick=()=>enterOwnTower();
   el('b_climb').onclick=()=>enterOwnTower();
   mode='verdict';
 }
