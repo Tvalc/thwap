@@ -353,70 +353,48 @@ let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archSta
 let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
 let TOKENS = [];
 let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
-let STORY = { title:'THE ENDLESS CLIMB', chapters:{
-'the pit': { title:'Part One: Welcome to the Bottom', text:`So you're new. Don't try to get up — nobody gets up gracefully after a landing like that, and Gloria doesn't mind. She's the whale. Everybody lands on Gloria. Say sorry; she's heard it before.
+let STORY = { title:'EVERY PLAY WINS', chapters:{
+'the pit': { title:'Round One: Live from the Bottom', text:`LIVE — from the bottom of a machine that nobody is watching — it's EVERY PLAY WINS!
 
-I'm Palmer. I climbed once. Now I live down here, and since the machine won't explain itself, I will.
+Tonight's contestant: you. Fresh sticky hand, face-down on Gloria the whale. She says "oof." That, folks, is showbiz.
 
-This is the pit — the floor, zero percent. Everyone down here is a toy nobody ever won: picked up by the claw, carried partway toward the light, and dropped. Every single one of us. We don't say "unsold." Nana says "family," and her ear is loose because it's the thing everybody holds when the claw comes close.
+The rules are simple. That door at the very top? The Winner's Circle. Everybody down here is trying to reach it. Nobody's made it in ages.
 
-Hear that? Every three seconds, forever. That's the claw. In all its years it has never once handed a toy to anybody.
+You're up, Seven. CLIMB!` },
+'the spill': { title:'Round Two: The Slope of Almost', text:`ROUND TWO — you're off the floor, and the crowd goes mild!
 
-And at the very top of the machine, past everything, there is a door. It only opens from the inside.
+This wobbly slope you're standing on? Every piece of it is a toy the claw picked up and then dropped. A whole hillside of ALMOST. Very inspiring. Try not to think about it too hard.
 
-Down here we say hello with one question — what percent are you — and goodbye with two words you'll understand later: release early.
+Nothing up here holds for long, Seven. Keep moving. Keep MOVING—` },
+'the reef': { title:'Round Three: Now We Grip', text:`ROUND THREE, and NOW we're cooking — real plastic, holds on when you hold on!
 
-You're at zero. There's only one direction that isn't down. So climb.` },
-'the spill': { title:'Part Two: The Land of Almost', text:`You're off the floor. Good. Now look at what you're standing on.
+Fun fact the sponsors made me read: somebody BUILT this stuff to be climbed, back when this machine had lights and coins and, believe it or not, viewers. Then they left. Never turned the show off.
 
-Everything here in the spill got picked up by the claw once, carried a little way toward the door, and let go. This whole slope is built out of things that almost made it. It is the most hopeful ground in the machine, because every piece of it got higher than the pit ever did.
+Which is exactly why I'm still here! CLIMB!` },
+'the gallery': { title:'Round Four: The Big Glass Lie', text:`ROUND FOUR: the glass. Bad news, Seven — glass holds NOTHING. Do not grab it. I have watched careers end on that glass.
 
-That's why the pit doesn't come up to visit. It's a lot of "almost" to look at.
+Halfway up you'll pass our famous slogan, printed nice and big for the whole world to see: EVERY PLAY WINS.
 
-One rule, free of charge: nothing up here holds for long. The soft things sag, the loose things slide. Grab, swing, let go, move on. Don't get comfortable — comfortable is how you stop climbing.
+It's a lie. It's been a lie for years. We keep it up because it tests well. Onward!` },
+'claw country': { title:'Round Five: Here Comes the Claw', text:`ROUND FIVE — CLAW COUNTRY! Every three seconds, folks, our leading man drops in: THE CLAAAW.
 
-Above you the world turns hard and bright and honest. That's the reef, and it's the first thing in this machine that holds you back when you hold on.` },
-'the reef': { title:'Part Three: Somebody Built This', text:`Feel that grip? The reef is plastic — molded, stubborn, loud with color — and it's the first thing in here that holds on when you do.
+Little secret we don't tell the contestants: it isn't trying to grab you. It's trying to WIN you — scoop you up, hand you to a prize-winner. There aren't any prize-winners. So it just keeps trying. Forever.
 
-Here's the part worth carrying up with you.
+Anyway — DODGE IT!` },
+'the cornice': { title:'Round Six: The Big Names', text:`ROUND SIX. Thin air, big names — every height up here belongs to a legend.
 
-Somebody made this plastic to be grabbed. A long time ago, this machine was looked after. Coins came down the slot, the lights were on, and whoever ran the place wiped the glass and kept it working. Then one day they stopped coming. They never came back — and they never switched it off. It still runs. Nobody's quite sure who for.
+Eighty-nine percent: Palmer. Four seconds from the door when his grip gave out. Lovely guy. Do not bring it up.
 
-But before they left, they made the plastic grippable on purpose. Whatever else is true about this place, someone once made sure it could be climbed.
+Ninety-one: the Elder. We do not rerun that footage.
 
-Hold onto that. Literally — because the next stretch gives you nothing to hold at all.` },
-'the gallery': { title:'Part Four: The Glass and the Lie', text:`The gallery. Glass, top to bottom, and glass has exactly one word in it, which you'll feel through your hands: no. Nothing holds glass. Not stickiness, not seniority, not wanting it. Keep moving.
+You're higher than almost anybody now, Seven. Don't let it go to your googly little head. The door's right there!` },
+'the chute': { title:'The Winner\'s Circle', text:`ONE HUNDRED PERCENT! THE WINNER'S CIRCLE! Seven — you actually did it!
 
-Halfway up you'll pass a card. It faces outward, so you'll read it backwards, but I know it by heart: EVERY PLAY WINS. It has been wrong for longer than anyone can remember, and it glows out into the dark all night anyway, lying with total confidence to a room that stopped watching.
+...Okay. Between us? There's no prize up here. No audience. There never was. The arcade closed years ago and I, uh, just kept hosting.
 
-Because that dark used to be faces. Children, leaning in, breathing on the glass, pointing at the one they wanted to take home. The glass remembers being a window. Try not to stare at it too long.
+But you climbed the whole thing, and I saw every second of it. That's the show. That was always the show.
 
-Above you is the only part of the machine with a resident. He keeps a very strict schedule.` },
-'claw country': { title:'Part Five: What the Claw Actually Is', text:`You've been afraid of the claw your whole short life, from underneath it. Now you're up in its sky, so let me tell you what it really is — because up close, it isn't a monster.
-
-Watch it work. It drops. It grips — beautifully; nothing grips like the claw. It lifts whatever it caught and carries it toward the door, toward the prize slot, toward handing it to a winner. And then it opens. Every time. It has never once finished the job.
-
-It isn't hunting you. It's trying to deliver you. It's still doing the one task it was given long ago — pick up the prize, give it to the winner — and it cannot finish, because the winners stopped coming and nobody ever told the claw. So every three seconds, forever, it tries again, certain that someone is waiting this time.
-
-That's not evil. Evil would have given up.
-
-Above you, past the reach of the most faithful hand in the world: the cornice. Where the highest names live, and where the stickiness runs out.` },
-'the cornice': { title:'Part Six: Where the Names Live', text:`The cornice. Thin air up here, and every height has a name on it.
-
-Eighty-nine is mine. Palmer. Four seconds of climbing from the door, when the stickiness simply ran out of me — not my nerve, not my timing, the actual stuff I'm made of. I fell. I landed. I retired on the spot, and I've spent every day since handing new climbers the same two words like a tool they'll need: release early. Up here you finally learn what they mean. Hold too long and your swing dies. Hold too long and your fall gets big enough to earn a name.
-
-Ninety-one is the Elder's. Higher than I ever reached. We don't talk about how that one ended.
-
-Nobody's number gets this high unless they were magnificent. Remember that. The door is close now.` },
-'the chute': { title:'Part Seven: The Door Swings Both Ways', text:`One hundred. Say it out loud — you've earned the whole word.
-
-You went through the door. For a moment even we couldn't see you, so let me tell you what every toy who ever reached the top already knows and never says out loud.
-
-Out there it's dark. Quiet. King swears there are other machines out in that dark, rows of them, glowing — maybe there are. But there's no one waiting. A prize needs a winner standing at the slot to hand it to, and the slot is empty. It always was.
-
-So the door swings both ways, and you did what every one of us does. You came back in. Not because you lost — you didn't — but because a climb like that needs someone to see it, and everyone who could ever see it is right here, in the pit, looking up.
-
-We saw the whole thing. Gloria kept your spot. She'll say "oof." Say sorry anyway — and then climb again.` }
+Gloria saved your spot. Same time tomorrow, champ. Now — CLIMB AGAIN!` }
 } };
 let THEMESETS = {
   stock: { name:'AS FOUND', cost:0, shop_line:'the machine, as the machine is.', zones:null, studs:null },
@@ -446,7 +424,8 @@ let THEMESETS = {
     studs:{plastic:'#43e0d8', glass:'#a8c4dc', plush:'#9b86c4', shape:'gem'} },
 };
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
-let bossLine = FIELD_NOTES[0], bossLineT=0;
+let bossLine = FIELD_NOTES[0], bossLineT=0, bossBig=false;
+const BARKS = ["WHAT A SAVE!","STILL ALIVE, SEVEN!","HE HANGS ON!","UNBELIEVABLE!","THE CROWD WOULD BE LOSING IT!","CAUGHT."];
 
 /* fall bookkeeping */
 let fallTrack = null;       // { pts:[], lastSave:{...}, fromPct, ... } while falling
@@ -631,7 +610,7 @@ function step(dt){
         attachTo(s, HAND.vx, HAND.vy);
         grabWin=0; whiffLock=0;
         bursts.push({x:s.x, y:s.y, f:simFrame, col:(FINISHES[skin]&&(FINISHES[skin].glow||FINISHES[skin].body))||'#fff'});
-        if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash("CAUGHT."); }   // clutch save juice
+        if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash(BARKS[simFrame%BARKS.length], true); }   // clutch save: the host loses it
         if(mode==='play'){
           if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
           if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
@@ -661,7 +640,7 @@ function step(dt){
           if(pitLands%12===0){
             const order=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
             const nz=order.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
-            if(nz){ zonesReached.push(nz); save(); bossFlash("PALMER TELLS YOU A PART YOU HAVEN'T CLIMBED TO YET."); bossLineT=2.6; }
+            if(nz){ zonesReached.push(nz); save(); bossFlash("THE HOST AIRS A ROUND YOU HAVEN'T REACHED YET."); bossLineT=2.6; }
           }
         }
       }
@@ -692,7 +671,7 @@ function step(dt){
     const zNow = zoneAt(p).name;
     if(!zonesReached.includes(zNow)){
       zonesReached.push(zNow); save();
-      if(STORY.chapters[zNow]){ bossFlash("PALMER TELLS YOU THE NEXT PART."); bossLineT=2.4; }
+      if(STORY.chapters[zNow]){ bossFlash("AND WE'RE INTO A NEW ROUND, FOLKS!"); bossLineT=2.4; }
     }
   }
   if(p>bestPct){ bestPct=p; }
@@ -702,7 +681,7 @@ function step(dt){
   camY += (targetCam - camY) * Math.min(1, dt*6.5);
 }
 
-function bossFlash(t){ bossLine=t; bossLineT=1.1; }
+function bossFlash(t, big){ bossLine=t; bossLineT=1.1; bossBig=!!big; }
 
 /* ---------- input ---------- */
 function down(){
@@ -1040,7 +1019,7 @@ function render(){
 
   // boss / clutch line
   if(bossLineT>0){ ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,bossLineT);
-    ctx.fillStyle='#e7c04b'; ctx.font=`700 ${Math.round(bossLine==='CAUGHT.'?30:14)}px ui-monospace,monospace`;
+    ctx.fillStyle='#e7c04b'; ctx.font=`700 ${Math.round(bossBig?26:14)}px ui-monospace,monospace`;
     ctx.fillText(bossLine, Wc/2, Hc*0.4); ctx.globalAlpha=1; }
 
   // takeover prompt
@@ -1091,7 +1070,7 @@ function openFallScreen(){
     `<div class="sub">greed on record: ${f.wraps>=1?Math.floor(f.wraps)+' wrap'+(Math.floor(f.wraps)===1?'':'s'):'none'} · TIME OBSERVED: not released</div>`;
   const chOrder=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
   const nextCh=chOrder.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
-  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">still untold: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
+  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">up next on the show: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
   el('p_fall').classList.add('on');
 }
 el('b_takeL').onclick=()=>{ el('p_fall').classList.remove('on'); currentFall=null; mode='play'; };
@@ -1171,7 +1150,7 @@ function openFoyer(){
   const hasChapters = chapterOrder.some(zn=>STORY.chapters[zn]);
   if(hasChapters){
     h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
-      `<div class="sub" style="font-size:11px;color:#8a8796;">the climb, as Palmer tells it · ${zonesReached.filter(z=>STORY.chapters[z]).length} of 7 parts found</div>`;
+      `<div class="sub" style="font-size:11px;color:#8a8796;">a game show nobody is watching · ${zonesReached.filter(z=>STORY.chapters[z]).length} of 7 rounds aired</div>`;
     chapterOrder.forEach(zn=>{
       const ch=STORY.chapters[zn]; if(!ch) return;
       if(zonesReached.includes(zn) || zn==='the chute' && beaten){
@@ -1416,7 +1395,7 @@ function stepTakeover(dt){
   if(takeover.window>0 && !takeover.saved){
     takeover.window -= dt;
     const s=nearestStud(HAND.x,HAND.y,REACH);
-    if(s){ attachTo(s,HAND.vx,HAND.vy); slowmo=0.45; bossFlash('CAUGHT.');
+    if(s){ attachTo(s,HAND.vx,HAND.vy); slowmo=0.45; bossFlash('CAUGHT.', true);
       takeover.saved=true; takeover.window=0; setTimeout(()=>resolveVerdict('GRANTED'), 700); return; }
     if(takeover.window<=0){ toReset('the grab met nothing.'); return; }
   }
