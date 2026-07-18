@@ -354,61 +354,75 @@ let quarters = 0, builds = [], finishes = [], skin = 'factory', pickups = [], pi
 let TOKENS = [];
 let zonesReached = [], themesOwned = [], themeWorn = 'stock', audienceN = 0, chaptersRead = [];
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
-'the pit': { title:'The Thing at the Top', text:`The pit agrees on two things. One: there is a monster at the top of the machine, and it takes toys and never gives them back. Two: you do not climb toward it.
+'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top of the machine, and it takes toys and does not give them back. Second: you never, ever climb toward it.
 
-You are going to climb toward it.
+You have decided to be wrong about the second one.
 
-Because before it was a monster, it was Moose — one eye, enormous, wrong about very nearly everything — and he taught a small, frightened sticky hand how to wind, how to let go, and how not to get grabbed. Then the claw took him. His eye rolled all the way down to you. You kept it.
+Because before the monster, there was Moose — one eye, roughly the size of a small country, and confidently mistaken about nearly everything. He found you when you were new and no bigger than a thumb, and he taught you the only three things that matter in here: how to wind, when to let go, and how not to be afraid of the thing that comes down every three seconds.
 
-You've gotten good since. HANDS UP, kid. Up you go.` },
-'the spill': { title:'His Handwriting', text:`Nobody mentioned that the monster leaves notes.
+Then it came down for him. His eye tore loose and rolled all the way to the bottom, to you. You've held onto it ever since.
 
-Halfway up the Spill — the long slope of everything the claw ever lifted and dropped — there's writing scratched into a stud, in big soft letters you would know anywhere:
+You aren't new anymore. You aren't small. HANDS UP, kid.` },
+'the spill': { title:'His Handwriting', lede:"Monsters don't leave encouraging notes. This one did.", text:`Nobody warned you the monster leaves notes.
 
-KEEP GOING, KID. DON'T LOOK DOWN, IT'S TACKY.
+Halfway up the Spill — the long, shifting heap of everything the claw ever lifted and then thought better of — someone has scratched three words into a stud, in big soft crooked letters you would know in the dark, underwater, a hundred years from now:
 
-Monsters, in your experience, do not write DON'T LOOK DOWN, IT'S TACKY.
+KEEP GOING, KID.
 
-So you keep going. You do not look down. It is, in fact, tacky.` },
-'the reef': { title:'The Ones It Kept', text:`The Reef is plastic, and plastic holds — the first honest thing this machine has ever offered you.
+And underneath, smaller, because he never could resist:
 
-It's also where you meet the others. Toys the claw carried up and simply left, snagged on the studs, facing the ceiling, still waiting to be handed to a child who is never coming.
+DON'T LOOK DOWN. IT'S TACKY.
 
-So here is the rule the whole pit got wrong: the claw is not a monster. It is a machine that takes things, and cannot, for the life of it, give them back.
+Monsters, in your considerable experience, do not write DON'T LOOK DOWN, IT'S TACKY.
 
-Something like that took Moose. Keep climbing. You're going to meet it.` },
-'the gallery': { title:'Out', text:`The Gallery is glass, and glass holds nothing — but for the first time, you can see out.
+So you keep going. And you do not look down. And it is, in fact, extremely tacky.` },
+'the reef': { title:'The Ones It Kept', lede:"The claw isn't a monster. It's worse — it can't give anything back.", text:`The Reef is plastic, and the plastic holds, which makes it the first honest thing this machine has ever said to you.
 
-Out is an arcade with the lights off. No coins. No children. No winners. The great dream of every toy in the pit — to be Won, lifted through the top into somebody's arms — leads, it turns out, to a dark room and a locked door.
+It is also a graveyard.
 
-Good. You were never climbing to get out. You are climbing to get UP. Today, that is the only difference that matters.` },
-'claw country': { title:'The Hand of God, Malfunctioning', text:`Welcome to Claw Country, where the monster lives. Except it doesn't. There is only the Claw — and now you're close enough to see it properly.
+They're everywhere, once you start seeing them: toys the claw carried halfway to the ceiling and simply set down, snagged on the studs, every one still turned hopefully toward a delivery slot and a child who stopped coming a very long time ago.
 
-It isn't hunting you. It comes down every three seconds and grabs whatever is there, because grabbing whatever is there is the only thought it has ever had.
+So here is the thing the whole pit got wrong, in its bones, for years. The claw is not a monster. A monster would at least mean it. The claw is a machine that takes, and takes, and cannot — not for anything, not for love, not for a thousand years of trying — give one single thing back.
 
-But watch it a while. Between the grabs, it keeps reaching higher — for something that keeps dodging. Has done, apparently, for years.
+Something like that has Moose. Keep climbing. You're going to meet it.` },
+'the gallery': { title:'Out', lede:'Everyone dreams of being Won. You just saw where Won goes.', text:`The Gallery is glass, and glass holds nothing at all — but press against it, and for the first time you can see out.
 
-Whatever the pit calls its monster: the Claw has been trying to catch it this whole time.` },
-'the cornice': { title:'Who It Actually Is', text:`Up here, near the very top, someone has been living. Tally marks. A small nest. And a big soft shape that turns when it hears you coming — one eye, enormous, unmistakable.
+Out is an arcade with its lights off. No coins in the slots. No small sticky hands on the buttons. No winners, and nobody coming to be one.
 
-The monster the whole pit feared for years is Moose. He has spent all of it doing the one thing he was ever good at: catching the toys the claw drops, while they scream past him, certain he is the thing that eats them.
+Which means the great dream of every toy in the pit — to be Won, scooped up and lifted out the top into somebody's arms — leads, it turns out, to exactly one place: a dark room, a locked door, and a very long wait.
 
-He is very tired. And somewhere in all those years, quietly, he decided you had grown up and forgotten him.
+Good. Let them dream it. You were never climbing to get out.
 
-He is about to be extremely wrong about that. One more climb.` },
-'the chute': { title:'Hands Up, Kid', text:`One hundred percent. The top. Moose.
+You're climbing to get up. Today, in this machine, that is the only difference that has ever mattered.` },
+'claw country': { title:'The Hand of God, Malfunctioning', lede:"It isn't hunting you. That's the worst part.", text:`Welcome to Claw Country, home of the monster — except there's no monster here either. There's only the Claw, and now you're close enough to watch it work.
 
-He looks at you the way you look at a thing you have decided not to hope for. "Figured you forgot," he says. "Everybody forgets."
+It isn't hunting you. It has never hunted anyone. It comes down every three seconds and closes around whatever happens to be there, because closing around whatever happens to be there is the single thought it has ever had, and it has been having it for a very long time.
 
-Then he sees what you're holding. His eye — the one that rolled down to you a lifetime ago. You carried it up an entire machine.
+But stay a moment. Watch between the grabs. Every so often it stretches higher than it needs to, reaching for something further up — something that keeps slipping the grip. Has kept slipping it, by the scoring worn into the cable, for years.
+
+Whatever the pit decided its monster was: the Claw has been trying to catch it this whole time, too.` },
+'the cornice': { title:'Who It Actually Is', lede:'The monster is the one who raised you.', text:`Someone has been living up here, near the very top. Tally marks worn into a stud. A nest of stuffing, arranged with care. And, turning slowly toward the sound of you climbing, a shape you have spent your whole life being told to fear — big, soft, and down to a single enormous eye.
+
+The monster is Moose. It was always Moose.
+
+He's spent every one of these years doing the one thing he was ever any good at: catching the toys the claw shakes loose, one after another, while every last one of them screams past him certain he's the thing that eats you.
+
+He is tired in a way you don't have the word for yet. And somewhere in all that time, quietly, without telling a soul, he decided you'd grown up and gotten over him.
+
+He is about to be so completely wrong. One more climb. Go.` },
+'the chute': { title:'Hands Up, Kid', lede:'You kept it. You were always coming.', text:`One hundred percent. The top. Moose.
+
+He turns, and he looks at you the way you look at a thing you long ago decided to stop hoping for. "Figured you forgot me," he says — gently, like it's fine, like it costs him nothing. "Everybody forgets."
+
+Then he sees what you've carried this whole way. His eye. The one that rolled down to a thumb-sized nobody a lifetime ago. You climbed an entire machine and never once set it down.
 
 "...you kept it?"
 
-The Claw comes down one last time, for both of you. And this time you do not run the way he taught you. You catch it. You wind, you let go, and you send the machine to deliver the one thing it is allowed to: itself. Down the chute. Gone.
+The Claw comes down one last time, for both of you — and this time you don't run the way he taught you. You catch it. You wind, you let go, exactly the way he taught you, and you send the machine off to deliver the only thing left in the world it's allowed to: itself. Down the chute. Gone.
 
 Two eyes again. Whole.
 
-You don't leave through the top — out is the dark, locked room. You go home the other way. Down. Together.
+You don't leave through the top. Out is the dark and the locked door. You go home the other way — down, together, the long way, and neither of you minds.
 
 HANDS UP, kid. You were always coming.` }
 } };
@@ -441,6 +455,7 @@ let THEMESETS = {
 };
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
 let bossLine = FIELD_NOTES[0], bossLineT=0, bossBig=false;
+let reveal=null, zonesThisRun=[];
 const BARKS = ["WHAT A SAVE!","STILL ALIVE, SEVEN!","HE HANGS ON!","UNBELIEVABLE!","THE CROWD WOULD BE LOSING IT!","CAUGHT."];
 
 /* fall bookkeeping */
@@ -649,7 +664,7 @@ function step(dt){
         attachTo(pit, 0, 0); held=false; HAND.charge=0;
         HAND.peakY = landY;
         if(mode==='play'){
-          resetTokens(); pitLands++;
+          resetTokens(); pitLands++; zonesThisRun=[];
           const owned = SHOP.filter(s=>s.kind==='build' && s.rline && builds.includes(s.id));
           if(owned.length && pitLands%3===0){ bossFlash(owned[(pitLands/3|0)%owned.length].rline); bossLineT=2.4; }
           // the mercy rail: persistence airs episodes the skill wall would have kept sealed
@@ -682,13 +697,15 @@ function step(dt){
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
-  // first time reaching a zone unlocks its chapter of the chronicle
+  // crossing into a new zone this climb reveals its beat live; first-ever reach also unlocks the full read
   if(mode==='play'){
     const zNow = zoneAt(p).name;
-    if(!zonesReached.includes(zNow)){
-      zonesReached.push(zNow); save();
-      if(STORY.chapters[zNow]){ bossFlash("THE CLIMB TELLS YOU SOMETHING TRUE."); bossLineT=2.4; }
+    if(!zonesThisRun.includes(zNow)){
+      zonesThisRun.push(zNow);
+      const ch=STORY.chapters[zNow];
+      if(ch && zNow!=='the pit') reveal={title:ch.title, lede:ch.lede||ch.title, t:0};
     }
+    if(!zonesReached.includes(zNow)){ zonesReached.push(zNow); save(); updateFoyerBadge(); }
   }
   if(p>bestPct){ bestPct=p; }
   if(p>=99.5 && mode==='play'){ openWinScreen(); return; }   // reached the summit
@@ -1045,6 +1062,19 @@ function render(){
     ctx.fillStyle='#e7c04b'; ctx.font=`700 ${Math.round(bossBig?26:14)}px ui-monospace,monospace`;
     ctx.fillText(bossLine, Wc/2, Hc*0.4); ctx.globalAlpha=1; }
 
+  // the climb narrates itself: a beat that lands as you cross into a new zone
+  if(reveal){
+    const a = reveal.t<0.35 ? reveal.t/0.35 : (reveal.t>3.9 ? Math.max(0,(4.6-reveal.t)/0.7) : 1);
+    ctx.save(); ctx.textAlign='center'; ctx.globalAlpha=a;
+    const cy=Hc*0.24;
+    ctx.fillStyle='rgba(231,192,75,.9)'; ctx.font='600 10px ui-monospace,monospace';
+    ctx.fillText(reveal.title.toUpperCase(), Wc/2, cy);
+    ctx.fillStyle='rgba(242,240,246,.98)'; ctx.font='500 16px ui-monospace,monospace';
+    const lines=wrapLines(ctx, reveal.lede, Wc-52);
+    lines.forEach((ln,i)=>ctx.fillText(ln, Wc/2, cy+22+i*22));
+    ctx.globalAlpha=1; ctx.restore();
+  }
+
   // takeover prompt
   if(mode==='appeal_play' && takeover){ ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.9)';
     ctx.font=`700 14px ui-monospace,monospace`; ctx.fillText('SAVE IT.', Wc/2, 96);
@@ -1065,6 +1095,7 @@ function frame(t){
     if(slowmo>0) slowmo-=DT;
     if(flash>0) flash=Math.max(0,flash-DT*4);
     if(bossLineT>0) bossLineT-=DT;
+    if(reveal){ reveal.t+=DT; if(reveal.t>4.6) reveal=null; }
     const active = (mode==='play'||mode==='appeal_play');
     if(active && hitstop<=0){
       const scale = slowmo>0?0.4:1;
@@ -1163,6 +1194,13 @@ function renderFinishPreviews(){
     paintHand(g, 24, 25, 14, FINISHES[cv2.dataset.fin]||FINISHES.factory, 0, 0);
   });
 }
+function wrapLines(g, text, maxW){
+  const words=String(text).split(' '); const lines=[]; let cur='';
+  for(const w of words){ const t=cur?cur+' '+w:w; if(g.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else cur=t; }
+  if(cur) lines.push(cur); return lines;
+}
+function unreadChapters(){ return zonesReached.filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length + ((beaten && STORY.chapters['the chute'] && !chaptersRead.includes('the chute'))?1:0); }
+function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE FOYER'+(unreadChapters()>0?' ●':''); }
 function openFoyer(){
   if(mode!=='play') return;
   mode='foyer';
@@ -1177,7 +1215,8 @@ function openFoyer(){
     chapterOrder.forEach(zn=>{
       const ch=STORY.chapters[zn]; if(!ch) return;
       if(zonesReached.includes(zn) || zn==='the chute' && beaten){
-        h += `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;" onclick="__readCh('${zn}')">📖 ${esc(ch.title)}</button>`;
+        const isNew = !chaptersRead.includes(zn);
+        h += `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;${isNew?'box-shadow:inset 0 0 0 1px #e7c04b;':''}" onclick="__readCh('${zn}')">📖 ${esc(ch.title)}${isNew?' <span style="color:#e7c04b;">◆ new</span>':''}</button>`;
       } else {
         h += `<div class="sub" style="margin-top:5px;color:#8a8796;">[ sealed — ${zn==='the chute'?'reach the chute':'reach '+esc(zn)} ]</div>`;
       }
@@ -1225,7 +1264,7 @@ window.__wearTheme = (id)=>{
 };
 window.__readCh = (zn)=>{
   const ch=STORY.chapters[zn]; if(!ch || mode!=='foyer') return;
-  if(!chaptersRead.includes(zn)){ chaptersRead.push(zn); if(audienceN===0) audienceN=1; save(); }
+  if(!chaptersRead.includes(zn)){ chaptersRead.push(zn); if(audienceN===0) audienceN=1; save(); updateFoyerBadge(); }
   el('foyer_doc').innerHTML =
     `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">${esc(STORY.title)} · ${esc(zn)}</div>`+
     `<h1 style="font-size:17px;">${esc(ch.title)}</h1><div class="rule"></div>`+
@@ -1509,6 +1548,7 @@ function showReceivedVerdict(pl){
 
 /* ---------- reset ---------- */
 function resetToPit(){
+  zonesThisRun=[];
   const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
@@ -1521,6 +1561,7 @@ function boot(){
   bossLine = FIELD_NOTES[(Date.now()>>10)%FIELD_NOTES.length];
   el('b_archive').onclick = ()=>openRecord();
   el('b_foyer').onclick = ()=>openFoyer();
+  updateFoyerBadge();
   const inc = parseIncoming();
   if(inc){ resetToPit(); startAppeal(inc); }
   else {
@@ -1539,6 +1580,7 @@ function tickOnce(){
   if(slowmo>0) slowmo-=DT;
   if(flash>0) flash=Math.max(0,flash-DT*4);
   if(bossLineT>0) bossLineT-=DT;
+  if(reveal){ reveal.t+=DT; if(reveal.t>4.6) reveal=null; }
   const active = (mode==='play'||mode==='appeal_play');
   if(active && hitstop<=0){ const scale=slowmo>0?0.4:1;
     if(mode==='appeal_play') stepTakeover(DT*scale); else step(DT*scale); }
