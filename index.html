@@ -342,7 +342,7 @@ let TOKENS = [];
 let zonesReached = [], audienceN = 0, chaptersRead = [];
 // the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
 const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
-let storyIdx = 1, foundThisRun = false;
+let storyIdx = 1, foundThisRun = false, resetArmed = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top of the machine, and it takes toys and does not give them back. Second: you never, ever climb toward it.
@@ -1217,6 +1217,15 @@ function openFoyer(){
   Object.keys(BACKDROPS).forEach(id=>{ h += bgRow(id); });
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">YOUR HAND</div>`;
   Object.keys(FINISHES).forEach(id=>{ h += finishRow(id); });
+  // start over — two taps, because this cannot be undone
+  h += `<div class="rule"></div>`;
+  if(!resetArmed){
+    h += `<button class="btn ghost" style="width:100%;margin-top:4px;padding:9px;font-size:11px;color:#8a8796;" onclick="__resetAsk()">start over</button>`;
+  } else {
+    h += `<div class="sub" style="color:#a3231f;"><b>this wipes everything.</b> your height, every note you've found, every quarter, every finish. Moose goes back to being a rumour, and you start again on the floor.</div>`+
+      `<button class="btn hot" style="width:100%;margin-top:6px;padding:10px;font-size:12px;background:#a3231f;color:#fff;" onclick="__resetDo()">YES — WIPE IT ALL</button>`+
+      `<button class="btn ghost" style="width:100%;margin-top:6px;padding:9px;font-size:11px;" onclick="__resetCancel()">no, keep my climb</button>`;
+  }
   el('foyer_doc').innerHTML = h;
   renderFinishPreviews();
   renderStudPreviews();
@@ -1298,7 +1307,15 @@ window.__wear = (id)=>{
   if(id!=='factory' && !finishes.includes(id)) return;
   skin=id; trail=[]; save(); mode='play'; openFoyer();
 };
-el('b_foyclose').onclick = ()=>{ el('p_foyer').classList.remove('on'); mode='play'; };
+window.__resetAsk = ()=>{ if(mode!=='foyer') return; resetArmed=true; mode='play'; openFoyer(); };
+window.__resetCancel = ()=>{ if(mode!=='foyer') return; resetArmed=false; mode='play'; openFoyer(); };
+window.__resetDo = ()=>{
+  if(mode!=='foyer') return;
+  try{ localStorage.removeItem('thwap'); }catch(e){}
+  // hard reload to a clean URL — guarantees a genuinely fresh boot with no stale state
+  location.replace(location.pathname);
+};
+el('b_foyclose').onclick = ()=>{ el('p_foyer').classList.remove('on'); resetArmed=false; mode='play'; };
 
 function openWinScreen(){
   if(mode==='win') return;
