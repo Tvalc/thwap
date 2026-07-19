@@ -340,6 +340,9 @@ let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archSta
 let quarters = 0, finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
 let TOKENS = [];
 let zonesReached = [], audienceN = 0, chaptersRead = [];
+// the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
+const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
+let storyIdx = 1, foundThisRun = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top of the machine, and it takes toys and does not give them back. Second: you never, ever climb toward it.
@@ -512,14 +515,11 @@ function load(){
     studOwned = d.stOwn||[]; studWorn = d.stWorn||'stock';
     if(!BACKDROPS[bgWorn]) bgWorn='stock';
     if(!STUDSETS[studWorn]) studWorn='stock';
-    audienceN = d.aud||0; chaptersRead = d.chRead||[];
-    // story v2: the old mercy rail handed out chapters for FALLING. re-gate on altitude actually climbed,
-    // and mark the rewritten chapters unread so they read fresh. (must run AFTER chaptersRead loads)
-    if(d.sv!==2){
-      const lows=[0]; for(let i=0;i<ZONES.length-1;i++) lows.push(ZONES[i].top);
-      zonesReached = ZONES.filter((z,i)=>bestPct>=lows[i]).map(z=>z.name);
-      chaptersRead = [];
-    }
+    audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1;
+    // story v3: gating on lifetime best height dumped the whole story in one good climb.
+    // now it's one note per climb, in order — reset the hunt so it actually gets earned.
+    if(d.sv!==3){ storyIdx = 1; chaptersRead = []; }
+    storyIdx = Math.max(1, Math.min(CHAPTER_ORDER.length, storyIdx));
     if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
   }catch(e){}
   if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
@@ -531,7 +531,7 @@ function save(){
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
     q:quarters, fin:finishes, skin:skin, zr:zonesReached,
     bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
-    aud:audienceN, chRead:chaptersRead, sv:2, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    aud:audienceN, chRead:chaptersRead, si:storyIdx, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -705,7 +705,7 @@ function step(dt){
         attachTo(pit, 0, 0); held=false; HAND.charge=0;
         HAND.peakY = landY;
         if(mode==='play'){
-          resetTokens(); pitLands++; zonesThisRun=[];
+          resetTokens(); pitLands++; zonesThisRun=[]; foundThisRun=false;
           // (no mercy unlocks — falling is not how you earn the story. only altitude is.)
         }
       }
@@ -731,15 +731,15 @@ function step(dt){
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
-  // crossing into a new zone this climb reveals its beat live; first-ever reach also unlocks the full read
-  if(mode==='play'){
-    const zNow = zoneAt(p).name;
-    if(!zonesThisRun.includes(zNow)){
-      zonesThisRun.push(zNow);
-      const ch=STORY.chapters[zNow];
-      if(ch && zNow!=='the pit') reveal={title:ch.title, lede:ch.lede||ch.title, t:0};
+  // ONE note per climb. reach the zone the next note is in, and you find it — then that's your lot until you climb again.
+  if(mode==='play' && !foundThisRun && storyIdx < CHAPTER_ORDER.length){
+    const nextZone = CHAPTER_ORDER[storyIdx];
+    const found = nextZone==='the chute' ? (p>=99.5) : (zoneAt(p).name===nextZone);
+    if(found && STORY.chapters[nextZone]){
+      storyIdx++; foundThisRun=true; save(); updateFoyerBadge();
+      const ch=STORY.chapters[nextZone];
+      reveal={title:'A NOTE — '+ch.title, lede:ch.lede||ch.title, t:0};
     }
-    if(!zonesReached.includes(zNow)){ zonesReached.push(zNow); save(); updateFoyerBadge(); }
   }
   if(p>bestPct){ bestPct=p; }
   if(p>=99.5 && mode==='play'){ openWinScreen(); return; }   // reached the summit
@@ -1187,7 +1187,7 @@ function wrapLines(g, text, maxW){
   for(const w of words){ const t=cur?cur+' '+w:w; if(g.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else cur=t; }
   if(cur) lines.push(cur); return lines;
 }
-function unreadChapters(){ return zonesReached.filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length + ((beaten && STORY.chapters['the chute'] && !chaptersRead.includes('the chute'))?1:0); }
+function unreadChapters(){ return CHAPTER_ORDER.slice(0, storyIdx).filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length; }
 function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE MACHINE'+(unreadChapters()>0?' ●':''); }
 function openFoyer(){
   if(mode!=='play') return;
@@ -1195,20 +1195,21 @@ function openFoyer(){
   let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE MACHINE</div>`+
     `<h1>¢ ${quarters}</h1>`+
     `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
-  const chapterOrder = ZONES.map(z=>z.name).concat(['the chute']);
-  const hasChapters = chapterOrder.some(zn=>STORY.chapters[zn]);
-  if(hasChapters){
-    h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
-      `<div class="sub" style="font-size:11px;color:#8a8796;">the way up to Moose · ${zonesReached.filter(z=>STORY.chapters[z]).length} of 7</div>`;
-    chapterOrder.forEach(zn=>{
-      const ch=STORY.chapters[zn]; if(!ch) return;
-      if(zonesReached.includes(zn) || zn==='the chute' && beaten){
-        const isNew = !chaptersRead.includes(zn);
-        h += `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;${isNew?'box-shadow:inset 0 0 0 1px #e7c04b;':''}" onclick="__readCh('${zn}')">📖 ${esc(ch.title)}${isNew?' <span style="color:#e7c04b;">◆ new</span>':''}</button>`;
-      } else {
-        h += `<div class="sub" style="margin-top:5px;color:#8a8796;">[ sealed — ${zn==='the chute'?'reach the chute':'reach '+esc(zn)} ]</div>`;
-      }
-    });
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
+    `<div class="sub" style="font-size:11px;color:#8a8796;">notes found · ${storyIdx} of ${CHAPTER_ORDER.length} — one per climb</div>`;
+  CHAPTER_ORDER.slice(0, storyIdx).forEach(zn=>{
+    const ch=STORY.chapters[zn]; if(!ch) return;
+    const isNew = !chaptersRead.includes(zn);
+    h += `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;${isNew?'box-shadow:inset 0 0 0 1px #e7c04b;':''}" onclick="__readCh('${zn}')">📖 ${esc(ch.title)}${isNew?' <span style="color:#e7c04b;">◆ new</span>':''}</button>`;
+  });
+  if(storyIdx < CHAPTER_ORDER.length){
+    const nz = CHAPTER_ORDER[storyIdx];
+    h += `<div class="sub" style="margin-top:8px;color:#e7c04b;">the next note is somewhere in <b>${esc(nz)}</b>.</div>`;
+    if(foundThisRun) h += `<div class="sub" style="color:#8a8796;font-size:11px;">you've already found one this climb. get back to the pit and go again.</div>`;
+    const left = CHAPTER_ORDER.length - storyIdx - 1;
+    if(left>0) h += `<div class="sub" style="color:#5b584c;font-size:11px;">${left} more after that, further up.</div>`;
+  } else {
+    h += `<div class="sub" style="margin-top:8px;color:#8a8796;">every note found. he wrote them all for you.</div>`;
   }
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE HOLDS <span style="color:#8a8796;font-weight:400;">— what you grab</span></div>`;
   Object.keys(STUDSETS).forEach(id=>{ h += studRow(id); });
@@ -1555,7 +1556,7 @@ function showReceivedVerdict(pl){
 
 /* ---------- reset ---------- */
 function resetToPit(){
-  zonesThisRun=[];
+  zonesThisRun=[]; foundThisRun=false;
   const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
