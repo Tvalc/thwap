@@ -171,12 +171,34 @@ const FIELD_NOTES = [
   "Every fall is footage.",
   "The chute has been at 100% this whole time. It is in no hurry.",
 ];
+// Moose's notes, scratched up the whole machine over years — his voice is everywhere you climb.
+// they get sparser and older the higher you go (see the fade in render).
 const CARVINGS = [
-  {pct:11,   x:70,     t:"FALL FROM HERE, IT GETS A NAME."},
-  {pct:12.2, x:74,     t:"FALL FROM BELOW, IT'S JUST CLIMBING."},
-  {pct:50,   x:VW-64,  t:"EVERY PLAY WINS"},
-  {pct:51.2, x:VW-76,  t:"— it means us. nobody told it yet."},
-  {pct:63,   x:80,     t:"ONE. TWO. FLING."},
+  {pct:6,    x:64,     t:"HANDS UP, KID. — M"},
+  {pct:13,   x:VW-150, t:"IF YOU CAN READ THIS YOU'RE ALREADY BRAVER THAN ME AT YOUR AGE"},
+  {pct:19,   x:70,     t:"THE PINK ONES LET GO. don't fall in love with a soft thing."},
+  {pct:27,   x:VW-140, t:"count the claw. one. two. then you go."},
+  {pct:34,   x:66,     t:"i named it Gerald. it's less scary with a name. barely."},
+  {pct:42,   x:VW-120, t:"the glass isn't a window, kid. i know it looks like one."},
+  {pct:50,   x:VW-150, t:"the sign out there says EVERYBODY GOES HOME. i'm keeping it honest up here."},
+  {pct:58,   x:72,     t:"i keep your eye where i can see it. the other one, i mean. keep mine."},
+  {pct:66,   x:VW-118, t:"release EARLY. earlier than that. i mean it, you stubborn thumb."},
+  {pct:74,   x:74,     t:"got higher today than yesterday. told nobody. told this stud."},
+  {pct:83,   x:VW-110, t:"if you made it this far you didn't need the notes. keep them anyway."},
+  {pct:91,   x:70,     t:"this is where Palmer's grip ran out. good hand. tell him i said so."},
+];
+// the pit remembers Moose. these play, quietly, while you rest at the bottom.
+const PIT_CHORUS = [
+  {who:'GLORIA', t:"Land on me, baby. Moose used to, back when he still came down."},
+  {who:'GLORIA', t:"He caught more of us than the claw ever did. Nobody puts THAT on a sign."},
+  {who:'PALMER', t:"Eighty-nine percent. That was me. Moose went higher and stayed. Don't ask me which is worse."},
+  {who:'PALMER', t:"He taught you to count the claw so the fear had somewhere to go. Still counting? Good."},
+  {who:'THE COLONEL', t:"I kept a tally of every toy that claw took. I stopped counting the day it took him."},
+  {who:'NANA', t:"When it comes down, hold something. Moose told me that. I've held this ear ever since."},
+  {who:'KING', t:"He made it OUT, I'm telling you. Through the top. He's in a better machine now."},
+  {who:'THE COLONEL', t:"You've got his release. Bad temper, too, but mostly the release."},
+  {who:'GLORIA', t:"You slept in the crook of his arm. You were the size of a thumb. You don't remember. He did."},
+  {who:'PALMER', t:"Nobody's climbed like you since him. Nobody. I'd know — I watch the whole thing."},
 ];
 const TOKEN_R = 44;
 // (pit furnishings deleted — cosmetics now only change the machine you climb through)
@@ -345,65 +367,55 @@ const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw coun
 let storyIdx = 1, foundThisRun = false, resetArmed = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
-'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top of the machine, and it takes toys and does not give them back. Second: you never, ever climb toward it.
+'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top, and it takes toys and never gives them back. Second: you do not climb toward it.
 
 You have decided to be wrong about the second one.
 
-Because before the monster, there was Moose — one eye, roughly the size of a small country, and confidently mistaken about nearly everything. He found you when you were new and no bigger than a thumb, and he taught you the only three things that matter in here: how to wind, when to let go, and how not to be afraid of the thing that comes down every three seconds.
+Because before the monster, there was Moose. You were the size of a thumb and frightened of the thing that came down every three seconds, and he was enormous and soft and certain it could be handled. He taught you to count it — one, two, hands up — so the fear had somewhere to go. You still count. You'll count today.
 
-Then it came down for him. His eye tore loose and rolled all the way to the bottom, to you. You've held onto it ever since.
+The last time it came down for you, he got between you and it, threw his own arms up, and shouted the only thing he ever shouted. It took him instead. His eye tore loose and rolled all the way down to you.
 
-You aren't new anymore. You aren't small. HANDS UP, kid.` },
-'the spill': { title:'His Handwriting', lede:"Monsters don't leave encouraging notes. This one did.", text:`You are barely off the floor and somebody has already left you a message.
+You have held onto it ever since. You aren't the size of a thumb anymore.
 
-It's scratched into a stud in big soft crooked letters you would know in the dark, underwater, a hundred years from now:
+HANDS UP, kid.` },
+'the spill': { title:'His Handwriting', lede:"Monsters don't leave encouraging notes. This one did.", text:`You are barely off the floor and he has already left you a message.
 
-KEEP GOING, KID.
+Scratched into a stud, in the big soft crooked letters you would know in the dark, underwater, a hundred years from now: KEEP GOING, KID. And under it, smaller, because he never could resist: DON'T LOOK DOWN. IT'S TACKY.
 
-And underneath, smaller, because he never could resist:
+He always did this. Tucked notes into the plush where you'd find them — good morning; watch the claw; you're doing fine. You had, somewhere along the way, lost the habit of being found.
 
-DON'T LOOK DOWN. IT'S TACKY.
+He has been up here writing them the whole time. Which means that at some point, in all those years alone, he thought somebody might come.
 
-Monsters, in your considerable experience, do not leave encouraging notes.
-
-Which means he's been up there writing things down. Which means that at some point, in all those years, he thought somebody might come.
-
-So you keep going. And you don't look down. And it is, in fact, extremely tacky.` },
+So you keep going. You don't look down. And it is, in fact, extremely tacky.` },
 'the reef': { title:'The Ones It Kept', lede:"The notes are getting older. He's been up there a long time.", text:`The notes keep coming, which would be wonderful, except you've started reading the dust in them.
 
-This one is older. The scratches are shallow and filled grey, and it doesn't cheer you on. It warns you: WATCH THE PINK ONES. THEY LET GO.
+This one is older, the scratches shallow and gone grey, and it doesn't cheer you on. It warns: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING.
 
-Here is why he learned that.
+He learned that up here. Without you. Everything he learned up here, he learned without you.
 
-The Reef is a graveyard. They're everywhere once you start seeing them — toys the claw carried halfway to the ceiling and simply set down, snagged on the studs, every one still turned hopefully toward a delivery slot and a child who stopped coming a very long time ago.
+The Reef is a graveyard — toys the claw carried halfway and set down, every one still turned toward a delivery slot and a child who stopped coming a very long time ago. It takes, and takes, and cannot, for anything, give one single thing back.
 
-The claw takes, and takes, and cannot — not for anything, not for love, not for a thousand years of trying — give one single thing back.
+He has been up there long enough for his handwriting to get old.
 
-He has been up there long enough for his handwriting to get old. Climb faster.` },
+Climb faster.` },
 'the gallery': { title:'Out', lede:'The notes were never meant for a rescuer. They were meant for you.', text:`The Gallery is glass, and glass holds nothing at all — but press against it and, for the first time, you can see out.
 
-Out is an arcade with its lights off. No coins in the slots. No small sticky hands on the buttons. No winners, and nobody coming to be one.
+Out is an arcade with its lights off. No coins. No small hands on the buttons. No winners, and nobody coming to be one.
 
-Which rearranges everything behind you.
+Which rearranges everything behind you. Nobody was ever coming — and he could see that from up there far better than you can see it from here. So the notes were never a trail laid for a rescue party. There was never going to be one.
 
-Nobody was ever coming. He knew that — he could see it from up there far better than you can see it from here. So the notes were never instructions left for a rescue party.
+He was writing them for you. Alone, in the dark, for years, on the chance that the thumb-sized thing he raised got big enough, one day, to come up and read them.
 
-He was writing them for you. On the chance. For years.
-
-There's one here, very faint, almost worn through: STILL TACKY.
+There's one here, nearly worn through: STILL TACKY.
 
 You laugh, and it comes out wrong.` },
-'claw country': { title:'The Hand of God, Malfunctioning', lede:"There are no notes in Claw Country. He couldn't stop long enough.", text:`The notes stop here. You climb the whole band and there isn't one.
+'claw country': { title:'The Hand of God, Malfunctioning', lede:"There are no notes in Claw Country. He couldn't stop long enough.", text:`The notes stop here. You climb the whole band and there isn't one, and soon enough you see why.
 
-You find out why soon enough.
+The Claw isn't hunting anyone. It comes down every three seconds and closes on whatever's there, because that is the only thought it has ever had. But watch between the grabs: it reaches higher than it needs to, for something that keeps slipping it, and by the scoring worn into the cable, it has been missing for years.
 
-The Claw isn't hunting you. It has never hunted anyone. It comes down every three seconds and closes on whatever happens to be there, because that is the single thought it has ever had, and it has been having it for a very long time.
+You can finally picture the day it didn't miss. How fast it must have been. How he still got his arms up first — for you, not himself.
 
-But watch between the grabs. Every so often it reaches higher than it needs to, for something further up that keeps slipping the grip — and by the scoring worn into the cable, it has been missing for years.
-
-Years of that. Every three seconds. No wonder he had nothing left over for writing.
-
-He wasn't hiding up there. He was busy.` },
+No wonder he had nothing left over for writing. He wasn't hiding up here. He was busy — three seconds at a time, for years, so that it never took anyone the way it took him.` },
 'the cornice': { title:'Who It Actually Is', lede:'IF NOBODY COMES, THAT\'S ALRIGHT. — the last thing he wrote.', text:`The notes come back up here, where the air is thin. Just one.
 
 Older than all of them. The letters gone shallow and wandering, like it took him a while to get through it.
@@ -418,7 +430,9 @@ The monster is Moose. It was always Moose.
 
 He stopped writing because he stopped believing anyone was reading.
 
-He is about to be so completely wrong. One more climb. Go.` },
+He stopped writing because he stopped believing anyone was reading. He is about to be so completely, so wonderfully wrong.
+
+Count it out, kid. One. Two. One more climb.` },
 'the chute': { title:'Hands Up, Kid', lede:'You kept it. You were always coming.', text:`One hundred percent. The top. Moose.
 
 He turns, and he looks at you the way you look at a thing you long ago decided to stop hoping for. "Figured you forgot me," he says — gently, like it's fine, like it costs him nothing. "Everybody forgets."
@@ -427,7 +441,9 @@ Then he sees what you've carried this whole way. His eye. The one that rolled do
 
 "...you kept it?"
 
-The Claw comes down one last time, for both of you — and this time you don't run the way he taught you. You catch it. You wind, you let go, exactly the way he taught you, and you send the machine off to deliver the only thing left in the world it's allowed to: itself. Down the chute. Gone.
+The Claw comes down one last time, for both of you. Last time, he got his arms up first — for you. This time you're faster, and it's for him.
+
+You don't run the way he taught you. You catch it. You wind, you let go, exactly the way he taught you, and you send the machine off to deliver the only thing left in the world it's allowed to: itself. Down the chute. Gone.
 
 Two eyes again. Whole.
 
@@ -951,9 +967,15 @@ function render(){
     if(y>-20&&y<Hc+20){ ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(Wc,y); ctx.stroke(); }
   }
-  ctx.font='600 9px ui-monospace,monospace'; ctx.textAlign='left';
+  ctx.font='600 8px ui-monospace,monospace'; ctx.textAlign='left';
   for(const cv2 of CARVINGS){ const cy2=sy(PIT_Y+TOWER_H*cv2.pct/100);
-    if(cy2>-10&&cy2<Hc+10){ ctx.fillStyle='rgba(180,183,200,.14)'; ctx.fillText(cv2.t, sx(cv2.x), cy2); } }
+    if(cy2>-8&&cy2<Hc+8){
+      const fade=Math.max(0.055, 0.17 - cv2.pct/100*0.10);   // higher = older = fainter
+      ctx.fillStyle='rgba(196,190,172,'+fade.toFixed(3)+')';
+      let X=sx(cv2.x); const w=ctx.measureText(cv2.t).width;
+      if(X+w>Wc-6) X=Math.max(6, Wc-6-w);
+      ctx.fillText(cv2.t, X, cy2);
+    } }
 
   const zc = zoneAt(pctOf(HAND.y));
   ctx.fillStyle='rgba(180,183,200,.18)'; ctx.font=`600 ${Math.round(11)}px ui-monospace,monospace`;
@@ -1043,6 +1065,17 @@ function render(){
     ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.7)';
     ctx.font='600 13px ui-monospace,monospace';
     ctx.fillText('HOLD to wind · LET GO to fly · TAP mid-air to grab', Wc/2, Hc*0.8);
+  }
+  // the pit remembers him — quiet chorus while you rest at the bottom
+  else if(mode==='play' && HAND.mode==='attach' && pctOf(HAND.y)<3.5){
+    const c=PIT_CHORUS[Math.floor(simFrame/(120*6))%PIT_CHORUS.length];
+    ctx.textAlign='center'; ctx.font='500 10.5px ui-monospace,monospace';
+    const lines=wrapLines(ctx, '“'+c.t+'”', Wc-46);
+    const baseY=Hc-34-lines.length*13;
+    ctx.fillStyle='rgba(202,205,218,.5)';
+    lines.forEach((ln,i)=>ctx.fillText(ln, Wc/2, baseY+i*13));
+    ctx.fillStyle='rgba(202,205,218,.34)'; ctx.font='600 8px ui-monospace,monospace';
+    ctx.fillText('— '+c.who, Wc/2, baseY+lines.length*13+2);
   }
 
   // boss / clutch line
