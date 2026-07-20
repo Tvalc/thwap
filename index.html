@@ -84,6 +84,11 @@
     <button class="btn ghost wide" id="b_recclose">back to the climb</button>
   </div>
 
+  <div class="panel" id="p_note">
+    <div class="doc" id="note_doc" style="max-height:74vh; overflow-y:auto;"></div>
+    <button class="btn hot wide" id="b_noteclose">keep climbing</button>
+  </div>
+
   <div class="panel" id="p_win">
     <div class="doc" id="win_doc"></div>
     <button class="btn hot wide" id="b_winshare">COPY THE PROOF</button>
@@ -364,7 +369,7 @@ let TOKENS = [];
 let zonesReached = [], audienceN = 0, chaptersRead = [];
 // the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
 const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
-let storyIdx = 1, foundThisRun = false, resetArmed = false;
+let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top, and it takes toys and never gives them back. Second: you do not climb toward it.
@@ -747,14 +752,15 @@ function step(dt){
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
-  // ONE note per climb. reach the zone the next note is in, and you find it — then that's your lot until you climb again.
+  // ONE note per climb. reach the zone the next note is in — the world stops, and you read it right there.
+  // (the chute's beat is the finale; the summit screen delivers it, not a note card.)
   if(mode==='play' && !foundThisRun && storyIdx < CHAPTER_ORDER.length){
     const nextZone = CHAPTER_ORDER[storyIdx];
-    const found = nextZone==='the chute' ? (p>=99.5) : (zoneAt(p).name===nextZone);
-    if(found && STORY.chapters[nextZone]){
-      storyIdx++; foundThisRun=true; save(); updateFoyerBadge();
-      const ch=STORY.chapters[nextZone];
-      reveal={title:'A NOTE — '+ch.title, lede:ch.lede||ch.title, t:0};
+    if(nextZone!=='the chute' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
+      storyIdx++; foundThisRun=true;
+      if(!chaptersRead.includes(nextZone)) chaptersRead.push(nextZone);
+      save(); updateFoyerBadge(); openNoteCard(nextZone);
+      return;
     }
   }
   if(p>bestPct){ bestPct=p; }
@@ -1108,7 +1114,7 @@ let last=performance.now()/1000, acc=0, frozen=false;
 function frame(t){
   requestAnimationFrame(frame);
   const now=t/1000; let real=now-last; last=now; if(real>0.2) real=0.2;
-  if(frozen){ render(); return; }
+  if(frozen || noteHold){ render(); return; }   // note card up: the world holds while you read
   acc+=real;
   while(acc>=DT){
     // timers (real time)
@@ -1350,8 +1356,30 @@ window.__resetDo = ()=>{
 };
 el('b_foyclose').onclick = ()=>{ el('p_foyer').classList.remove('on'); resetArmed=false; mode='play'; };
 
+function openNoteCard(zn){
+  const ch=STORY.chapters[zn]; if(!ch) return;
+  noteHold=true;
+  const note = ch.lede||ch.title;
+  const found = storyIdx-1;   // this is note N of the set
+  el('note_doc').innerHTML =
+    `<div class="kick" style="letter-spacing:.16em;font-size:10px;margin-bottom:8px;color:#8a6510;">YOU FIND ANOTHER OF HIS NOTES · ${found} of ${CHAPTER_ORDER.length-1}</div>`+
+    `<div style="border:1px dashed #b9b4a4;border-radius:4px;padding:12px 14px;margin-bottom:12px;transform:rotate(-.5deg);">`+
+      `<div style="font-family:'Bradley Hand','Segoe Print',cursive;font-size:18px;line-height:1.35;color:#2a2a22;">${esc(note)}</div>`+
+    `</div>`+
+    `<h1 style="font-size:15px;">${esc(ch.title)}</h1>`+
+    `<div class="sub" style="font-size:12.5px;line-height:1.75;white-space:pre-wrap;margin-top:4px;">${esc(ch.text)}</div>`;
+  el('p_note').classList.add('on');
+}
+el('b_noteclose').onclick = ()=>{ el('p_note').classList.remove('on'); noteHold=false; };
+
 function openWinScreen(){
   if(mode==='win') return;
+  // the finale note is earned only once every other note is found — reaching the top can't dump the story
+  if(storyIdx === CHAPTER_ORDER.length-1){
+    storyIdx = CHAPTER_ORDER.length;
+    if(!chaptersRead.includes('the chute')) chaptersRead.push('the chute');
+    updateFoyerBadge();
+  }
   mode='win';
   const firstTime = !beaten;
   let tLine='';
@@ -1634,6 +1662,7 @@ function boot(){
 
 /* one fixed-step of the sim, mirroring the main loop body (for headless driving) */
 function tickOnce(){
+  if(noteHold) return;
   if(hitstop>0) hitstop-=DT;
   if(slowmo>0) slowmo-=DT;
   if(flash>0) flash=Math.max(0,flash-DT*4);
@@ -1691,6 +1720,7 @@ window.__thwap = {
     side:HAND.mode==='attach'?+Math.cos(HAND.ang).toFixed(2):null}),
   state:()=>({mode,pct:+pctOf(HAND.y).toFixed(1),best:+bestPct.toFixed(1),handle:myHandle,frame:simFrame,
     handMode:HAND.mode,attempts:takeover?takeover.attempts:null,
+    noteHold:noteHold, storyIdx:storyIdx,
     tw:takeover?+(takeover.window||0).toFixed(3):null, tsaved:takeover?takeover.saved:null,
     ty:takeover?Math.round(HAND.y-takeover.failY):null}),
 };
