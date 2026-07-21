@@ -424,68 +424,64 @@ let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
 let introBeat = 0, introT = 0, seenIntro = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
-'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never climb toward it.
+'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never, ever climb toward it.
 
 You are about to break the second rule.
 
-Because the monster took Moose — the big, one-eyed plush who raised you. When you were small and scared of the claw, he taught you to count it: one, two, hands up. The day the claw came down for you, he threw himself in front of it, and it took him instead. His eye came loose and rolled all the way down to you.
+You know exactly how the first one works, because you watched it happen. Moose — the big, one-eyed plush who raised you, who taught a small scared nobody to survive the claw by counting it, one, two, hands up — was standing right where you are the day it came down for you. He shoved you clear and let it take him instead. His eye tore loose and rolled all the way down to your feet.
 
-You have kept that eye ever since. You tell yourself you are climbing to give it back and make things even between you.
+You kept it. And you are going to climb this entire machine to give it back and make the two of you even.
 
-That is not really why. You just want him back. Either way — hands up, kid. Start climbing.` },
-'the spill': { title:'His Handwriting', lede:"Monsters don't leave friendly notes. This one does.", text:`You are barely off the floor when you find the first note.
+That is the plan, anyway. Hands up, kid. Start climbing.` },
+'the spill': { title:'His Handwriting', lede:"Monsters don't leave friendly notes. This one does.", text:`You are barely off the floor when the wall says something.
 
-It is scratched into a stud in Moose's big, crooked handwriting — you would know it anywhere: KEEP GOING, KID. And under it, smaller: DON'T LOOK DOWN. IT'S TACKY.
+KEEP GOING, KID. Scratched into a stud in big crooked letters that lean a little downhill, the way all his letters did. You would know that handwriting in the dark. And under it, smaller, squeezed in where he ran out of room: DON'T LOOK DOWN. IT'S TACKY.
 
-He always left you notes like this back in the pit. Good morning. Watch the claw. You're doing fine.
+You almost laugh. He always left you notes exactly like this back in the pit — good morning; watch the claw; you're doing fine — tucked where only you would find them.
 
-Which means he has been up here all this time, still leaving them. Still hoping you would come. Even after all these years, he never stopped believing you might.
+Then the good feeling curdles into something colder. For him to have scratched this, he had to be up here. For the letters to be worn this soft, he scratched it a long time ago. So every year you spent down there growing up, he spent up here. Waiting. Leaving signs for a kid who never came.
 
 You climb faster.` },
-'the reef': { title:'The Ones It Kept', lede:"The notes are getting old. He's been up here a long time.", text:`The notes keep coming, but they are getting old — the letters worn shallow and grey. He has been up here a long, long time.
+'the reef': { title:'The Pink Ones Let Go', lede:"The notes are getting old. He's been up here a long time.", text:`The notes keep coming, but they are older now — the letters worn shallow and grey. He was up here a long, long time.
 
-This one is not cheerful. It is a warning: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING. He learned that up here, alone, without you.
+This one does not cheer you on. It warns: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING. He learned that up here. Alone. The way he learned everything after the claw took him.
 
-And that is what finally gets you. For years you told yourself this climb was about paying him back — handing over the eye and calling it even.
+And that is the one that finally gets you. This whole climb you have told yourself the same tidy story — hand the eye back, call it even, walk away square. Standing here reading a warning he wrote with nobody left to read it, you stop being able to lie about it.
 
-That was never it. You are climbing because you miss him. Every single day, you have missed him. You just would not let yourself feel it until now.
+You do not want to be even. You want him back. You have wanted him back every single day and only just let yourself feel it.
 
-The eye in your hand is not a debt anymore. It is just his. You want the rest of him back too.
+The eye stops being something you owe. It is just his, and you want the rest of him with it.
 
-Climb faster.` },
+You close your fist around it and reach for the next hold.` },
 'the gallery': { title:'Out', lede:'The notes were never a trail for a rescuer. They were only ever for you.', text:`Here the wall turns to glass, and for the first time you can see outside.
 
-Outside is an arcade with the lights off. No coins. No kids at the buttons. Nobody was ever coming to win anyone out of this machine — and Moose could see that from up here long before you could.
+Outside is an arcade that died years ago. The lights are off. The coin slots are dark. Somebody unplugged the whole building and never told the claw, which has been grinding overtime ever since for a machine nobody will ever feed another quarter.
 
-So the notes were never a trail for some rescue party. There was never going to be one.
+No kids. No winners. Nobody was ever coming to win a single toy out of here — and Moose could see that from up here long before you could.
 
-He wrote them for you. Alone, in the dark, for years — just in case the little thing he raised grew up and climbed high enough to read them.
+So the notes were never a trail for a rescue party. There was never going to be one. He left them anyway. Alone, in the dark, for years, on the one-in-a-million chance that the little thing he raised would grow up and climb high enough to find them.
 
-He never wanted the eye back. He never cared about being even. He just wanted you. That is all it ever was, for both of you. You were just too busy feeling guilty to see it.
+There is one here too, nearly worn through: STILL TACKY.
 
-There is one note here, nearly worn through: STILL TACKY. You laugh, and it comes out wrong.` },
-'claw country': { title:'The Hand of God, Malfunctioning', lede:"No notes here. He was too busy to stop.", text:`The notes stop here. You climb the whole stretch and there is not one — and soon you see why.
+You laugh, and it comes out wrong.` },
+'claw country': { title:'The Hand of God, Malfunctioning', lede:"No notes here. He was too busy to stop.", text:`The notes stop here. You climb the whole stretch and there is not one, and soon enough you see why.
 
-Get a good look at the Claw. It is not hunting anyone. It just comes down every three seconds and grabs whatever it can, over and over, forever. But watch closely: it keeps reaching higher than it needs to, for something it can never quite catch. By the wear on the cable, it has been missing for years.
+Get a good look at the Claw up close. It is not hunting anyone. It is not even cruel. It is a bored machine with a single instruction, dropping every three seconds to grab whatever it can — the Hand of God, if God were a motor nobody has oiled since the arcade closed. But watch it a while and you notice it reaches higher than it needs to, for something up top it can never quite close on. By the wear on the cable, it has been missing that grab for years.
 
-That something is Moose. All this time he has been up here catching every toy the claw knocks loose, so it never takes anyone the way it took him. That is why he had no time to write.
+That something is him. All this time Moose has been up here catching the toys the claw shakes loose, three seconds at a time, so it never takes anyone the way it took him.
 
-And somewhere on this climb, you notice you have started doing the same thing — watching the claw for the small ones climbing below you, not just for yourself.
-
-You are turning into him. You did not even decide to. It just happened.` },
-'the cornice': { title:'Who It Actually Is', lede:'IF NOBODY COMES, THAT\'S ALRIGHT. — the last thing he wrote.', text:`The notes come back near the top. Just one, older than all the rest, the letters shaky and wandering like it was hard to write.
+And somewhere on this climb you catch yourself doing it too — watching the claw for the small ones climbing below you, not just for your own hide. You do not remember deciding to. Your hands just started counting for someone else.` },
+'the cornice': { title:'If Nobody Comes', lede:'The last note is the hardest one to read.', text:`The notes come back near the top. Just one, older than all the rest, the letters shaky and wandering, like it was hard to write.
 
 IF NOBODY COMES, THAT'S ALRIGHT.
 
-That is the last thing he ever wrote. After it, nothing — just tally marks counting the days, and then even those stop.
+That is the last thing he ever wrote. After it, nothing — just tally marks scratched into the stud, counting the days. And then, partway along, even those stop.
 
-Past them, a nest of stuffing, and a shape turning slowly toward the sound of you climbing. Big. Soft. One enormous eye. The monster every toy taught you to fear.
+Past them, a nest of stuffing worn into the shape of a thing that has waited a long time. And in it, turning slowly toward the sound of you climbing: big, soft, one enormous eye.
 
-The monster is Moose. It was always Moose.
+Every toy in the pit grows up afraid of the monster at the top. You are looking straight at him, and he is not a monster at all. He is the one who raised you — waiting up here in the dark so long the pit turned his name into a story to frighten small toys with. The thing they taught you to fear and the thing that loved you most were the same shape the whole time. Nobody down there could tell the difference. For years, neither could you.
 
-He stopped writing because he stopped believing anyone would come. He made his peace with being forgotten, and by the look of the tally marks, he got good at it.
-
-And one climb away from him, you finally know why you are really here. Not to settle a debt. Not to be rescued. You came to prove that last note wrong — to be the somebody who came.
+He gave up believing anyone would come. You are one climb from proving him wrong.
 
 One. Two. One more climb.` },
 'the chute': { title:'Hands Up, Kid', lede:'You kept his eye the whole way. You were always coming.', text:`One hundred percent. The top. Moose.
@@ -496,9 +492,9 @@ Then he sees what you have carried the whole way up: his eye. The one that rolle
 
 "...you kept it?"
 
-You did. Not because you owed him — you know better now — but because it was the one piece of him you had, and you were never letting the machine take that too.
+You did. You climbed the whole monster to give it back — and now that you are here, holding it out, you both know you are not handing it over to settle anything. You just wanted to be in the same place as him again.
 
-The Claw comes down one more time, for both of you. Last time, he got his arms up first, for you. This time you are faster, and it is for him. You catch it, you wind, you let go — exactly the way he taught you — and you throw it down its own chute. Gone.
+The Claw comes down one more time, for both of you. Last time, he got his arms up first, for you. This time you are faster, and it is for him. You count it the way he taught you — one, two — and you catch it, and wind it, and send it straight down its own chute. Gone.
 
 Two eyes again. Whole. He looks at you like the last thing he ever wrote just got proven wrong.
 
