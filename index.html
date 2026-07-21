@@ -71,6 +71,7 @@
   </div>
 
   <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
+  <button class="btn ghost" id="b_introskip" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px; color:#8a8796;">skip ›</button>
   <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE</button>
   <button class="btn ghost" id="b_foyer" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE MACHINE</button>
 
@@ -207,6 +208,16 @@ const PIT_CHORUS = [
 ];
 const TOKEN_R = 44;
 // (pit furnishings deleted — cosmetics now only change the machine you climb through)
+// THE OPENING — a tappable cold open that plays on a fresh start. characters, dialogue, the first turn of the arc.
+const INTRO = [
+  { key:'pit',   lines:["Every claw machine has a bottom. Toys nobody won, all the way down.","You were the newest of them. The smallest. And you were scared of the ceiling."] },
+  { key:'moose', lines:['"New, huh. And shaking."','"That\'s allowed. Once."',"Moose. One eye, big as a door, wrong about almost everything. He decided you were his."] },
+  { key:'count', lines:['"That claw comes down every three seconds. It always will."','"You don\'t outrun it, kid. You count it. One. Two. Hands up."',"The fear had somewhere to go after that."] },
+  { key:'taught',lines:["He taught you to wind. To let go at the top. To not fear the one thing worth fearing.","You were the size of a thumb. You slept in the crook of his arm and thought it would last."] },
+  { key:'sacrifice', anim:1, lines:["Then, one grey day, the claw came down for YOU.",'"HANDS UP, KID —"'] },
+  { key:'eye', anim:1, lines:["He threw himself between you and it. It took him instead.","His eye tore loose and rolled all the way down. To you. You closed your hand around it."] },
+  { key:'decide',lines:["You were too small to climb after him. So you waited. You grew. You got good.","You told yourself a story: climb up one day, give the eye back, make it even.","That is the lie you needed to get off the floor.","Hands up, kid."] },
+];
 // hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
 const FINISHES = {
   factory: { name:'FACTORY RED', cost:0, body:'#e85c3c', body2:'#b23a1e', eye:'googly', trail:null, glow:null,
@@ -370,6 +381,7 @@ let zonesReached = [], audienceN = 0, chaptersRead = [];
 // the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
 const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
 let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
+let introBeat = 0, introT = 0, seenIntro = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top, and it takes toys and never gives them back. Second: you do not climb toward it.
@@ -544,7 +556,7 @@ function load(){
     studOwned = d.stOwn||[]; studWorn = d.stWorn||'stock';
     if(!BACKDROPS[bgWorn]) bgWorn='stock';
     if(!STUDSETS[studWorn]) studWorn='stock';
-    audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1;
+    audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1; seenIntro = !!d.seen;
     // story v3: gating on lifetime best height dumped the whole story in one good climb.
     // now it's one note per climb, in order — reset the hunt so it actually gets earned.
     if(d.sv!==3){ storyIdx = 1; chaptersRead = []; }
@@ -560,7 +572,7 @@ function save(){
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
     q:quarters, fin:finishes, skin:skin, zr:zonesReached,
     bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
-    aud:audienceN, chRead:chaptersRead, si:storyIdx, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -782,6 +794,7 @@ function bossFlash(t, big){ bossLine=t; bossLineT=1.1; bossBig=!!big; }
 
 /* ---------- input ---------- */
 function down(){
+  if(mode==='intro'){ introAdvance(); return; }
   if(mode!=='play' && mode!=='appeal_play') return;
   held=true;
   if(mode==='appeal_play'){                      // reconstructions: ONE grab per attempt, timed
@@ -1122,6 +1135,7 @@ let last=performance.now()/1000, acc=0, frozen=false;
 function frame(t){
   requestAnimationFrame(frame);
   const now=t/1000; let real=now-last; last=now; if(real>0.2) real=0.2;
+  if(mode==='intro'){ introT+=real; renderIntro(); return; }   // the opening plays on a fresh start
   if(frozen || noteHold){ render(); return; }   // note card up: the world holds while you read
   acc+=real;
   while(acc>=DT){
@@ -1243,7 +1257,8 @@ function openFoyer(){
     `<h1>¢ ${quarters}</h1>`+
     `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
-    `<div class="sub" style="font-size:11px;color:#8a8796;">notes found · ${storyIdx} of ${CHAPTER_ORDER.length} — one per climb</div>`;
+    `<div class="sub" style="font-size:11px;color:#8a8796;">notes found · ${storyIdx} of ${CHAPTER_ORDER.length} — one per climb</div>`+
+    `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;" onclick="__playIntro()">↻ the beginning</button>`;
   CHAPTER_ORDER.slice(0, storyIdx).forEach(zn=>{
     const ch=STORY.chapters[zn]; if(!ch) return;
     const isNew = !chaptersRead.includes(zn);
@@ -1649,12 +1664,64 @@ function resetToPit(){
   camY = HAND.y+60;
 }
 
+/* ============================================================ THE OPENING (cold open) */
+function iHand(g,x,y,r,carry){
+  g.fillStyle='#e85c3c'; g.beginPath(); g.arc(x,y,r,0,7); g.fill();
+  g.fillStyle='#fff'; g.beginPath(); g.arc(x-r*0.35,y-r*0.26,r*0.3,0,7); g.arc(x+r*0.35,y-r*0.26,r*0.3,0,7); g.fill();
+  g.fillStyle='#111'; g.beginPath(); g.arc(x-r*0.35,y-r*0.22,r*0.14,0,7); g.arc(x+r*0.35,y-r*0.22,r*0.14,0,7); g.fill();
+  if(carry){ g.fillStyle='#f2efe6'; g.beginPath(); g.arc(x+r*0.72,y+r*0.6,r*0.3,0,7); g.fill();
+    g.fillStyle='#111'; g.beginPath(); g.arc(x+r*0.74,y+r*0.62,r*0.13,0,7); g.fill(); }
+}
+function iMoose(g,x,y,s){
+  g.fillStyle='#9a7b57';
+  g.beginPath(); g.ellipse(x-s*0.85,y-s*0.55,s*0.28,s*0.42,-0.5,0,7); g.ellipse(x+s*0.85,y-s*0.55,s*0.28,s*0.42,0.5,0,7); g.fill();
+  g.beginPath(); g.ellipse(x,y,s*1.12,s,0,0,7); g.fill();
+  g.fillStyle='#fff'; g.beginPath(); g.arc(x,y-s*0.12,s*0.4,0,7); g.fill();
+  g.fillStyle='#111'; g.beginPath(); g.arc(x,y-s*0.07,s*0.18,0,7); g.fill();
+  g.strokeStyle='rgba(0,0,0,.28)'; g.lineWidth=2; g.beginPath(); g.arc(x,y+s*0.28,s*0.34,0.15*Math.PI,0.85*Math.PI); g.stroke();
+}
+function iClaw(g,x,y){ g.strokeStyle='#c6cad8'; g.lineWidth=3; g.lineCap='round';
+  g.beginPath(); g.moveTo(x,y-34); g.lineTo(x,y); g.moveTo(x,y); g.lineTo(x-15,y+20); g.moveTo(x,y); g.lineTo(x+15,y+20); g.moveTo(x,y); g.lineTo(x,y+22); g.stroke(); }
+function renderIntro(){
+  ctx.clearRect(0,0,Wc,Hc);
+  const g=ctx.createLinearGradient(0,0,0,Hc); g.addColorStop(0,'#0e0f16'); g.addColorStop(1,'#07080d'); ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
+  const b=INTRO[introBeat]||INTRO[0]; const cx=Wc/2, midY=Hc*0.38, t=Math.min(1,introT/1.5);
+  if(b.key==='pit'){ for(let i=0;i<6;i++){ ctx.fillStyle='#8b4a5c'; ctx.beginPath(); ctx.arc(34+i*(Wc-68)/5,Hc*0.6,16,0,7); ctx.fill(); } iHand(ctx,cx,Hc*0.6-15,12); }
+  else if(b.key==='moose'){ iMoose(ctx,cx-24,midY,58); iHand(ctx,cx+74,midY+30,13); }
+  else if(b.key==='count'){ iMoose(ctx,cx-24,midY,56); iHand(ctx,cx+74,midY+28,13);
+    ctx.fillStyle='rgba(198,200,214,.55)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillText('one · two · hands up', cx, Hc*0.18); }
+  else if(b.key==='taught'){ iMoose(ctx,cx-6,midY+46,50); iHand(ctx,cx+44,midY-36,13);
+    ctx.strokeStyle='rgba(231,192,75,.4)'; ctx.setLineDash([4,5]); ctx.beginPath(); ctx.moveTo(cx-6,midY+16); ctx.quadraticCurveTo(cx+14,midY-64,cx+44,midY-36); ctx.stroke(); ctx.setLineDash([]); }
+  else if(b.key==='sacrifice'){ const cy=-20+t*(midY+14); iHand(ctx,cx,midY+18,11); iMoose(ctx,cx,midY-6,42*(0.75+t*0.35)); iClaw(ctx,cx,cy);
+    if(t>0.86){ ctx.fillStyle='rgba(255,255,255,'+((t-0.86)/0.14*0.6).toFixed(2)+')'; ctx.fillRect(0,0,Wc,Hc); } }
+  else if(b.key==='eye'){ ctx.strokeStyle='rgba(150,150,160,.2)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,midY-30); ctx.lineTo(cx,-4); ctx.stroke();
+    const ex=cx-t*(cx-42), ey=midY+t*(Hc*0.6-midY); ctx.fillStyle='#f2efe6'; ctx.beginPath(); ctx.arc(ex,ey,8,0,7); ctx.fill(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(ex,ey,3.4,0,7); ctx.fill();
+    iHand(ctx,42,Hc*0.6,12); }
+  else if(b.key==='decide'){ ctx.strokeStyle='rgba(140,143,158,.22)'; ctx.lineWidth=1;
+    for(let i=0;i<9;i++){ ctx.beginPath(); ctx.arc(cx+(i%2?30:-30),Hc*0.5-i*26,5,0,7); ctx.stroke(); }
+    iHand(ctx,cx,Hc*0.62,16,true); }
+  // dialogue
+  ctx.textAlign='center'; ctx.font='500 14px ui-monospace,monospace';
+  const raw=[]; (b.lines||[]).forEach(L=> String(L).split('\n').forEach(sub=> wrapLines(ctx,sub,Wc-52).forEach(w=>raw.push({w, q:sub.trim().startsWith('"')})) ));
+  let ty=Hc*0.74-raw.length*11;
+  raw.forEach((o,i)=>{ ctx.fillStyle=o.q?'rgba(231,206,120,.96)':'rgba(226,228,236,.9)'; ctx.fillText(o.w, cx, ty+i*22); });
+  ctx.fillStyle='rgba(200,203,216,.42)'; ctx.font='600 10px ui-monospace,monospace';
+  ctx.fillText(introBeat>=INTRO.length-1?'tap to climb':'tap to continue', cx, Hc-22);
+}
+function introAdvance(){ introBeat++; introT=0; if(introBeat>=INTRO.length) finishIntro(); }
+function finishIntro(){ seenIntro=true; save(); el('b_introskip').style.display='none';
+  mode='play'; el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }
+function playIntro(){ introBeat=0; introT=0; mode='intro'; el('b_introskip').style.display='block';
+  el('b_archive').style.display='none'; el('b_foyer').style.display='none'; el('p_foyer').classList.remove('on'); }
+window.__playIntro = ()=>{ if(mode==='foyer'||mode==='play') playIntro(); };
+
 /* ============================================================ BOOT */
 function boot(){
   resize(); buildTower(); load();
   bossLine = FIELD_NOTES[(Date.now()>>10)%FIELD_NOTES.length];
   el('b_archive').onclick = ()=>openRecord();
   el('b_foyer').onclick = ()=>openFoyer();
+  el('b_introskip').onclick = ()=>finishIntro();
   updateFoyerBadge();
   const inc = parseIncoming();
   if(inc){ resetToPit(); startAppeal(inc); }
@@ -1662,15 +1729,15 @@ function boot(){
     // land on the nearest pit stud, already gripping, dusty if returning
     resetToPit();
     if(dusty){ setTimeout(()=>{ HAND._wiped=true; }, 900); }
-    mode='play';
-    el('b_archive').style.display='block'; el('b_foyer').style.display='block';
+    if(!seenIntro){ playIntro(); }                 // fresh start: play the opening
+    else { mode='play'; el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }
   }
   requestAnimationFrame(frame);
 }
 
 /* one fixed-step of the sim, mirroring the main loop body (for headless driving) */
 function tickOnce(){
-  if(noteHold) return;
+  if(noteHold || mode==='intro') return;
   if(hitstop>0) hitstop-=DT;
   if(slowmo>0) slowmo-=DT;
   if(flash>0) flash=Math.max(0,flash-DT*4);
@@ -1714,6 +1781,8 @@ window.__thwap = {
     return buildAppealLink(currentFall); },
   caseStart:(id)=>{ resetToPit(); startAppeal(casePayload(CASES.find(c=>c.id===id)||CASES[0])); return 'case '+id; },
   freeze:(v)=>{ frozen=!!v; return frozen; },
+  intro:()=>({mode, beat:introBeat, key:(INTRO[introBeat]||{}).key, total:INTRO.length, seen:seenIntro}),
+  introAdvance:()=>{ introAdvance(); return {mode, beat:introBeat}; },
   grantQ:(n)=>{ quarters+=n; save(); return quarters; },
   story:()=>({zones:zonesReached.slice(), chapters:Object.keys(STORY.chapters), read:chaptersRead.slice()}),
   foyer:()=>({quarters, finishes:finishes.slice(), skin, bgWorn, studWorn, bgOwned:bgOwned.slice(), studOwned:studOwned.slice(), tokenCount:TOKENS.length}),
