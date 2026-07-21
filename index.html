@@ -93,7 +93,7 @@
   <div class="panel" id="p_win">
     <div class="doc" id="win_doc"></div>
     <button class="btn hot wide" id="b_winshare">COPY THE PROOF</button>
-    <button class="btn ghost wide" id="b_wincont">return to the pit</button>
+    <button class="btn ghost wide" id="b_wincont">keep climbing ↑</button>
   </div>
 
   <div class="panel" id="p_verdict">
@@ -210,13 +210,13 @@ const TOKEN_R = 44;
 // (pit furnishings deleted — cosmetics now only change the machine you climb through)
 // THE OPENING — a tappable cold open that plays on a fresh start. characters, dialogue, the first turn of the arc.
 const INTRO = [
-  { key:'pit',   lines:["Every claw machine has a bottom. Toys nobody won, all the way down.","You were the newest of them. The smallest. And you were scared of the ceiling."] },
-  { key:'moose', lines:['"New, huh. And shaking."','"That\'s allowed. Once."',"Moose. One eye, big as a door, wrong about almost everything. He decided you were his."] },
-  { key:'count', lines:['"That claw comes down every three seconds. It always will."','"You don\'t outrun it, kid. You count it. One. Two. Hands up."',"The fear had somewhere to go after that."] },
-  { key:'taught',lines:["He taught you to wind. To let go at the top. To not fear the one thing worth fearing.","You were the size of a thumb. You slept in the crook of his arm and thought it would last."] },
-  { key:'sacrifice', anim:1, lines:["Then, one grey day, the claw came down for YOU.",'"HANDS UP, KID —"'] },
-  { key:'eye', anim:1, lines:["He threw himself between you and it. It took him instead.","His eye tore loose and rolled all the way down. To you. You closed your hand around it."] },
-  { key:'decide',lines:["You were too small to climb after him. So you waited. You grew. You got good.","You told yourself a story: climb up one day, give the eye back, make it even.","That is the lie you needed to get off the floor.","Hands up, kid."] },
+  { key:'pit',   lines:["This is a claw machine. The arcade around it closed years ago.","At the bottom is the pit — where the toys nobody ever won pile up.","You're the newest one. A small sticky hand. Scared of everything."] },
+  { key:'moose', lines:['"Hey. New kid. You\'re shaking."',"That's Moose — a big plush with one eye, and the oldest toy down here.","He took one look at you and decided you were his to raise."] },
+  { key:'count', lines:['"That claw grabs a toy every three seconds. You can\'t outrun it."','"So you count it. One. Two. Hands up."',"He taught you everything. How to climb. How to let go. How not to be afraid."] },
+  { key:'taught',lines:["You two were a team.","You were the size of a thumb, and you slept tucked in his arm,","and you figured it would always be that way."] },
+  { key:'sacrifice', anim:1, lines:["Then one day the claw came straight down for you.","Moose shoved you out of the way and took your place.",'"HANDS UP, KID!"'] },
+  { key:'eye', anim:1, lines:["The claw carried him up to the top of the machine. It never brought him back.","One of his eyes came loose and rolled all the way down to you.","You've kept it ever since. It's all you have left of him."] },
+  { key:'decide',lines:["You were too small to go after him then. So you waited. You grew up. You practiced.","Now you're going to climb this whole machine and get him back.","His eye goes home. Hands up, kid. Let's climb."] },
 ];
 // hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
 const FINISHES = {
@@ -298,6 +298,7 @@ let STUDS = [];
 function zoneAt(pct){ for(const z of ZONES){ if(pct < z.top) return z; } return ZONES[ZONES.length-1]; }
 function buildTower(){
   STUDS = [];
+  builtToY = TOP_Y;                   // endless generation resets to the summit
   const rnd = mulberry32(70707);      // FIXED seed → same tower everywhere
   // plush pit: a soft floor that catches any fall — these NEVER rip, so you can rest at the bottom
   for(let i=0;i<6;i++) STUDS.push({x:56+i*64, y:PIT_Y - 8 + (i%2)*12, type:'plush', pit:true});
@@ -363,6 +364,45 @@ function buildTower(){
 function resetTokens(){ for(const t of TOKENS) t.got=false; }
 let CLAW=null;
 
+// ---- ENDLESS MACHINE: above the summit, the machine keeps going forever ----
+// studs are generated in deterministic chunks (seeded per chunk) so every device — and every
+// shared appeal — builds the exact same tower. it is climbable by construction + a service pass.
+let builtToY = TOP_Y;
+function serviceRegion(loY, hiY){
+  const APEX=397; let safety=0;
+  while(safety++<40){
+    const g = STUDS.filter(s=>grippable(s) && s.y>=loY-620 && s.y<=hiY).sort((a,b)=>a.y-b.y);
+    let wall=null;
+    for(const s of g){ if(s.y>hiY-40) continue;
+      let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue; if(Math.abs(t.x-s.x)>240) continue;
+        const need=dy-REACH; if(need<best) best=need; }
+      if(best>APEX){ wall=s; break; } }
+    if(!wall) break;
+    STUDS.push({x:Math.max(48,Math.min(VW-48, wall.x + (wall.x<CX?90:-90))),
+      y:wall.y+APEX+REACH-90, type:'plastic', endless:true});
+  }
+}
+function extendTowerTo(targetY){
+  while(builtToY < targetY){
+    const chunk = Math.round((builtToY - TOP_Y) / 2400);     // 0,1,2… — deterministic per band
+    const rnd = mulberry32(90909 + chunk*131 + 7);
+    const chunkTop = TOP_Y + (chunk+1)*2400;
+    let y = builtToY + 60, side = (chunk%2)?1:-1;
+    while(y < chunkTop){
+      const spread = 100 + rnd()*54;
+      const x = CX + side*spread*(0.4+rnd()*0.6);
+      STUDS.push({x:Math.max(48,Math.min(VW-48,x)), y, type:'plastic', endless:true});
+      if(rnd()<0.34) STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+72+rnd()*34, type:'plastic', endless:true});
+      if(rnd()<0.55) TOKENS.push({x:60+rnd()*(VW-120), y:y+rnd()*70, v:5, got:false});
+      y += 244 + rnd()*96;          // hard, but always inside a fling's reach
+      side*=-1;
+    }
+    serviceRegion(builtToY, chunkTop);
+    builtToY = chunkTop;
+  }
+}
+
 /* ---------- game state ---------- */
 const HAND = {
   mode:'attach',            // 'attach' | 'fly'
@@ -384,97 +424,87 @@ let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
 let introBeat = 0, introT = 0, seenIntro = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
-'the pit': { title:'The Thing at the Top', lede:'There is a monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two things for certain. First: there is a monster at the top, and it takes toys and never gives them back. Second: you do not climb toward it.
+'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never climb toward it.
 
-You have decided to be wrong about the second one.
+You are about to break the second rule.
 
-Because before the monster, there was Moose. You were the size of a thumb and frightened of the thing that came down every three seconds, and he was enormous and soft and certain it could be handled. He taught you to count it — one, two, hands up — so the fear had somewhere to go. You still count. You'll count today.
+Because the monster took Moose — the big, one-eyed plush who raised you. When you were small and scared of the claw, he taught you to count it: one, two, hands up. The day the claw came down for you, he threw himself in front of it, and it took him instead. His eye came loose and rolled all the way down to you.
 
-The last time it came down for you, he got between you and it, threw his own arms up, and shouted the only thing he ever shouted. It took him instead. His eye tore loose and rolled all the way down to you.
+You have kept that eye ever since. You tell yourself you are climbing to give it back and make things even between you.
 
-You have carried it ever since, like a debt. You tell yourself you're climbing to give it back — to make the two of you even.
+That is not really why. You just want him back. Either way — hands up, kid. Start climbing.` },
+'the spill': { title:'His Handwriting', lede:"Monsters don't leave friendly notes. This one does.", text:`You are barely off the floor when you find the first note.
 
-That is the lie you needed to get off the floor. You aren't the size of a thumb anymore. HANDS UP, kid.` },
-'the spill': { title:'His Handwriting', lede:"Monsters don't leave encouraging notes. This one did.", text:`You are barely off the floor and he has already left you a message.
+It is scratched into a stud in Moose's big, crooked handwriting — you would know it anywhere: KEEP GOING, KID. And under it, smaller: DON'T LOOK DOWN. IT'S TACKY.
 
-Scratched into a stud, in the big soft crooked letters you would know in the dark, underwater, a hundred years from now: KEEP GOING, KID. And under it, smaller, because he never could resist: DON'T LOOK DOWN. IT'S TACKY.
+He always left you notes like this back in the pit. Good morning. Watch the claw. You're doing fine.
 
-He always did this. Tucked notes into the plush where you'd find them — good morning; watch the claw; you're doing fine.
+Which means he has been up here all this time, still leaving them. Still hoping you would come. Even after all these years, he never stopped believing you might.
 
-Reading one now, the debt in your chest turns over and shows its other face. He wasn't up here suffering, blaming you. He was up here cheerful. Hopeful. Leaving good mornings you were years too late to answer.
+You climb faster.` },
+'the reef': { title:'The Ones It Kept', lede:"The notes are getting old. He's been up here a long time.", text:`The notes keep coming, but they are getting old — the letters worn shallow and grey. He has been up here a long, long time.
 
-Somehow that is worse. You climb faster, and you don't ask yourself why.` },
-'the reef': { title:'The Ones It Kept', lede:"The notes are getting older. He's been up there a long time.", text:`The notes keep coming, which would be wonderful, except you've started reading the dust in them.
+This one is not cheerful. It is a warning: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING. He learned that up here, alone, without you.
 
-This one is older, the scratches shallow and gone grey, and it doesn't cheer you on. It warns: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING.
+And that is what finally gets you. For years you told yourself this climb was about paying him back — handing over the eye and calling it even.
 
-He learned that up here. Without you. Everything he learned up here, he learned without you — and that is the sentence that finally gets you.
+That was never it. You are climbing because you miss him. Every single day, you have missed him. You just would not let yourself feel it until now.
 
-Because somewhere in the reading, it stopped being a debt. You aren't climbing to hand an eye back and walk away even. You are climbing because you have missed him — plainly, stupidly, every single day — and you only just let yourself notice.
-
-The eye in your grip stops being a weight you owe. It's just his. You would like the rest of him back.
+The eye in your hand is not a debt anymore. It is just his. You want the rest of him back too.
 
 Climb faster.` },
-'the gallery': { title:'Out', lede:'The notes were never meant for a rescuer. They were meant for you.', text:`The Gallery is glass, and glass holds nothing at all — but press against it and, for the first time, you can see out.
+'the gallery': { title:'Out', lede:'The notes were never a trail for a rescuer. They were only ever for you.', text:`Here the wall turns to glass, and for the first time you can see outside.
 
-Out is an arcade with its lights off. No coins. No small hands on the buttons. No winners, and nobody coming to be one.
+Outside is an arcade with the lights off. No coins. No kids at the buttons. Nobody was ever coming to win anyone out of this machine — and Moose could see that from up here long before you could.
 
-Which rearranges everything behind you. Nobody was ever coming — and he could see that from up there far better than you can from here. So the notes were never a trail laid for a rescue party. There was never going to be one.
+So the notes were never a trail for some rescue party. There was never going to be one.
 
-He wrote them for you. Alone, in the dark, for years, on the chance that the thumb-sized thing he raised got big enough, one day, to come read them.
+He wrote them for you. Alone, in the dark, for years — just in case the little thing he raised grew up and climbed high enough to read them.
 
-He never wanted the eye back. He never wanted the two of you even. He wanted you — that is all it ever was, on both ends — and you spent years too busy being guilty to understand the debt was something you invented to keep from missing him.
+He never wanted the eye back. He never cared about being even. He just wanted you. That is all it ever was, for both of you. You were just too busy feeling guilty to see it.
 
-There's one here, nearly worn through: STILL TACKY. You laugh, and it comes out wrong.` },
-'claw country': { title:'The Hand of God, Malfunctioning', lede:"There are no notes in Claw Country. He couldn't stop long enough.", text:`The notes stop here. You climb the whole band and there isn't one, and soon enough you see why.
+There is one note here, nearly worn through: STILL TACKY. You laugh, and it comes out wrong.` },
+'claw country': { title:'The Hand of God, Malfunctioning', lede:"No notes here. He was too busy to stop.", text:`The notes stop here. You climb the whole stretch and there is not one — and soon you see why.
 
-The Claw isn't hunting anyone. It comes down every three seconds and closes on whatever's there, because that is the only thought it has ever had. But watch between the grabs: it reaches higher than it needs to, for something that keeps slipping it, and by the scoring worn into the cable, it has been missing for years.
+Get a good look at the Claw. It is not hunting anyone. It just comes down every three seconds and grabs whatever it can, over and over, forever. But watch closely: it keeps reaching higher than it needs to, for something it can never quite catch. By the wear on the cable, it has been missing for years.
 
-You can finally picture the day it didn't miss. How fast it must have been. How he still got his arms up first — for you, not himself.
+That something is Moose. All this time he has been up here catching every toy the claw knocks loose, so it never takes anyone the way it took him. That is why he had no time to write.
 
-No wonder he had nothing left over for writing. He wasn't hiding up here. He was busy — three seconds at a time, for years, so it never took anyone the way it took him.
+And somewhere on this climb, you notice you have started doing the same thing — watching the claw for the small ones climbing below you, not just for yourself.
 
-And watching it reach and miss and reach, you notice something has changed in you since the floor. You came up as the thumb-sized thing he threw his arms up for. You are not that anymore. Somewhere on the way, without deciding to, you started counting the claw not for your own fear — but for the small ones climbing below you.
-
-You have become the thing he was. You just never had his notes to warn you it would happen.` },
-'the cornice': { title:'Who It Actually Is', lede:'IF NOBODY COMES, THAT\'S ALRIGHT. — the last thing he wrote.', text:`The notes come back up here, where the air is thin. Just one.
-
-Older than all of them. The letters gone shallow and wandering, like it took him a while to get through it.
+You are turning into him. You did not even decide to. It just happened.` },
+'the cornice': { title:'Who It Actually Is', lede:'IF NOBODY COMES, THAT\'S ALRIGHT. — the last thing he wrote.', text:`The notes come back near the top. Just one, older than all the rest, the letters shaky and wandering like it was hard to write.
 
 IF NOBODY COMES, THAT'S ALRIGHT.
 
-That is the last thing he wrote. After it: nothing. No notes, no jokes, only tally marks scratched into a stud — and then, partway along, even those stop.
+That is the last thing he ever wrote. After it, nothing — just tally marks counting the days, and then even those stop.
 
-Beyond them, a nest of stuffing arranged with some care. And turning slowly toward the sound of you climbing, a shape you have spent your entire life being told to fear. Big. Soft. Down to a single enormous eye.
+Past them, a nest of stuffing, and a shape turning slowly toward the sound of you climbing. Big. Soft. One enormous eye. The monster every toy taught you to fear.
 
 The monster is Moose. It was always Moose.
 
-He stopped writing because he stopped believing anyone was reading.
+He stopped writing because he stopped believing anyone would come. He made his peace with being forgotten, and by the look of the tally marks, he got good at it.
 
-He stopped writing because he stopped believing anyone was reading. He made his peace with being forgotten. By the look of the tally marks, he got good at it.
+And one climb away from him, you finally know why you are really here. Not to settle a debt. Not to be rescued. You came to prove that last note wrong — to be the somebody who came.
 
-And one climb from him, you finally know why you came — and it was never the reason you told yourself on the floor. Not to settle up. Not to be saved. You came to ruin the peace he made. To be the somebody. To take the last thing he ever wrote and prove it wrong with your whole body.
+One. Two. One more climb.` },
+'the chute': { title:'Hands Up, Kid', lede:'You kept his eye the whole way. You were always coming.', text:`One hundred percent. The top. Moose.
 
-Count it out, kid. One. Two. One more climb.` },
-'the chute': { title:'Hands Up, Kid', lede:'You kept it. You were always coming.', text:`One hundred percent. The top. Moose.
+He turns and looks at you like he is looking at something he gave up hoping for. "Figured you forgot me," he says, gentle, like it is fine. "Everybody forgets."
 
-He turns, and he looks at you the way you look at a thing you long ago decided to stop hoping for. "Figured you forgot me," he says — gently, like it's fine, like it costs him nothing. "Everybody forgets."
-
-Then he sees what you've carried this whole way. His eye. The one that rolled down to a thumb-sized nobody a lifetime ago. You climbed an entire machine and never once set it down.
+Then he sees what you have carried the whole way up: his eye. The one that rolled down to a tiny, scared nobody a lifetime ago. You climbed an entire machine and never once put it down.
 
 "...you kept it?"
 
-You did. Not as a debt — you know that now — but because it was the one piece of him the machine let you keep, and you were never letting it have that too.
+You did. Not because you owed him — you know better now — but because it was the one piece of him you had, and you were never letting the machine take that too.
 
-The Claw comes down one last time, for both of you. Last time, he got his arms up first — for you. This time you're faster, and it's for him.
+The Claw comes down one more time, for both of you. Last time, he got his arms up first, for you. This time you are faster, and it is for him. You catch it, you wind, you let go — exactly the way he taught you — and you throw it down its own chute. Gone.
 
-You don't run the way he taught you. You catch it. You wind, you let go, exactly the way he taught you, and you send the machine off to deliver the only thing left in the world it's allowed to: itself. Down the chute. Gone.
+Two eyes again. Whole. He looks at you like the last thing he ever wrote just got proven wrong.
 
-Two eyes again. Whole. And he is looking at you the way you look at a thing you had made your peace with never having — the last line he ever wrote, quietly, finally proven wrong.
+You do not leave through the top — out there is just a locked door and the dark. You go home the other way: down, together, the long way, and neither of you minds.
 
-You don't leave through the top. Out is the dark and the locked door. You go home the other way — down, together, the long way, and neither of you minds.
-
-And somewhere in the Spill, on the way past, you stop and scratch four words into a stud in handwriting that isn't his, for whoever climbs next:
+And on the way past the bottom, you stop and scratch four words into a stud, in your own handwriting, for whoever climbs next:
 
 SOMEBODY CAME. KEEP GOING.` }
 } };
@@ -577,7 +607,8 @@ function save(){
 
 /* ---------- helpers ---------- */
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
-const pctOf=y=>clamp((y-PIT_Y)/TOWER_H*100,0,100);
+// height is UNCAPPED above the summit — the machine is endless, so 100% is a milestone, not a ceiling
+const pctOf=y=>Math.max(0,(y-PIT_Y)/TOWER_H*100);
 function grippable(s){ return s.type!=='glass'; }
 function nearestStud(x,y,rad){
   let best=null, bd=rad*rad;
@@ -729,7 +760,7 @@ function step(dt){
           if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
           if(pendingStamp){ bossFlash(pendingStamp); bossLineT=2.2; pendingStamp=null; }
         }
-        if(s.chute && mode==='play'){ openWinScreen(); }                     // reached the top → win
+        if(s.chute && mode==='play' && !beaten){ openWinScreen(); }           // first summit → the reunion
         return;
       }
     }
@@ -769,22 +800,24 @@ function step(dt){
     trail.push({x:HAND.x,y:HAND.y}); if(trail.length>16) trail.shift();
   }
 
+  // keep the endless machine built out ahead of the climber (also covers shared-appeal targets)
+  if(HAND.y > builtToY - 1800) extendTowerTo(HAND.y + 2800);
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
-  // ONE note per climb. reach the zone the next note is in — the world stops, and you read it right there.
-  // (the chute's beat is the finale; the summit screen delivers it, not a note card.)
-  if(mode==='play' && !foundThisRun && storyIdx < CHAPTER_ORDER.length){
+  // notes are found by ALTITUDE, in order: reach the next note's zone and the world stops so you read it.
+  // one continuous climb keeps discovering them — no restart needed. (the chute beat is the summit finale.)
+  if(mode==='play' && storyIdx < CHAPTER_ORDER.length){
     const nextZone = CHAPTER_ORDER[storyIdx];
     if(nextZone!=='the chute' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
-      storyIdx++; foundThisRun=true;
+      storyIdx++;
       if(!chaptersRead.includes(nextZone)) chaptersRead.push(nextZone);
       save(); updateFoyerBadge(); openNoteCard(nextZone);
       return;
     }
   }
   if(p>bestPct){ bestPct=p; }
-  if(p>=99.5 && mode==='play'){ openWinScreen(); return; }   // reached the summit
+  if(p>=99.5 && mode==='play' && !beaten){ openWinScreen(); return; }   // first time reaching the summit
   // camera
   const targetCam = HAND.y + 60;
   camY += (targetCam - camY) * Math.min(1, dt*6.5);
@@ -1412,12 +1445,12 @@ function openWinScreen(){
     if(rec) bestTime=t;
     tLine = `<div class="rule"></div><div class="sub">THE RETURN MIGRATION: ${fmtT(t)}${rec?' — the literature has been updated.':' · best: '+fmtT(bestTime)}</div>`;
   }
-  beaten = true; bestPct = 100; save();
+  beaten = true; bestPct = Math.max(bestPct, pctOf(HAND.y)); save();
   el('win_doc').innerHTML =
     `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ONE HUNDRED PERCENT · THE TOP</div>`+
     `<h1>MOOSE.</h1>`+
     `<div class="sub">He turns. "Figured you forgot," he says — then he sees his own eye, in your hand, carried up an entire machine. "...you kept it?"<br><br>The Claw comes down one last time. You don't run. You catch it, and send it to deliver the one thing it's allowed to: itself. Down the chute.<br><br>Two eyes again. You go home the other way — down, together. HANDS UP, kid.</div>`+
-    (firstTime?`<div class="rule"></div><div class="sub"><b>Somewhere above, another motor just kicked on.</b> Another toy at another ceiling its pit has turned into a monster. You know better now. Climb — be the hand that comes for it.</div>`:'')+
+    (firstTime?`<div class="rule"></div><div class="sub"><b>Somewhere above, another motor just kicked on.</b> Another toy at another ceiling its pit has turned into a monster. You know better now. The machine doesn't end here — it never did. Keep climbing, and see how high you can get. Be the hand that comes.</div>`:'')+
     tLine+
     `<div class="rule"></div>`+
     `<div class="sub" style="text-align:center;color:#8a8796;">— the marquee flickers: EVERYBODY GOES HOME —</div>`;
@@ -1429,7 +1462,7 @@ function openWinScreen(){
     else if(navigator.clipboard){ navigator.clipboard.writeText(txt+' '+brag).then(()=>{ el('b_winshare').textContent='COPIED — go flex'; },()=>{}); }
     else prompt('copy this', txt+' '+brag);
   };
-  el('b_wincont').onclick = ()=>{ el('p_win').classList.remove('on'); resetToPit(); mode='play'; };
+  el('b_wincont').onclick = ()=>{ el('p_win').classList.remove('on'); mode='play'; extendTowerTo(HAND.y+2800); };
 }
 
 function doShare(link, kind){
@@ -1782,6 +1815,14 @@ window.__thwap = {
   caseStart:(id)=>{ resetToPit(); startAppeal(casePayload(CASES.find(c=>c.id===id)||CASES[0])); return 'case '+id; },
   freeze:(v)=>{ frozen=!!v; return frozen; },
   intro:()=>({mode, beat:introBeat, key:(INTRO[introBeat]||{}).key, total:INTRO.length, seen:seenIntro}),
+  endless:()=>({builtToY, studs:STUDS.length, maxStudY:Math.round(Math.max.apply(null,STUDS.map(s=>s.y))), TOP_Y}),
+  extend:(y)=>{ extendTowerTo(y); return builtToY; },
+  audit:(loY,hiY)=>{ const g=STUDS.filter(s=>grippable(s)&&s.y>=loY&&s.y<=hiY).sort((a,b)=>a.y-b.y);
+    let worst=0, walls=0, at=null;
+    for(const s of g){ let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue; if(Math.abs(t.x-s.x)>240) continue; const need=dy-REACH; if(need<best) best=need; }
+      if(best>397){ walls++; if(best>worst){worst=best; at=Math.round(s.y);} } }
+    return {count:g.length, worstGap:Math.round(worst), unclearableWalls:walls, wallAt:at}; },
   introAdvance:()=>{ introAdvance(); return {mode, beat:introBeat}; },
   grantQ:(n)=>{ quarters+=n; save(); return quarters; },
   story:()=>({zones:zonesReached.slice(), chapters:Object.keys(STORY.chapters), read:chaptersRead.slice()}),
