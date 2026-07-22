@@ -445,12 +445,15 @@ let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
 const DAILY_LEN = 180;                 // seconds on the clock
 const DAILY_EPOCH = 20655;             // day # displays as (localDayNum - this); day 1 = 2026-07-22
 let dailyActive=false, dailyT=0, dailyPeak=0, dailyFalls=0, dailyBestSave=0;
+let dailyPrevPct=0, dailyWall=0, dailySickUsed=false, dailyPrizes=[];   // per-attempt transients
 let dayOverride=null;                  // test hook: freeze "today"
 // completed-daily record. day = last day completed; punches = current streak;
 // sick = OUT SICK notes left (refills to 1 each week); prevPct = yesterday's bar to beat
 let dailyData = { day:0, pct:0, falls:0, bestSave:0, punches:0, sick:1, sickWk:-1, prevPct:0 };
 function dayNum(){ if(dayOverride!==null) return dayOverride;
-  const d=new Date(); return Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000); }
+  // Date.UTC of the LOCAL calendar date: exact multiple of 86400000, +1 per local day, DST-immune,
+  // and the same day # for the same calendar date worldwide (rollover still at each player's midnight)
+  const d=new Date(); return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000); }
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never, ever climb toward it.
 
@@ -838,12 +841,9 @@ function step(dt){
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
-  // THE DAILY GRAB: run the clock, track the peak. story and summit stay out of the daily.
-  if(dailyActive){
-    dailyT -= dt;
-    if(p > dailyPeak) dailyPeak = p;
-    if(dailyT <= 0){ endDaily(); return; }
-  }
+  // THE DAILY GRAB: track the peak here; the clock itself runs in the frame loop,
+  // charged every tick — hitstop, slowmo and early returns can't stretch a ranked 3:00.
+  if(dailyActive && p > dailyPeak) dailyPeak = p;
   // notes are found by ALTITUDE, in order: reach the next note's zone and the world stops so you read it.
   // one continuous climb keeps discovering them — no restart needed. (the chute beat is the summit finale.)
   if(mode==='play' && !dailyActive && storyIdx < CHAPTER_ORDER.length){
@@ -1231,6 +1231,14 @@ function frame(t){
     if(flash>0) flash=Math.max(0,flash-DT*4);
     if(bossLineT>0) bossLineT-=DT;
     if(reveal){ reveal.t+=DT; if(reveal.t>4.6) reveal=null; }
+    // THE DAILY GRAB clock: full rate through hitstop and slowmo, clamped to wall time
+    // so backgrounding the tab burns the ranked 3:00 instead of pausing it
+    if(dailyActive && mode==='play'){
+      dailyT -= DT;
+      const wallLeft = DAILY_LEN - (Date.now()-dailyWall)/1000;
+      if(wallLeft < dailyT) dailyT = wallLeft;
+      if(dailyT <= 0){ endDaily(); acc=0; break; }
+    }
     const active = (mode==='play'||mode==='appeal_play');
     if(active && hitstop<=0){
       const scale = slowmo>0?0.4:1;
@@ -1432,7 +1440,7 @@ window.__wearStuds = (id)=>{ if(mode!=='foyer') return;
   if(id!=='stock' && !studOwned.includes(id)) return;
   studWorn=id; save(); mode='play'; openFoyer(); };
 window.__buyBg = (id)=>{ const t=BACKDROPS[id];
-  if(!t || mode!=='foyer' || quarters<t.cost || bgOwned.includes(id)) return;
+  if(!t || t.cost<0 || mode!=='foyer' || quarters<t.cost || bgOwned.includes(id)) return;
   quarters-=t.cost; bgOwned.push(id); bgWorn=id; save(); mode='play'; openFoyer(); };
 window.__wearBg = (id)=>{ if(mode!=='foyer') return;
   if(id!=='stock' && !bgOwned.includes(id)) return;
@@ -1753,7 +1761,7 @@ function resetToPit(){
 }
 
 /* ============================================================ THE DAILY GRAB */
-function dailyDoneToday(){ return dailyData.day === dayNum(); }
+function dailyDoneToday(){ return dailyData.day >= dayNum(); }   // >= : a wound-back clock can't replay past days
 function dailyBar(pct){
   const f=Math.max(0,Math.min(10,Math.round(pct/10)));
   return '🟧'.repeat(f)+'⬛'.repeat(10-f);
@@ -1797,7 +1805,7 @@ function openDaily(){
       `<div class="sub">today the whole world climbs the <b>same strange machine</b> — built this morning, gone at midnight. `+
       `<b>3:00</b> on the clock. your highest point is your number.</div>`+
       `<div class="rule"></div>`+
-      `<div class="sub"><b>the pot:</b> 5¢ a zone cleared${prev>0?` — <b>doubled</b> if you beat your last daily (${prev}%)`:''}.<br>`+
+      `<div class="sub"><b>the pot:</b> 2¢ for clocking in + 5¢ a zone cleared${prev>0?` — <b>doubled</b> if you beat your last daily (${prev}%)`:''}.<br>`+
       `<b>the card:</b> a punch for showing up. 3 punches — holds. 7 — a finish. 30 — the gold one.</div>`+
       punchCardHTML()+
       `<div class="sub" style="color:#8a8796;font-size:11px;margin-top:8px;">one ranked shot per day. no notes up there, no summit — just you, the clock, and everyone else's number.</div>`;
@@ -1809,47 +1817,52 @@ function openDaily(){
 function startDaily(){
   if(dailyDoneToday() || dailyActive || mode!=='daily_menu') return;
   el('p_daily').classList.remove('on');
-  buildTower(70707 + dayNum());          // today's machine — same for the whole world
-  dailyActive=true; dailyT=DAILY_LEN; dailyPeak=0; dailyFalls=0; dailyBestSave=0;
+  const dn = dayNum();
+  buildTower(70707 + dn);                // today's machine — same for the whole world
+  // THE CARD SETTLES WHEN YOU CLOCK IN. showing up is the currency; the result comes at 0:00.
+  // stamping the day NOW also burns the attempt — a reload mid-shot forfeits it (0%), never retries it.
+  dailyPrevPct = dailyData.day>0 ? dailyData.pct : 0;    // last completed daily = the bar to beat
+  const wk=Math.floor(dn/7);             // weekly OUT SICK refill, before the gap check
+  if(wk!==dailyData.sickWk){ dailyData.sick=1; dailyData.sickWk=wk; }
+  dailySickUsed=false;
+  if(dailyData.day>0){
+    const gap = dn - dailyData.day;      // 1 = consecutive; 2 = missed one day; 3+ = the card resets
+    if(gap===2 && dailyData.sick>0){ dailyData.sick--; dailySickUsed=true; }
+    else if(gap>1){ dailyData.punches=0; }
+  }
+  dailyData.punches++;
+  // punch prizes — earned by showing up, never buyable, kept forever even if the streak breaks
+  dailyPrizes=[];
+  if(dailyData.punches>=3 && !studOwned.includes('punchcard')){ studOwned.push('punchcard'); dailyPrizes.push('THE PUNCH CARD holds — stamped into the machine.'); }
+  if(dailyData.punches>=7 && !finishes.includes('regular')){ finishes.push('regular'); dailyPrizes.push('THE REGULAR — a finish for hands that keep showing up.'); }
+  if(dailyData.punches>=30 && !finishes.includes('employee')){ finishes.push('employee'); dailyPrizes.push('EMPLOYEE OF THE MONTH. gold. obviously.'); }
+  dailyData.day=dn; dailyData.pct=0; dailyData.falls=0; dailyData.bestSave=0;
+  save();
+  dailyActive=true; dailyT=DAILY_LEN; dailyWall=Date.now(); dailyPeak=0; dailyFalls=0; dailyBestSave=0;
   currentFall=null; fallTrack=null; hasFlung=true;
   resetToPit(); mode='play';
 }
 function endDaily(){
   dailyActive=false;
-  const dn=dayNum(), pct=Math.round(dailyPeak);
-  const prevPct = dailyData.day>0 ? dailyData.pct : 0;
-  // weekly OUT SICK refill happens before the gap check, so this week's note can cover a miss
-  const wk=Math.floor(dn/7);
-  if(wk!==dailyData.sickWk){ dailyData.sick=1; dailyData.sickWk=wk; }
-  let sickUsed=false;
-  if(dailyData.day>0){
-    const gap = dn - dailyData.day;      // 1 = consecutive; 2 = missed one day; 3+ = the card resets
-    if(gap===2 && dailyData.sick>0){ dailyData.sick--; sickUsed=true; }
-    else if(gap>1){ dailyData.punches=0; }
-  }
-  dailyData.punches++;
-  // the pot: showing up pays, altitude pays more, beating yourself pays double
-  const zonesCleared = ZONES.filter(z=>pct>=z.top).length;
+  const pct=Math.floor(dailyPeak);
+  // the pot: clocking in pays, altitude pays more, beating yourself pays double
+  const zonesCleared = ZONES.filter(z=>pct>=Math.min(z.top,100)).length;   // a 100% summit clears them all
   let pot = 2 + 5*zonesCleared;
-  const doubled = prevPct>0 && pct>prevPct;
+  const doubled = dailyPrevPct>0 && pct>dailyPrevPct;
   if(doubled) pot*=2;
   quarters += pot;
-  // punch prizes — earned by showing up, never buyable, kept forever even if the streak breaks
-  const prizes=[];
-  if(dailyData.punches>=3 && !studOwned.includes('punchcard')){ studOwned.push('punchcard'); prizes.push('THE PUNCH CARD holds — stamped into the machine.'); }
-  if(dailyData.punches>=7 && !finishes.includes('regular')){ finishes.push('regular'); prizes.push('THE REGULAR — a finish for hands that keep showing up.'); }
-  if(dailyData.punches>=30 && !finishes.includes('employee')){ finishes.push('employee'); prizes.push('EMPLOYEE OF THE MONTH. gold. obviously.'); }
-  dailyData.day=dn; dailyData.pct=pct; dailyData.falls=dailyFalls; dailyData.bestSave=dailyBestSave;
+  dailyData.pct=pct; dailyData.falls=dailyFalls; dailyData.bestSave=dailyBestSave;
   save();
+  currentFall=null; fallTrack=null;      // nothing from the daily tower survives into the main machine
   buildTower(70707); resetToPit();       // the main machine comes back
   // the receipt
   mode='daily_menu';
-  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#85510b;">THE DAILY GRAB · day ${dn-DAILY_EPOCH} · TIME.</div>`+
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#85510b;">THE DAILY GRAB · day ${dailyData.day-DAILY_EPOCH} · TIME.</div>`+
     dailyResultHTML()+
     `<div class="rule"></div>`+
     `<div class="sub"><b>the pot: ¢${pot}</b>${doubled?' — DOUBLED. yesterday has been informed.':''}</div>`+
-    (sickUsed?`<div class="sub" style="color:#e7c04b;">an OUT SICK note covered the day you missed. the card lives.</div>`:'')+
-    prizes.map(p=>`<div class="sub ok" style="margin-top:5px;">★ ${p}</div>`).join('');
+    (dailySickUsed?`<div class="sub" style="color:#e7c04b;">an OUT SICK note covered the day you missed. the card lives.</div>`:'')+
+    dailyPrizes.map(p=>`<div class="sub ok" style="margin-top:5px;">★ ${p}</div>`).join('');
   el('daily_doc').innerHTML = h;
   el('b_dailygo').style.display='none'; el('b_dailyshare').style.display='block';
   el('p_daily').classList.add('on');
@@ -1943,6 +1956,12 @@ function tickOnce(){
   if(flash>0) flash=Math.max(0,flash-DT*4);
   if(bossLineT>0) bossLineT-=DT;
   if(reveal){ reveal.t+=DT; if(reveal.t>4.6) reveal=null; }
+  if(dailyActive && mode==='play'){                 // mirror of the frame-loop daily clock
+    dailyT -= DT;
+    const wallLeft = DAILY_LEN - (Date.now()-dailyWall)/1000;
+    if(wallLeft < dailyT) dailyT = wallLeft;
+    if(dailyT <= 0){ endDaily(); return; }
+  }
   const active = (mode==='play'||mode==='appeal_play');
   if(active && hitstop<=0){ const scale=slowmo>0?0.4:1;
     if(mode==='appeal_play') stepTakeover(DT*scale); else step(DT*scale); }
@@ -2019,6 +2038,8 @@ window.__thwap = {
 
 // a link dropped into an already-open tab should also fire the appeal
 addEventListener('hashchange', ()=>{
+  // never hijack a ranked daily attempt (or its menu) — the appeal would be judged on the wrong tower
+  if(dailyActive || mode==='daily_menu') return;
   if(mode==='appeal_intro'||mode==='appeal_watch'||mode==='appeal_play'||mode==='verdict') return;
   const inc = parseIncoming();
   if(inc){ resetToPit(); startAppeal(inc); }
