@@ -73,6 +73,7 @@
   <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
   <button class="btn ghost" id="b_introskip" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px; color:#8a8796;">skip ›</button>
   <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE</button>
+  <button class="btn ghost" id="b_daily" style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px; color:#e7c04b;">THE DAILY GRAB</button>
   <button class="btn ghost" id="b_foyer" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE MACHINE</button>
 
   <div class="panel" id="p_foyer">
@@ -94,6 +95,13 @@
     <div class="doc" id="win_doc"></div>
     <button class="btn hot wide" id="b_winshare">COPY THE PROOF</button>
     <button class="btn ghost wide" id="b_wincont">keep climbing ↑</button>
+  </div>
+
+  <div class="panel" id="p_daily">
+    <div class="doc" id="daily_doc" style="max-height:70vh; overflow-y:auto;"></div>
+    <button class="btn hot wide" id="b_dailygo" style="display:none;">TAKE TODAY'S SHOT</button>
+    <button class="btn hot wide" id="b_dailyshare" style="display:none;">COPY THE RECEIPT</button>
+    <button class="btn ghost wide" id="b_dailyclose">back to the climb</button>
   </div>
 
   <div class="panel" id="p_verdict">
@@ -234,6 +242,10 @@ const FINISHES = {
     line:'the claw has excellent taste. climb accordingly.' },
   chrome:  { name:"THE OPERATOR'S OWN", cost:120, body:'#e2e8ef', body2:'#5b6470', metal:true, eye:'rimmed', rim:'#7d8894', trail:'after', trailCol:'rgba(226,232,239,0.55)', glow:'#f0f5fb',
     line:"the operator's own hand, borrowed. it still remembers the last commandment. so, now, do you." },
+  regular: { name:'THE REGULAR', cost:-1, punch:7, body:'#5fae6b', body2:'#2e6e3e', eye:'googly', trail:null, glow:null,
+    line:'seven days straight on the card. the pit keeps your spot now.' },
+  employee:{ name:'EMPLOYEE OF THE MONTH', cost:-1, punch:30, body:'#f3d34e', body2:'#8a6510', metal:true, eye:'rimmed', rim:'#8a6510', trail:'sparkle', trailCol:'#ffe9a0', glow:'#e7c04b',
+    line:'thirty punches. your photo hangs on a wall nobody can see. gold, regardless.' },
 };
 const GUIDE_DEFS = {
   dead:   {name:'THE DEAD RELEASE', better:'lower', unit:'ms',
@@ -296,10 +308,12 @@ function sy(y){ return Hc*0.62 - (y - camY)*S; }   // hero sits ~62% down the sc
 /* ---------- tower ---------- */
 let STUDS = [];
 function zoneAt(pct){ for(const z of ZONES){ if(pct < z.top) return z; } return ZONES[ZONES.length-1]; }
-function buildTower(){
+let towerSeed = 70707;                // 70707 = the fixed main machine; daily uses 70707+dayNum
+function buildTower(seed){
   STUDS = [];
+  towerSeed = seed || 70707;
   builtToY = TOP_Y;                   // endless generation resets to the summit
-  const rnd = mulberry32(70707);      // FIXED seed → same tower everywhere
+  const rnd = mulberry32(towerSeed);  // FIXED seed → same tower everywhere
   // plush pit: a soft floor that catches any fall — these NEVER rip, so you can rest at the bottom
   for(let i=0;i<6;i++) STUDS.push({x:56+i*64, y:PIT_Y - 8 + (i%2)*12, type:'plush', pit:true});
   // the starting perch: a stable plastic block you spawn on; wind from it at your own pace, no pressure
@@ -352,7 +366,7 @@ function buildTower(){
   }
   // quarters, wedged in the machine since Season 0 — fixed spots, richer with altitude
   TOKENS = [];
-  const r2 = mulberry32(40404);
+  const r2 = mulberry32(40404 + (towerSeed===70707 ? 0 : towerSeed));   // main machine byte-identical
   let ty = PIT_Y + 320;
   while(ty < TOP_Y - 220){
     const pq = (ty-PIT_Y)/TOWER_H*100;
@@ -386,7 +400,7 @@ function serviceRegion(loY, hiY){
 function extendTowerTo(targetY){
   while(builtToY < targetY){
     const chunk = Math.round((builtToY - TOP_Y) / 2400);     // 0,1,2… — deterministic per band
-    const rnd = mulberry32(90909 + chunk*131 + 7);
+    const rnd = mulberry32(90909 + chunk*131 + 7 + (towerSeed===70707 ? 0 : towerSeed));
     const chunkTop = TOP_Y + (chunk+1)*2400;
     let y = builtToY + 60, side = (chunk%2)?1:-1;
     while(y < chunkTop){
@@ -423,6 +437,20 @@ const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw coun
 let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
 let introBeat = 0, introT = 0, seenIntro = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
+
+/* ---------- THE DAILY GRAB — one machine, one day, one ranked shot ----------
+   the whole world climbs the same date-seeded tower. 3 minutes on the clock;
+   highest % reached is your result. pays a quarter pot + a punch on the card.
+   never power: the reward is bragging material, currency, and showing up. */
+const DAILY_LEN = 180;                 // seconds on the clock
+const DAILY_EPOCH = 20655;             // day # displays as (localDayNum - this); day 1 = 2026-07-22
+let dailyActive=false, dailyT=0, dailyPeak=0, dailyFalls=0, dailyBestSave=0;
+let dayOverride=null;                  // test hook: freeze "today"
+// completed-daily record. day = last day completed; punches = current streak;
+// sick = OUT SICK notes left (refills to 1 each week); prevPct = yesterday's bar to beat
+let dailyData = { day:0, pct:0, falls:0, bestSave:0, punches:0, sick:1, sickWk:-1, prevPct:0 };
+function dayNum(){ if(dayOverride!==null) return dayOverride;
+  const d=new Date(); return Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000); }
 let STORY = { title:'EVERYBODY GOES HOME', chapters:{
 'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never, ever climb toward it.
 
@@ -551,6 +579,7 @@ const STUDSETS = {
   circuit: { name:'CIRCUIT',    cost:55,  line:'somebody wired the inside for a purpose nobody remembers.', studs:{plastic:'#4ce07a', glass:'#7fd6e8', plush:'#a77bd0', shape:'bolt'} },
   coral:   { name:'CORAL',      cost:65,  line:'the reef, taken literally.',                             studs:{plastic:'#ff8c5a', glass:'#8fd0dd', plush:'#e0708f', shape:'round'} },
   ice:     { name:'ICE',        cost:80,  line:'every hold looks like it might not forgive you.',        studs:{plastic:'#bfe6f5', glass:'#8fb8d8', plush:'#a8c2d8', shape:'gem'} },
+  punchcard:{ name:'PUNCH CARD', cost:-1, punch:3, line:'three days on the card. the machine noticed. every hold stamped like a loyalty card.', studs:{plastic:'#e0b64a', glass:'#c2cfe0', plush:'#d0708a', shape:'square'} },
   gold:    { name:'SOLID GOLD', cost:110, line:'the whole machine upgraded into a prize nobody can win.', studs:{plastic:'#f0c64a', glass:'#d8c890', plush:'#c9a05a', shape:'gem'} },
 };
 let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
@@ -583,6 +612,7 @@ function load(){
     if(!BACKDROPS[bgWorn]) bgWorn='stock';
     if(!STUDSETS[studWorn]) studWorn='stock';
     audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1; seenIntro = !!d.seen;
+    if(d.dg) dailyData = Object.assign(dailyData, d.dg);
     // story v3: gating on lifetime best height dumped the whole story in one good climb.
     // now it's one note per climb, in order — reset the hunt so it actually gets earned.
     if(d.sv!==3){ storyIdx = 1; chaptersRead = []; }
@@ -598,7 +628,7 @@ function save(){
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
     q:quarters, fin:finishes, skin:skin, zr:zonesReached,
     bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
-    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, dg:dailyData, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -670,6 +700,12 @@ function beginFallTrack(){
 }
 function endFallAtLanding(landY){
   const dropPct = pctOf(HAND.peakY) - pctOf(landY);
+  // daily: falls are counted, not ceremonised — the clock is the punishment
+  if(dailyActive){
+    if(dropPct >= NAMED_FALL_PCT) dailyFalls++;
+    HAND.peakY = landY; fallTrack = null;
+    return;
+  }
   if(dropPct >= NAMED_FALL_PCT && fallTrack){
     const z = zoneAt(fallTrack.fromPct);
     fallCount++;
@@ -750,13 +786,14 @@ function step(dt){
         attachTo(s, HAND.vx, HAND.vy);
         grabWin=0; whiffLock=0;
         bursts.push({x:s.x, y:s.y, f:simFrame, col:(FINISHES[skin]&&(FINISHES[skin].glow||FINISHES[skin].body))||'#fff'});
-        if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash(BARKS[simFrame%BARKS.length], true); }   // clutch save: the host loses it
+        if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash(BARKS[simFrame%BARKS.length], true);     // clutch save: the host loses it
+          if(dailyActive && dropSoFar>dailyBestSave) dailyBestSave=Math.round(dropSoFar); }
         if(mode==='play'){
           if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
           if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
           if(pendingStamp){ bossFlash(pendingStamp); bossLineT=2.2; pendingStamp=null; }
         }
-        if(s.chute && mode==='play' && !beaten){ openWinScreen(); }           // first summit → the reunion
+        if(s.chute && mode==='play' && !beaten && !dailyActive){ openWinScreen(); }   // first summit → the reunion
         return;
       }
     }
@@ -801,9 +838,15 @@ function step(dt){
   // track best % + the return-migration clock (armed while resting in the pit)
   const p = pctOf(HAND.y);
   if(p<2 && HAND.mode==='attach') runStart = simFrame;
+  // THE DAILY GRAB: run the clock, track the peak. story and summit stay out of the daily.
+  if(dailyActive){
+    dailyT -= dt;
+    if(p > dailyPeak) dailyPeak = p;
+    if(dailyT <= 0){ endDaily(); return; }
+  }
   // notes are found by ALTITUDE, in order: reach the next note's zone and the world stops so you read it.
   // one continuous climb keeps discovering them — no restart needed. (the chute beat is the summit finale.)
-  if(mode==='play' && storyIdx < CHAPTER_ORDER.length){
+  if(mode==='play' && !dailyActive && storyIdx < CHAPTER_ORDER.length){
     const nextZone = CHAPTER_ORDER[storyIdx];
     if(nextZone!=='the chute' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
       storyIdx++;
@@ -812,8 +855,8 @@ function step(dt){
       return;
     }
   }
-  if(p>bestPct){ bestPct=p; }
-  if(p>=99.5 && mode==='play' && !beaten){ openWinScreen(); return; }   // first time reaching the summit
+  if(p>bestPct && !dailyActive){ bestPct=p; }
+  if(p>=99.5 && mode==='play' && !beaten && !dailyActive){ openWinScreen(); return; }   // first time reaching the summit
   // camera
   const targetCam = HAND.y + 60;
   camY += (targetCam - camY) * Math.min(1, dt*6.5);
@@ -1010,6 +1053,8 @@ function drawClaw(){
 }
 
 function render(){
+  // the daily button lives only on the plain climb screen — never mid-attempt, mid-appeal, or under a panel
+  el('b_daily').style.display = (mode==='play' && !dailyActive && !noteHold && !frozen) ? 'block' : 'none';
   ctx.clearRect(0,0,Wc,Hc);
   // machine interior — zone- and theme-aware
   const bgz = themeBG();
@@ -1091,6 +1136,18 @@ function render(){
   ctx.font=`600 ${Math.round(10)}px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.4)';
   ctx.fillText('BEST '+Math.round(bestPct)+'%', Wc-14, 68);
 
+  // THE DAILY GRAB: the clock is the whole HUD story
+  if(dailyActive){
+    const t=Math.max(0,dailyT), mm=Math.floor(t/60), ss=Math.floor(t%60);
+    ctx.textAlign='center';
+    ctx.fillStyle = t<=30 ? 'rgba(226,75,74,.95)' : 'rgba(231,192,75,.95)';
+    ctx.font='700 27px ui-monospace,monospace';
+    ctx.fillText(mm+':'+(ss<10?'0':'')+ss, Wc/2, 46);
+    ctx.font='600 9px ui-monospace,monospace'; ctx.fillStyle='rgba(231,192,75,.6)';
+    ctx.fillText('THE DAILY GRAB · PEAK '+Math.round(dailyPeak)+'%', Wc/2, 60);
+    ctx.textAlign='right';
+  }
+
   // the loss, live: watch your progress drain while you fall
   if(fallTrack && HAND.mode==='fly' && mode==='play'){
     const d = pctOf(HAND.peakY)-pctOf(HAND.y);
@@ -1099,7 +1156,7 @@ function render(){
       ctx.fillText('−'+Math.floor(d)+'%', Wc-14, 98); }
   }
   // return-migration clock (only shown once you've cleared the tower once)
-  if(beaten && runStart!==null && mode==='play' && pctOf(HAND.y)>=2){
+  if(beaten && runStart!==null && mode==='play' && !dailyActive && pctOf(HAND.y)>=2){
     ctx.fillStyle='rgba(231,192,75,.75)'; ctx.font='600 12px ui-monospace,monospace'; ctx.textAlign='left';
     ctx.fillText('RM '+fmtT((simFrame-runStart)/120), 12, 52); ctx.textAlign='right';
   }
@@ -1220,7 +1277,7 @@ function openShare(){
 el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=null; mode='play'; };
 
 function openRecord(){
-  if(mode!=='play') return;
+  if(mode!=='play' || dailyActive) return;
   mode='record';
   let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE ARCHIVE · ${SEASON.name}</div>`+
     `<h1>standing footage</h1>`+
@@ -1263,6 +1320,7 @@ function finishRow(id){
     `<div style="flex:1;min-width:0;"><b>${esc(f.name)}</b> — ${esc(f.line)}`+
     (worn ? `<div class="ok" style="margin-top:4px;">worn.</div>`
       : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wear('${id}')">WEAR</button>`
+      : f.cost<0 ? `<div style="margin-top:5px;color:#8a8796;font-size:11px;">🔒 daily punch card prize — day ${f.punch}</div>`
       : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyFin('${id}')">BUY · ¢${f.cost}</button>`)+
     `</div></div>`;
 }
@@ -1280,7 +1338,7 @@ function wrapLines(g, text, maxW){
 function unreadChapters(){ return CHAPTER_ORDER.slice(0, storyIdx).filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length; }
 function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE MACHINE'+(unreadChapters()>0?' ●':''); }
 function openFoyer(){
-  if(mode!=='play') return;
+  if(mode!=='play' || dailyActive) return;
   mode='foyer';
   let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE MACHINE</div>`+
     `<h1>¢ ${quarters}</h1>`+
@@ -1331,6 +1389,7 @@ function studRow(id){
     `<div style="flex:1;min-width:0;"><b>${esc(t.name)}</b> — ${esc(t.line)}`+
     (worn ? `<div class="ok" style="margin-top:4px;">in the machine.</div>`
       : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearStuds('${id}')">FIT THEM</button>`
+      : t.cost<0 ? `<div style="margin-top:5px;color:#8a8796;font-size:11px;">🔒 daily punch card prize — day ${t.punch}</div>`
       : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyStuds('${id}')">BUY · ¢${t.cost}</button>`)+
     `</div></div>`;
 }
@@ -1367,7 +1426,7 @@ function studPathOn(g, X, Y, r, shape){
   else { g.arc(X,Y,r,0,7); }
 }
 window.__buyStuds = (id)=>{ const t=STUDSETS[id];
-  if(!t || mode!=='foyer' || quarters<t.cost || studOwned.includes(id)) return;
+  if(!t || t.cost<0 || mode!=='foyer' || quarters<t.cost || studOwned.includes(id)) return;
   quarters-=t.cost; studOwned.push(id); studWorn=id; save(); mode='play'; openFoyer(); };
 window.__wearStuds = (id)=>{ if(mode!=='foyer') return;
   if(id!=='stock' && !studOwned.includes(id)) return;
@@ -1390,7 +1449,7 @@ window.__readCh = (zn)=>{
 };
 window.__buyFin = (id)=>{
   const f=FINISHES[id];
-  if(!f || mode!=='foyer' || finishes.includes(id) || quarters<f.cost) return;
+  if(!f || f.cost<0 || mode!=='foyer' || finishes.includes(id) || quarters<f.cost) return;
   quarters-=f.cost; finishes.push(id); skin=id; trail=[]; save(); mode='play'; openFoyer();
 };
 window.__wear = (id)=>{
@@ -1693,6 +1752,109 @@ function resetToPit(){
   camY = HAND.y+60;
 }
 
+/* ============================================================ THE DAILY GRAB */
+function dailyDoneToday(){ return dailyData.day === dayNum(); }
+function dailyBar(pct){
+  const f=Math.max(0,Math.min(10,Math.round(pct/10)));
+  return '🟧'.repeat(f)+'⬛'.repeat(10-f);
+}
+function punchCardHTML(){
+  const p=dailyData.punches;
+  const next = p<3?3 : p<7?7 : p<30?30 : null;
+  const show = next||30;
+  let dots='';
+  for(let i=0;i<Math.min(show,30);i++)
+    dots += `<span style="display:inline-block;width:11px;height:11px;border-radius:50%;margin:1.5px;${i<p?'background:#e7c04b;':'border:1px solid #4a473c;'}"></span>`;
+  return `<div class="sub" style="margin-top:8px;"><b>the punch card</b> · 🔥 ${p}${next?` · next prize at ${next}`:' · the card is full'}`+
+    `<div style="margin-top:5px;line-height:1;">${dots}</div>`+
+    `<div style="color:#8a8796;font-size:11px;margin-top:4px;">OUT SICK notes: ${dailyData.sick} — miss one day and the card survives. refills weekly.</div></div>`;
+}
+function dailyResultHTML(){
+  const d=dailyData;
+  return `<h1>${d.pct}%${d.pct>=100?' 💯':''}</h1>`+
+    `<div class="sub" style="font-size:15px;letter-spacing:1px;">${dailyBar(d.pct)}</div>`+
+    `<div class="sub">${d.falls} fall${d.falls===1?'':'s'}${d.bestSave?` · best save −${d.bestSave}%`:''} · 🔥 ${d.punches}</div>`+
+    `<div class="rule"></div>`+punchCardHTML()+
+    `<div class="sub" style="color:#8a8796;font-size:11px;margin-top:8px;">the machine rebuilds at midnight. come take tomorrow's shot.</div>`;
+}
+function dailyShareText(){
+  const d=dailyData;
+  return `THE DAILY GRAB #${d.day-DAILY_EPOCH}\n${dailyBar(d.pct)} ${d.pct}%${d.pct>=100?' 💯':''}\n`+
+    `${d.falls} fall${d.falls===1?'':'s'}${d.bestSave?` · clutch save −${d.bestSave}%`:''} · 🔥${d.punches}\n`+
+    location.origin+location.pathname;
+}
+function openDaily(){
+  if(mode!=='play' || dailyActive) return;
+  mode='daily_menu';
+  const dayNo = dayNum()-DAILY_EPOCH;
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#85510b;">THE DAILY GRAB · day ${dayNo}</div>`;
+  if(dailyDoneToday()){
+    h += dailyResultHTML();
+    el('b_dailygo').style.display='none'; el('b_dailyshare').style.display='block';
+  } else {
+    const prev = dailyData.day>0 ? dailyData.pct : 0;
+    h += `<h1>one machine. one day. one shot.</h1>`+
+      `<div class="sub">today the whole world climbs the <b>same strange machine</b> — built this morning, gone at midnight. `+
+      `<b>3:00</b> on the clock. your highest point is your number.</div>`+
+      `<div class="rule"></div>`+
+      `<div class="sub"><b>the pot:</b> 5¢ a zone cleared${prev>0?` — <b>doubled</b> if you beat your last daily (${prev}%)`:''}.<br>`+
+      `<b>the card:</b> a punch for showing up. 3 punches — holds. 7 — a finish. 30 — the gold one.</div>`+
+      punchCardHTML()+
+      `<div class="sub" style="color:#8a8796;font-size:11px;margin-top:8px;">one ranked shot per day. no notes up there, no summit — just you, the clock, and everyone else's number.</div>`;
+    el('b_dailygo').style.display='block'; el('b_dailyshare').style.display='none';
+  }
+  el('daily_doc').innerHTML = h;
+  el('p_daily').classList.add('on');
+}
+function startDaily(){
+  if(dailyDoneToday() || dailyActive || mode!=='daily_menu') return;
+  el('p_daily').classList.remove('on');
+  buildTower(70707 + dayNum());          // today's machine — same for the whole world
+  dailyActive=true; dailyT=DAILY_LEN; dailyPeak=0; dailyFalls=0; dailyBestSave=0;
+  currentFall=null; fallTrack=null; hasFlung=true;
+  resetToPit(); mode='play';
+}
+function endDaily(){
+  dailyActive=false;
+  const dn=dayNum(), pct=Math.round(dailyPeak);
+  const prevPct = dailyData.day>0 ? dailyData.pct : 0;
+  // weekly OUT SICK refill happens before the gap check, so this week's note can cover a miss
+  const wk=Math.floor(dn/7);
+  if(wk!==dailyData.sickWk){ dailyData.sick=1; dailyData.sickWk=wk; }
+  let sickUsed=false;
+  if(dailyData.day>0){
+    const gap = dn - dailyData.day;      // 1 = consecutive; 2 = missed one day; 3+ = the card resets
+    if(gap===2 && dailyData.sick>0){ dailyData.sick--; sickUsed=true; }
+    else if(gap>1){ dailyData.punches=0; }
+  }
+  dailyData.punches++;
+  // the pot: showing up pays, altitude pays more, beating yourself pays double
+  const zonesCleared = ZONES.filter(z=>pct>=z.top).length;
+  let pot = 2 + 5*zonesCleared;
+  const doubled = prevPct>0 && pct>prevPct;
+  if(doubled) pot*=2;
+  quarters += pot;
+  // punch prizes — earned by showing up, never buyable, kept forever even if the streak breaks
+  const prizes=[];
+  if(dailyData.punches>=3 && !studOwned.includes('punchcard')){ studOwned.push('punchcard'); prizes.push('THE PUNCH CARD holds — stamped into the machine.'); }
+  if(dailyData.punches>=7 && !finishes.includes('regular')){ finishes.push('regular'); prizes.push('THE REGULAR — a finish for hands that keep showing up.'); }
+  if(dailyData.punches>=30 && !finishes.includes('employee')){ finishes.push('employee'); prizes.push('EMPLOYEE OF THE MONTH. gold. obviously.'); }
+  dailyData.day=dn; dailyData.pct=pct; dailyData.falls=dailyFalls; dailyData.bestSave=dailyBestSave;
+  save();
+  buildTower(70707); resetToPit();       // the main machine comes back
+  // the receipt
+  mode='daily_menu';
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#85510b;">THE DAILY GRAB · day ${dn-DAILY_EPOCH} · TIME.</div>`+
+    dailyResultHTML()+
+    `<div class="rule"></div>`+
+    `<div class="sub"><b>the pot: ¢${pot}</b>${doubled?' — DOUBLED. yesterday has been informed.':''}</div>`+
+    (sickUsed?`<div class="sub" style="color:#e7c04b;">an OUT SICK note covered the day you missed. the card lives.</div>`:'')+
+    prizes.map(p=>`<div class="sub ok" style="margin-top:5px;">★ ${p}</div>`).join('');
+  el('daily_doc').innerHTML = h;
+  el('b_dailygo').style.display='none'; el('b_dailyshare').style.display='block';
+  el('p_daily').classList.add('on');
+}
+
 /* ============================================================ THE OPENING (cold open) */
 function iHand(g,x,y,r,carry){
   g.fillStyle='#e85c3c'; g.beginPath(); g.arc(x,y,r,0,7); g.fill();
@@ -1751,6 +1913,15 @@ function boot(){
   el('b_archive').onclick = ()=>openRecord();
   el('b_foyer').onclick = ()=>openFoyer();
   el('b_introskip').onclick = ()=>finishIntro();
+  el('b_daily').onclick = ()=>openDaily();
+  el('b_dailyclose').onclick = ()=>{ el('p_daily').classList.remove('on'); if(mode==='daily_menu') mode='play'; };
+  el('b_dailygo').onclick = ()=>startDaily();
+  el('b_dailyshare').onclick = ()=>{
+    const txt = dailyShareText();
+    if(navigator.share){ navigator.share({text:txt}).catch(()=>{}); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>{ el('b_dailyshare').textContent='COPIED — go compare'; },()=>{}); }
+    else prompt('copy this', txt);
+  };
   updateFoyerBadge();
   const inc = parseIncoming();
   if(inc){ resetToPit(); startAppeal(inc); }
@@ -1813,6 +1984,13 @@ window.__thwap = {
   intro:()=>({mode, beat:introBeat, key:(INTRO[introBeat]||{}).key, total:INTRO.length, seen:seenIntro}),
   endless:()=>({builtToY, studs:STUDS.length, maxStudY:Math.round(Math.max.apply(null,STUDS.map(s=>s.y))), TOP_Y}),
   extend:(y)=>{ extendTowerTo(y); return builtToY; },
+  daily:()=>({active:dailyActive, t:+dailyT.toFixed(1), peak:+dailyPeak.toFixed(1), falls:dailyFalls,
+    bestSave:dailyBestSave, seed:towerSeed, data:JSON.parse(JSON.stringify(dailyData))}),
+  dailyOpen:()=>{ openDaily(); return mode; },
+  dailyStart:()=>{ startDaily(); return {seed:towerSeed, active:dailyActive}; },
+  dailyEnd:()=>{ if(dailyActive) endDaily(); return dailyShareText(); },
+  setDay:(n)=>{ dayOverride=n; return dayNum(); },
+  dailySet:(o)=>{ Object.assign(dailyData,o); return JSON.parse(JSON.stringify(dailyData)); },
   audit:(loY,hiY)=>{ const g=STUDS.filter(s=>grippable(s)&&s.y>=loY&&s.y<=hiY).sort((a,b)=>a.y-b.y);
     let worst=0, walls=0, at=null;
     for(const s of g){ let best=1e9;
