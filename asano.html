@@ -1,0 +1,2246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0f">
+<title>THWAP</title>
+<style>
+  :root { --machine:#0b0b0f; --glass:#11131a; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#050507; overflow:hidden; overscroll-behavior:none; }
+  body { display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; color:#e8e8ee;
+    touch-action:none; -webkit-user-select:none; user-select:none; }
+  #wrap { position:relative; height:100%; aspect-ratio:9/19.5; max-width:100vw; background:var(--machine);
+    box-shadow:0 0 0 1px #1c1e28, 0 30px 80px rgba(0,0,0,.6); overflow:hidden; }
+  @media (max-aspect-ratio:9/19.5){ #wrap{ width:100vw; height:auto; aspect-ratio:9/19.5; } }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  .layer { position:absolute; inset:0; pointer-events:none; }
+  .panel { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center; background:rgba(5,5,7,.86); backdrop-filter:blur(2px); pointer-events:auto; }
+  .panel.on { display:flex; }
+  .doc { width:100%; max-width:340px; background:#f3f0e7; color:#14140f; border-radius:6px; padding:18px 18px 16px;
+    box-shadow:0 12px 40px rgba(0,0,0,.5); text-align:left; }
+  .doc .rule { border-top:1px dashed #b9b4a4; margin:10px 0; }
+  .doc h1 { font-size:19px; font-weight:700; letter-spacing:.01em; line-height:1.15; }
+  .doc .sub { font-size:12px; color:#5b584c; margin-top:3px; line-height:1.5; }
+  .doc .big { font-size:15px; font-weight:700; }
+  .doc .dmg { color:#a3231f; font-weight:700; }
+  .doc .ok { color:#166a3d; font-weight:700; }
+  .ledger { font-size:11px; color:#5b584c; display:flex; justify-content:space-between; gap:6px; }
+  .btns { display:flex; gap:10px; margin-top:16px; width:100%; max-width:340px; }
+  .btn { flex:1; pointer-events:auto; cursor:pointer; border:none; border-radius:6px; padding:13px 10px;
+    font-family:inherit; font-size:13px; font-weight:700; letter-spacing:.02em; }
+  .btn.ghost { background:transparent; color:#c9c7cf; box-shadow:inset 0 0 0 1px #33313c; }
+  .btn.hot { background:#e8e8ee; color:#101015; }
+  .btn.wide { flex:none; width:100%; max-width:340px; margin-top:10px; }
+  .hint { font-size:11px; color:#6b6976; margin-top:14px; max-width:300px; line-height:1.6; }
+  #shareimg { width:100%; max-width:300px; border-radius:6px; margin-top:4px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  .kick { font-size:12px; letter-spacing:.22em; color:#8a8796; text-transform:uppercase; margin-bottom:8px; }
+  .tag { position:absolute; top:10px; left:12px; font-size:10px; letter-spacing:.2em; color:#3f3d49; pointer-events:none; }
+  a.raw { color:#8a8796; font-size:10px; word-break:break-all; text-decoration:none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div class="tag">THWAP · machine no. 7 · season 1 · the observation continues</div>
+
+  <div class="panel" id="p_fall">
+    <div class="doc" id="fall_doc"></div>
+    <div class="btns">
+      <button class="btn ghost" id="b_takeL">TAKE THE FALL</button>
+      <button class="btn hot" id="b_appeal">CALL A HAND</button>
+    </div>
+    <div class="hint">drop a friend into your exact last second — the grab you missed. one hand, one shot. reachable, or not?</div>
+  </div>
+
+  <div class="panel" id="p_share">
+    <div class="kick">a hand, called</div>
+    <img id="shareimg" alt="your fall, on the record">
+    <button class="btn hot wide" id="b_copy">COPY THE CALL</button>
+    <button class="btn ghost wide" id="b_back">back to the climb</button>
+    <div class="hint" id="share_note">they get one shot at the grab you missed. send it.</div>
+  </div>
+
+  <div class="panel" id="p_appeal_intro">
+    <div class="kick" id="ai_kick">incoming appeal</div>
+    <div class="doc" id="ai_doc"></div>
+    <button class="btn hot wide" id="b_watch">TAKE THE SHOT</button>
+  </div>
+
+  <button class="btn ghost" id="b_giveup" style="position:absolute; bottom:18px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:11px; padding:9px 16px;">abandon · certify it unsurvivable</button>
+  <button class="btn ghost" id="b_introskip" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px; color:#8a8796;">skip ›</button>
+  <button class="btn ghost" id="b_archive" style="position:absolute; bottom:16px; left:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE ARCHIVE</button>
+  <button class="btn ghost" id="b_daily" style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px; color:#e7c04b;">THE DAILY GRAB</button>
+  <button class="btn ghost" id="b_foyer" style="position:absolute; bottom:16px; right:12px; width:auto; display:none; pointer-events:auto; font-size:10px; padding:8px 12px;">THE MACHINE</button>
+
+  <div class="panel" id="p_foyer">
+    <div class="doc" id="foyer_doc" style="max-height:72vh; overflow-y:auto;"></div>
+    <button class="btn ghost wide" id="b_foyclose">back to the climb</button>
+  </div>
+
+  <div class="panel" id="p_record">
+    <div class="doc" id="record_doc" style="max-height:72vh; overflow-y:auto;"></div>
+    <button class="btn ghost wide" id="b_recclose">back to the climb</button>
+  </div>
+
+  <div class="panel" id="p_note">
+    <div class="doc" id="note_doc" style="max-height:74vh; overflow-y:auto;"></div>
+    <button class="btn hot wide" id="b_noteclose">keep climbing</button>
+  </div>
+
+  <div class="panel" id="p_win">
+    <div class="doc" id="win_doc"></div>
+    <button class="btn hot wide" id="b_winshare">COPY THE PROOF</button>
+    <button class="btn ghost wide" id="b_wincont">keep climbing ↑</button>
+  </div>
+
+  <div class="panel" id="p_daily">
+    <div class="doc" id="daily_doc" style="max-height:70vh; overflow-y:auto;"></div>
+    <button class="btn hot wide" id="b_dailygo" style="display:none;">TAKE TODAY'S SHOT</button>
+    <button class="btn hot wide" id="b_dailyshare" style="display:none;">COPY THE RECEIPT</button>
+    <button class="btn ghost wide" id="b_dailyclose">back to the climb</button>
+  </div>
+
+  <div class="panel" id="p_verdict">
+    <div class="doc" id="verdict_doc"></div>
+    <button class="btn hot wide" id="b_reply">SEND THE VERDICT</button>
+    <button class="btn ghost wide" id="b_climb">start your own tower</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================ THWAP
+   one-button claw-machine climber · phone-first · deterministic world
+   HOLD to wind a stud · RELEASE to fling · TAP mid-air to grab
+   ============================================================ */
+
+/* ---------- deterministic PRNG (fixed seed → identical tower on every device) ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- fixed virtual world (units, NOT pixels) ---------- */
+const VW = 430;              // world width in units
+const CX = VW/2;
+const G  = 2000;             // gravity (units/s^2)
+const DT = 1/120;            // fixed sim step
+const REACH = 112;           // grab reach ring radius — small enough that aim is real
+const AIM_BEND = 1.45;       // how hard a mistimed release bends the launch off vertical
+const COYOTE = 0.08;         // 80ms grab forgiveness
+const HITSTOP = 0.07;        // 70ms freeze on grab
+const WIND_TIME = 0.85;      // seconds to full charge
+const W0 = 5, WMAX = 11;     // angular velocity range (rad/s) — spin is a charge tell, not an aim gate
+const WRAP_CAP = 3;          // hard greed cap (wraps) → auto-release
+const R0 = 42, RMIN = 34;    // orbit radius (wound in as you charge)
+const LAUNCH_MIN = 720, LAUNCH_MAX = 1260;
+const PLUSH_RIP = 1.5;       // plush lets go after 1.5s
+const CLAW_PERIOD = 3.0;     // claw opens every 3s
+const CLAW_OPEN = 0.55;
+const NAMED_FALL_PCT = 11;   // % drop that earns a named catastrophe
+const PIT_Y = 150;           // plush pit floor
+const TOP_Y = 6150;          // the chute
+const TOWER_H = TOP_Y - PIT_Y;
+
+/* ---------- copy pools (system voice: deadpan court; never slang; roasts the decision) ---------- */
+const HANDLES = ["DARNELL","MAYA","THE OPP","DEVON","PRIYA","MASON","JAYDEN","AVA","ZOE","DEX","THE DEFENDANT",
+  "NO. 7","MARCUS","SAM","THE ACCUSED","YOUR HONOR","EXHIBIT A","THE PLAINTIFF","WASHED","THE JURY","GREGORY"];
+const ZONES = [
+  {top:8,  name:"the pit"},
+  {top:30, name:"the spill"},
+  {top:55, name:"the reef"},
+  {top:75, name:"the gallery"},
+  {top:92, name:"claw country"},
+  {top:101,name:"the cornice"},
+];
+const SEASON = { id:1, name:"SEASON 1" };
+const FALL_NAMES = [
+  "THE OPTIMIST","THE LONG GOODBYE","THE NEGOTIATION","THE SECOND OPINION",
+  "THE COMMITMENT","THE ENCORE","THE VICTORY LAP","THE SABBATICAL",
+  "THE UNDERSTUDY","THE FAREWELL TOUR","THE INVESTMENT","THE HOMECOMING",
+  "THE DOUBLE DOWN","THE EARLY RETIREMENT","THE LEASE","THE FORECAST",
+];
+const FINDINGS = {
+  greed: [
+    "The rubber trembled. The rubber squeaked. The subject wound once more. This behavior has been documented before. It has never worked.",
+    "A third wrap was attempted. The third wrap is not a secret. It is a countdown.",
+  ],
+  rip: [
+    "The plush held for its full 1.5 seconds. The subject requested more. The plush declined, as plush do.",
+    "A hold that outlasted the fauna's attention span. The fauna noticed nothing.",
+  ],
+  manual: [
+    "The survivable release is marked. The subject is visible in the footage, not taking it.",
+    "A hold that outlasted its usefulness. The stud was not consulted.",
+  ],
+};
+const CEREMONY_LINE = "The fall is not unusual. What is unusual is that it will try again.";
+const FIELD_NOTES = [
+  "The claw is scheduled the way rain is scheduled. You do not argue with it. You count.",
+  "Plastic holds forever, asks nothing, remembers no one.",
+  "The plush have noticed nothing. The plush never do.",
+  "Release early. It feels wrong every time. It is right every time.",
+  "The pit is not the bottom. The plush call it the foyer.",
+  "Every fall is footage.",
+  "The chute has been at 100% this whole time. It is in no hurry.",
+];
+// Moose's notes, scratched up the whole machine over years — his voice is everywhere you climb.
+// they get sparser and older the higher you go (see the fade in render).
+const CARVINGS = [
+  {pct:6,    x:64,     t:"HANDS UP, KID. — M"},
+  {pct:13,   x:VW-150, t:"IF YOU CAN READ THIS YOU'RE ALREADY BRAVER THAN ME AT YOUR AGE"},
+  {pct:19,   x:70,     t:"THE PINK ONES LET GO. don't fall in love with a soft thing."},
+  {pct:27,   x:VW-140, t:"count the claw. one. two. then you go."},
+  {pct:34,   x:66,     t:"i named it Gerald. it's less scary with a name. barely."},
+  {pct:42,   x:VW-120, t:"the glass isn't a window, kid. i know it looks like one."},
+  {pct:50,   x:VW-150, t:"the sign out there says EVERYBODY GOES HOME. i'm keeping it honest up here."},
+  {pct:58,   x:72,     t:"i keep your eye where i can see it. the other one, i mean. keep mine."},
+  {pct:66,   x:VW-118, t:"release EARLY. earlier than that. i mean it, you stubborn thumb."},
+  {pct:74,   x:74,     t:"got higher today than yesterday. told nobody. told this stud."},
+  {pct:83,   x:VW-110, t:"if you made it this far you didn't need the notes. keep them anyway."},
+  {pct:91,   x:70,     t:"this is where Palmer's grip ran out. good hand. tell him i said so."},
+];
+// the pit remembers Moose. these play, quietly, while you rest at the bottom.
+const PIT_CHORUS = [
+  {who:'GLORIA', t:"Land on me, baby. Moose used to, back when he still came down."},
+  {who:'GLORIA', t:"He caught more of us than the claw ever did. Nobody puts THAT on a sign."},
+  {who:'PALMER', t:"Eighty-nine percent. That was me. Moose went higher and stayed. Don't ask me which is worse."},
+  {who:'PALMER', t:"He taught you to count the claw so the fear had somewhere to go. Still counting? Good."},
+  {who:'THE COLONEL', t:"I kept a tally of every toy that claw took. I stopped counting the day it took him."},
+  {who:'NANA', t:"When it comes down, hold something. Moose told me that. I've held this ear ever since."},
+  {who:'KING', t:"He made it OUT, I'm telling you. Through the top. He's in a better machine now."},
+  {who:'THE COLONEL', t:"You've got his release. Bad temper, too, but mostly the release."},
+  {who:'GLORIA', t:"You slept in the crook of his arm. You were the size of a thumb. You don't remember. He did."},
+  {who:'PALMER', t:"Nobody's climbed like you since him. Nobody. I'd know — I watch the whole thing."},
+];
+const TOKEN_R = 44;
+// (pit furnishings deleted — cosmetics now only change the machine you climb through)
+// THE OPENING — a tappable cold open that plays on a fresh start. characters, dialogue, the first turn of the arc.
+const INTRO = [
+  { key:'pit',   lines:["This is a claw machine. The arcade around it closed years ago.","At the bottom is the pit — where the toys nobody ever won pile up.","You're the newest one. A small sticky hand. Scared of everything."] },
+  { key:'moose', lines:['"Hey. New kid. You\'re shaking."',"That's Moose — a big plush with one eye, and the oldest toy down here.","He took one look at you and decided you were his to raise."] },
+  { key:'count', lines:['"That claw grabs a toy every three seconds. You can\'t outrun it."','"So you count it. One. Two. Hands up."',"He taught you everything. How to climb. How to let go. How not to be afraid."] },
+  { key:'taught',lines:["You two were a team.","You were the size of a thumb, and you slept tucked in his arm,","and you figured it would always be that way."] },
+  { key:'sacrifice', anim:1, lines:["Then one day the claw came straight down for you.","Moose shoved you out of the way and took your place.",'"HANDS UP, KID!"'] },
+  { key:'eye', anim:1, lines:["The claw carried him up to the top of the machine. It never brought him back.","One of his eyes came loose and rolled all the way down to you.","You've kept it ever since. It's all you have left of him."] },
+  { key:'decide',lines:["You were too small to go after him then. So you waited. You grew up. You practiced.","Now you're going to climb this whole machine and get him back.","His eye goes home. Hands up, kid. Let's climb."] },
+];
+// hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
+const FINISHES = {
+  factory: { name:'FACTORY RED', cost:0, body:'#e85c3c', body2:'#b23a1e', eye:'googly', trail:null, glow:null,
+    line:'as manufactured. honest.' },
+  midnight:{ name:'MIDNIGHT', cost:25, body:'#3b447a', body2:'#1c2140', eye:'glint', trail:'stars', trailCol:'#cdd6ff', glow:null,
+    line:'for climbing when you would rather not be seen doing it.' },
+  banana:  { name:'BANANA', cost:25, body:'#ecc24a', body2:'#b98a1f', eye:'cyclops', trail:null, glow:null,
+    line:'one eye, entirely committed. the machine will mistake you for stock. briefly.' },
+  ghost:   { name:'GHOST', cost:40, body:'rgba(208,214,230,0.42)', body2:null, eye:'hollow', trail:'after', trailCol:'rgba(208,214,230,0.5)', glow:null,
+    line:'translucent, and leaves itself behind. the glass approves. the glass has never approved of anything.' },
+  ember:   { name:'EMBER', cost:45, body:'#ff6a2a', body2:'#b8300f', eye:'googly', trail:'fire', trailCol:'#ff7a33', glow:'#ff5a1e',
+    line:'burns a trace all the way down. the record approves of nothing, and it approves of this.' },
+  gilded:  { name:'GILDED', cost:80, body:'#f0cf62', body2:'#a6791d', eye:'rimmed', rim:'#8a6510', trail:'sparkle', trailCol:'#ffe9a0', glow:'#e7c04b',
+    line:'the claw has excellent taste. climb accordingly.' },
+  chrome:  { name:"THE OPERATOR'S OWN", cost:120, body:'#e2e8ef', body2:'#5b6470', metal:true, eye:'rimmed', rim:'#7d8894', trail:'after', trailCol:'rgba(226,232,239,0.55)', glow:'#f0f5fb',
+    line:"the operator's own hand, borrowed. it still remembers the last commandment. so, now, do you." },
+  regular: { name:'THE REGULAR', cost:-1, punch:7, body:'#5fae6b', body2:'#2e6e3e', eye:'googly', trail:null, glow:null,
+    line:'seven days straight on the card. the pit keeps your spot now.' },
+  employee:{ name:'EMPLOYEE OF THE MONTH', cost:-1, punch:30, body:'#f3d34e', body2:'#8a6510', metal:true, eye:'rimmed', rim:'#8a6510', trail:'sparkle', trailCol:'#ffe9a0', glow:'#e7c04b',
+    line:'thirty punches. your photo hangs on a wall nobody can see. gold, regardless.' },
+};
+const GUIDE_DEFS = {
+  dead:   {name:'THE DEAD RELEASE', better:'lower', unit:'ms',
+    riddle:'concerns: the two instants per revolution when the machine cannot tell left from right.',
+    stamp:'released at dead vertical. the machine checked the angle twice. there was no angle.'},
+  wrap:   {name:'THE THIRD WRAP', better:'lower', unit:'ms',
+    riddle:'concerns: property released moments before repossession.',
+    stamp:'filed {m}ms before the cap. the cap was already reaching.'},
+  snipe:  {name:'THE RIP SNIPE', better:'lower', unit:'ms',
+    riddle:'concerns: leaving a soft thing precisely before it leaves you.',
+    stamp:'left the plush {m}ms before it left you.'},
+  cushion:{name:'THE CUSHION', better:'lower', unit:'%',
+    riddle:'concerns: falls that never made the record, and why the record resents them.',
+    stamp:'drop trimmed to {m}%. nothing will be named today. the record is disappointed.'},
+  skip:   {name:'THE SKIP', better:'higher', unit:'u',
+    riddle:'concerns: a rung that was, on review, found unnecessary.',
+    stamp:'two rungs, one fling. the stud in between has been notified.'},
+};
+const CASES = [
+  { id:'elder', title:'RECONSTRUCTION №1 — THE ELDER', from:'THE ELDER',
+    sub:'Season 1, day 3. Survived by nothing, ever.',
+    f:{n:'FALL №1', p:79, a:91, b:12, w:3},
+    t:[[215,5610],[180,5300],[240,4900],[170,4500],[230,4100],[250,3300],[270,2450]],
+    s0:[270,2450,-180,-900] },
+  { id:'lullaby', title:'RECONSTRUCTION №2 — THE LULLABY', from:'PALMER',
+    sub:'Season 1. A retired hand. The plush sang, allegedly.',
+    f:{n:'FALL №2', p:58, a:71, b:13, w:2},
+    t:[[200,4400],[260,4300],[320,4180],[330,4050]],
+    s0:[330,4050,-260,-900] },
+  { id:'wedding', title:'RECONSTRUCTION №3 — THE WEDDING', from:'DUCHESS',
+    sub:'Season 1. From the cornice. Nobody speaks of the reception.',
+    f:{n:'FALL №3', p:88, a:96, b:8, w:3},
+    t:[[215,5900],[170,5750],[120,5600],[80,5480],[60,5400]],
+    s0:[60,5400,-260,-900] },
+];
+function casePayload(c){ return {v:1,k:'A',archive:true,caseId:c.id,from:c.from,sn:1,f:c.f,t:c.t,s0:c.s0.slice(),L:{vs:null,c:0,g:0,d:0,dmg:0}}; }
+function footagePayload(e){ return {v:1,k:'A',self:true,no:e.no,from:myHandle,sn:SEASON.id,
+  f:{n:'FALL №'+e.no+' — '+e.name, p:e.pct, a:e.from, b:Math.max(0,e.from-e.pct), w:0},
+  t:e.t, s0:e.s0.slice(), L:{vs:null,c:0,g:0,d:0,dmg:0}}; }
+
+/* ---------- canvas / DPR ---------- */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let Wc=0, Hc=0, S=1, DPR=1;
+function resize(){
+  const r = cv.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio||1, 2.5);
+  Wc = r.width; Hc = r.height;
+  cv.width = Math.round(Wc*DPR); cv.height = Math.round(Hc*DPR);
+  S = Wc / VW;                         // world→screen scale
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+new ResizeObserver(resize).observe(cv);
+addEventListener('resize', resize);
+
+/* world→screen */
+let camY = 0;
+function sx(x){ return x*S; }
+function sy(y){ return Hc*0.62 - (y - camY)*S; }   // hero sits ~62% down the screen
+
+/* ---------- tower ---------- */
+let STUDS = [];
+function zoneAt(pct){ for(const z of ZONES){ if(pct < z.top) return z; } return ZONES[ZONES.length-1]; }
+let towerSeed = 70707;                // 70707 = the fixed main machine; daily uses 70707+dayNum
+function buildTower(seed){
+  STUDS = [];
+  towerSeed = seed || 70707;
+  builtToY = TOP_Y;                   // endless generation resets to the summit
+  const rnd = mulberry32(towerSeed);  // FIXED seed → same tower everywhere
+  // plush pit: a soft floor that catches any fall — these NEVER rip, so you can rest at the bottom
+  for(let i=0;i<6;i++) STUDS.push({x:56+i*64, y:PIT_Y - 8 + (i%2)*12, type:'plush', pit:true});
+  // the starting perch: a stable plastic block you spawn on; wind from it at your own pace, no pressure
+  STUDS.push({x:CX, y:PIT_Y+40, type:'plastic', perch:true});
+  // gentle on-ramp: a centered plastic ladder. the first hops are gimmes; the machine turns mean higher up
+  STUDS.push({x:CX,    y:PIT_Y+175, type:'plastic'});
+  STUDS.push({x:CX-38, y:PIT_Y+345, type:'plastic'});
+  STUDS.push({x:CX+44, y:PIT_Y+520, type:'plastic'});
+  STUDS.push({x:CX-28, y:PIT_Y+700, type:'plastic'});
+  let y = PIT_Y + 890;
+  let side = 1;
+  while(y < TOP_Y - 240){
+    const pct = (y-PIT_Y)/TOWER_H*100;
+    const z = zoneAt(pct);
+    // horizontal placement zig-zags; gap grows a touch with height
+    const spread = 96 + rnd()*54 + (pct>55?26:0);
+    const x = CX + side*spread*(0.35+rnd()*0.65);
+    let type='plastic';
+    if(z.name==='the pit') type='plush';
+    else if(z.name==='the gallery'){ type = rnd()<0.52 ? 'glass' : 'plastic'; }
+    else if(z.name==='claw country'){ type = rnd()<0.28 ? 'glass' : 'plastic'; }
+    else if(z.name==='the spill'){ type = rnd()<0.25 ? 'plush':'plastic'; }
+    STUDS.push({x:Math.max(48,Math.min(VW-48,x)), y, type});
+    // helper studs thin out with altitude — the upper machine stops being polite
+    if(rnd() < (pct>55 ? 0.26 : 0.42)){ STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+70+rnd()*40,
+      type: (z.name==='the gallery'&&rnd()<0.42)?'glass':'plastic'}); }
+    let gap = 226 + rnd()*104;
+    if(pct>55) gap += 30 + rnd()*26;
+    if(pct>80) gap += 26 + rnd()*24;
+    y += gap;
+    side *= -1;
+  }
+  // the claw: a grabbable bar near the chute
+  CLAW = {x:CX, y:TOP_Y-960, w:120, phase:0};
+  STUDS.push({x:CX, y:TOP_Y-20, type:'plastic', chute:true});
+  // service pass: the machine is hostile, never impossible — rivet in plastic where no route exists
+  const APEX=397; let safety=0;
+  while(safety++<60){
+    const g = STUDS.filter(grippable).sort((a,b)=>a.y-b.y);
+    let wall=null;
+    for(const s of g){ if(s.y>TOP_Y-260) continue;
+      let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue;
+        if(Math.abs(t.x-s.x)>240) continue;
+        const need=dy-REACH; if(need<best) best=need; }
+      if(best>APEX){ wall=s; break; } }
+    if(!wall) break;
+    STUDS.push({x:Math.max(48,Math.min(VW-48, wall.x + (wall.x<CX?90:-90))),
+      y:wall.y+APEX+REACH-90, type:'plastic'});
+  }
+  // quarters, wedged in the machine since Season 0 — fixed spots, richer with altitude
+  TOKENS = [];
+  const r2 = mulberry32(40404 + (towerSeed===70707 ? 0 : towerSeed));   // main machine byte-identical
+  let ty = PIT_Y + 320;
+  while(ty < TOP_Y - 220){
+    const pq = (ty-PIT_Y)/TOWER_H*100;
+    TOKENS.push({x:60+r2()*(VW-120), y:ty+r2()*80, v: pq<30?1: pq<55?2: pq<80?3:5, got:false});
+    ty += 300 + r2()*260;
+  }
+  TOKENS.push({x:CX-40,y:TOP_Y-260,v:5,got:false},{x:CX+55,y:TOP_Y-190,v:5,got:false});
+}
+function resetTokens(){ for(const t of TOKENS) t.got=false; }
+let CLAW=null;
+
+// ---- ENDLESS MACHINE: above the summit, the machine keeps going forever ----
+// studs are generated in deterministic chunks (seeded per chunk) so every device — and every
+// shared appeal — builds the exact same tower. it is climbable by construction + a service pass.
+let builtToY = TOP_Y;
+function serviceRegion(loY, hiY){
+  const APEX=397; let safety=0;
+  while(safety++<40){
+    const g = STUDS.filter(s=>grippable(s) && s.y>=loY-620 && s.y<=hiY).sort((a,b)=>a.y-b.y);
+    let wall=null;
+    for(const s of g){ if(s.y>hiY-40) continue;
+      let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue; if(Math.abs(t.x-s.x)>240) continue;
+        const need=dy-REACH; if(need<best) best=need; }
+      if(best>APEX){ wall=s; break; } }
+    if(!wall) break;
+    STUDS.push({x:Math.max(48,Math.min(VW-48, wall.x + (wall.x<CX?90:-90))),
+      y:wall.y+APEX+REACH-90, type:'plastic', endless:true});
+  }
+}
+function extendTowerTo(targetY){
+  while(builtToY < targetY){
+    const chunk = Math.round((builtToY - TOP_Y) / 2400);     // 0,1,2… — deterministic per band
+    const rnd = mulberry32(90909 + chunk*131 + 7 + (towerSeed===70707 ? 0 : towerSeed));
+    const chunkTop = TOP_Y + (chunk+1)*2400;
+    let y = builtToY + 60, side = (chunk%2)?1:-1;
+    while(y < chunkTop){
+      const spread = 100 + rnd()*54;
+      const x = CX + side*spread*(0.4+rnd()*0.6);
+      STUDS.push({x:Math.max(48,Math.min(VW-48,x)), y, type:'plastic', endless:true});
+      if(rnd()<0.34) STUDS.push({x:Math.max(48,Math.min(VW-48,CX - side*spread*0.7)), y:y+72+rnd()*34, type:'plastic', endless:true});
+      if(rnd()<0.55) TOKENS.push({x:60+rnd()*(VW-120), y:y+rnd()*70, v:5, got:false});
+      y += 244 + rnd()*96;          // hard, but always inside a fling's reach
+      side*=-1;
+    }
+    serviceRegion(builtToY, chunkTop);
+    builtToY = chunkTop;
+  }
+}
+
+/* ---------- game state ---------- */
+const HAND = {
+  mode:'attach',            // 'attach' | 'fly'
+  x:CX, y:PIT_Y, vx:0, vy:0,
+  anchor:null, ang:0, r:R0, w:W0, spin:1, charge:0, wraps:0, plush:0,
+  peakY:PIT_Y,              // highest established point since last safe grab
+};
+let simFrame=0, hitstop=0, slowmo=0, flash=0, clawT=0;
+let held=false, grabWin=0, whiffLock=0, grabLock=0;
+let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=false;
+let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
+let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
+let quarters = 0, finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
+let TOKENS = [];
+let zonesReached = [], audienceN = 0, chaptersRead = [];
+// the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
+const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
+let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
+let introBeat = 0, introT = 0, seenIntro = false;
+let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
+
+/* ---------- THE DAILY GRAB — one machine, one day, one ranked shot ----------
+   the whole world climbs the same date-seeded tower. 3 minutes on the clock;
+   highest % reached is your result. pays a quarter pot + a punch on the card.
+   never power: the reward is bragging material, currency, and showing up. */
+const DAILY_LEN = 180;                 // seconds on the clock
+const DAILY_EPOCH = 20655;             // day # displays as (localDayNum - this); day 1 = 2026-07-22
+let dailyActive=false, dailyT=0, dailyPeak=0, dailyFalls=0, dailyBestSave=0;
+let dailyPrevPct=0, dailyWall=0, dailySickUsed=false, dailyPrizes=[];   // per-attempt transients
+let dayOverride=null;                  // test hook: freeze "today"
+// completed-daily record. day = last day completed; punches = current streak;
+// sick = OUT SICK notes left (refills to 1 each week); prevPct = yesterday's bar to beat
+let dailyData = { day:0, pct:0, falls:0, bestSave:0, punches:0, sick:1, sickWk:-1, prevPct:0 };
+function dayNum(){ if(dayOverride!==null) return dayOverride;
+  // Date.UTC of the LOCAL calendar date: exact multiple of 86400000, +1 per local day, DST-immune,
+  // and the same day # for the same calendar date worldwide (rollover still at each player's midnight)
+  const d=new Date(); return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000); }
+let STORY = { title:'EVERYBODY GOES HOME', chapters:{
+'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never, ever climb toward it.
+
+You are about to break the second rule.
+
+You know exactly how the first one works, because you watched it happen. Moose — the big, one-eyed plush who raised you, who taught a small scared nobody to survive the claw by counting it, one, two, hands up — was standing right where you are the day it came down for you. He shoved you clear and let it take him instead. His eye tore loose and rolled all the way down to your feet.
+
+You kept it. And you are going to climb this entire machine to give it back and make the two of you even.
+
+That is the plan, anyway. Hands up, kid. Start climbing.` },
+'the spill': { title:'His Handwriting', lede:"Monsters don't leave friendly notes. This one does.", text:`You are barely off the floor when the wall says something.
+
+KEEP GOING, KID. Scratched into a stud in big crooked letters that lean a little downhill, the way all his letters did. You would know that handwriting in the dark. And under it, smaller, squeezed in where he ran out of room: DON'T LOOK DOWN. IT'S TACKY.
+
+You almost laugh. He always left you notes exactly like this back in the pit — good morning; watch the claw; you're doing fine — tucked where only you would find them.
+
+Then the good feeling curdles into something colder. For him to have scratched this, he had to be up here. For the letters to be worn this soft, he scratched it a long time ago. So every year you spent down there growing up, he spent up here. Waiting. Leaving signs for a kid who never came.
+
+You climb faster.` },
+'the reef': { title:'The Pink Ones Let Go', lede:"The notes are getting old. He's been up here a long time.", text:`The notes keep coming, but they are older now — the letters worn shallow and grey. He was up here a long, long time.
+
+This one does not cheer you on. It warns: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING. He learned that up here. Alone. The way he learned everything after the claw took him.
+
+And that is the one that finally gets you. This whole climb you have told yourself the same tidy story — hand the eye back, call it even, walk away square. Standing here reading a warning he wrote with nobody left to read it, you stop being able to lie about it.
+
+You do not want to be even. You want him back. You have wanted him back every single day and only just let yourself feel it.
+
+The eye stops being something you owe. It is just his, and you want the rest of him with it.
+
+You close your fist around it and reach for the next hold.` },
+'the gallery': { title:'Out', lede:'The notes were never a trail for a rescuer. They were only ever for you.', text:`Here the wall turns to glass, and for the first time you can see outside.
+
+Outside is an arcade that died years ago. The lights are off. The coin slots are dark. Somebody unplugged the whole building and never told the claw, which has been grinding overtime ever since for a machine nobody will ever feed another quarter.
+
+No kids. No winners. Nobody was ever coming to win a single toy out of here — and Moose could see that from up here long before you could.
+
+So the notes were never a trail for a rescue party. There was never going to be one. He left them anyway. Alone, in the dark, for years, on the one-in-a-million chance that the little thing he raised would grow up and climb high enough to find them.
+
+There is one here too, nearly worn through: STILL TACKY.
+
+You laugh, and it comes out wrong.` },
+'claw country': { title:'The Hand of God, Malfunctioning', lede:"No notes here. He was too busy to stop.", text:`The notes stop here. You climb the whole stretch and there is not one, and soon enough you see why.
+
+Get a good look at the Claw up close. It is not hunting anyone. It is not even cruel. It is a bored machine with a single instruction, dropping every three seconds to grab whatever it can — the Hand of God, if God were a motor nobody has oiled since the arcade closed. But watch it a while and you notice it reaches higher than it needs to, for something up top it can never quite close on. By the wear on the cable, it has been missing that grab for years.
+
+That something is him. All this time Moose has been up here catching the toys the claw shakes loose, three seconds at a time, so it never takes anyone the way it took him.
+
+And somewhere on this climb you catch yourself doing it too — watching the claw for the small ones climbing below you, not just for your own hide. You do not remember deciding to. Your hands just started counting for someone else.` },
+'the cornice': { title:'If Nobody Comes', lede:'The last note is the hardest one to read.', text:`The notes come back near the top. Just one, older than all the rest, the letters shaky and wandering, like it was hard to write.
+
+IF NOBODY COMES, THAT'S ALRIGHT.
+
+That is the last thing he ever wrote. After it, nothing — just tally marks scratched into the stud, counting the days. And then, partway along, even those stop.
+
+Past them, a nest of stuffing worn into the shape of a thing that has waited a long time. And in it, turning slowly toward the sound of you climbing: big, soft, one enormous eye.
+
+Every toy in the pit grows up afraid of the monster at the top. You are looking straight at him, and he is not a monster at all. He is the one who raised you — waiting up here in the dark so long the pit turned his name into a story to frighten small toys with. The thing they taught you to fear and the thing that loved you most were the same shape the whole time. Nobody down there could tell the difference. For years, neither could you.
+
+He gave up believing anyone would come. You are one climb from proving him wrong.
+
+One. Two. One more climb.` },
+'the chute': { title:'Hands Up, Kid', lede:'You kept his eye the whole way. You were always coming.', text:`One hundred percent. The top. Moose.
+
+He turns and looks at you like he is looking at something he gave up hoping for. "Figured you forgot me," he says, gentle, like it is fine. "Everybody forgets."
+
+Then he sees what you have carried the whole way up: his eye. The one that rolled down to a tiny, scared nobody a lifetime ago. You climbed an entire machine and never once put it down.
+
+"...you kept it?"
+
+You did. You climbed the whole monster to give it back — and now that you are here, holding it out, you both know you are not handing it over to settle anything. You just wanted to be in the same place as him again.
+
+The Claw comes down one more time, for both of you. Last time, he got his arms up first, for you. This time you are faster, and it is for him. You count it the way he taught you — one, two — and you catch it, and wind it, and send it straight down its own chute. Gone.
+
+Two eyes again. Whole. He looks at you like the last thing he ever wrote just got proven wrong.
+
+You do not leave through the top — out there is just a locked door and the dark. You go home the other way: down, together, the long way, and neither of you minds.
+
+And on the way past the bottom, you stop and scratch four words into a stud, in your own handwriting, for whoever climbs next:
+
+SOMEBODY CAME. KEEP GOING.` }
+} };
+let THEMESETS = {
+  stock: { name:'AS FOUND', cost:0, shop_line:'the machine, as the machine is.', zones:null, studs:null },
+  quarter_age: { name:'QUARTER AGE', cost:40,
+    shop_line:'the machine, back when it was paid to care. the warmth is original. the irony is aftermarket.',
+    zones:[ {zone:'the pit',top:'#2e1b16',bottom:'#221310',motif:'banners'}, {zone:'the spill',top:'#332015',bottom:'#2a1913',motif:'none'},
+      {zone:'the reef',top:'#3a2412',bottom:'#2e1b12',motif:'embers'}, {zone:'the gallery',top:'#232a33',bottom:'#1a2027',motif:'stars'},
+      {zone:'claw country',top:'#26201a',bottom:'#1a1512',motif:'runes'}, {zone:'the cornice',top:'#2f2410',bottom:'#1c150d',motif:'stars'} ],
+    studs:{plastic:'#d9a13b', glass:'#b9cad6', plush:'#b45a5e', shape:'round'} },
+  on_air: { name:'ON AIR', cost:65,
+    shop_line:'the machine dressed for a show, the way the pit swears it looked once. spotlights, applause signage. audience sold separately.',
+    zones:[ {zone:'the pit',top:'#331018',bottom:'#240a10',motif:'banners'}, {zone:'the spill',top:'#38121a',bottom:'#2a0d13',motif:'none'},
+      {zone:'the reef',top:'#401320',bottom:'#300e18',motif:'stars'}, {zone:'the gallery',top:'#241b2c',bottom:'#191320',motif:'bubbles'},
+      {zone:'claw country',top:'#2a0c10',bottom:'#1c070a',motif:'embers'}, {zone:'the cornice',top:'#332108',bottom:'#200f0c',motif:'stars'} ],
+    studs:{plastic:'#f6cf5a', glass:'#8fb0c9', plush:'#d4849a', shape:'bolt'} },
+  archive_footage: { name:'ARCHIVE FOOTAGE', cost:90,
+    shop_line:'season 1, as filed. some interference near the top. the footage has been survived by nothing.',
+    zones:[ {zone:'the pit',top:'#262019',bottom:'#1a1611',motif:'snow'}, {zone:'the spill',top:'#2a241c',bottom:'#1f1a14',motif:'none'},
+      {zone:'the reef',top:'#2f281e',bottom:'#241f17',motif:'snow'}, {zone:'the gallery',top:'#23262a',bottom:'#191c20',motif:'none'},
+      {zone:'claw country',top:'#1d1b18',bottom:'#121110',motif:'snow'}, {zone:'the cornice',top:'#282624',bottom:'#161514',motif:'snow'} ],
+    studs:{plastic:'#f0e8d4', glass:'#c4d2d8', plush:'#97897b', shape:'square'} },
+  after_closing: { name:'AFTER CLOSING', cost:120,
+    shop_line:'the outside, per KING. rows of other machines, allegedly. unverified at any price. this is the price.',
+    zones:[ {zone:'the pit',top:'#0d1220',bottom:'#070a14',motif:'stars'}, {zone:'the spill',top:'#0f1526',bottom:'#0a0e1a',motif:'none'},
+      {zone:'the reef',top:'#0d1a26',bottom:'#08111a',motif:'stars'}, {zone:'the gallery',top:'#0b0d16',bottom:'#060810',motif:'none'},
+      {zone:'claw country',top:'#140d1c',bottom:'#0b0712',motif:'embers'}, {zone:'the cornice',top:'#101b2e',bottom:'#0a101e',motif:'stars'} ],
+    studs:{plastic:'#43e0d8', glass:'#a8c4dc', plush:'#9b86c4', shape:'gem'} },
+};
+// cosmetics, reimagined: everything changes the machine you climb through, and you see it every second.
+// backdrops and studs are DECOUPLED so they mix — far more looks from the same content.
+const BACKDROPS = {
+  stock:      { name:'AS FOUND',    cost:0,   line:'the machine as the machine is.', zones:null },
+  quarter:    { name:'QUARTER AGE', cost:35,  line:'back when the machine was still paid to care.', zones:THEMESETS.quarter_age.zones },
+  showtime:   { name:'SHOWTIME',    cost:45,  line:'dressed up for a night nobody came to.', zones:THEMESETS.on_air.zones },
+  oldfootage: { name:'OLD FOOTAGE', cost:55,  line:'sepia and static, the way the first climbs got remembered.', zones:THEMESETS.archive_footage.zones },
+  afterhours: { name:'AFTER HOURS', cost:70,  line:'the arcade at three in the morning, seen from the inside.', zones:THEMESETS.after_closing.zones },
+  deep:       { name:'THE DEEP',    cost:85,  line:'somebody filled it with water. nobody has explained why.',
+    zones:[ {zone:'the pit',top:'#08222c',bottom:'#04141c',motif:'bubbles'}, {zone:'the spill',top:'#082a34',bottom:'#05181f',motif:'bubbles'},
+      {zone:'the reef',top:'#06303a',bottom:'#041d24',motif:'none'}, {zone:'the gallery',top:'#052a38',bottom:'#03181f',motif:'bubbles'},
+      {zone:'claw country',top:'#04222e',bottom:'#02141b',motif:'none'}, {zone:'the cornice',top:'#062e3e',bottom:'#031a24',motif:'bubbles'} ] },
+};
+const STUDSETS = {
+  stock:   { name:'AS FOUND',   cost:0,   line:'factory plastic. honest.', studs:null },
+  gum:     { name:'GUMDROPS',   cost:30,  line:'the machine, if it had sold candy instead of promises.', studs:{plastic:'#ff7bac', glass:'#9fd8e8', plush:'#e2607f', shape:'round'} },
+  bone:    { name:'BONE',       cost:40,  line:'pale, dry, and faintly rude about it.',                  studs:{plastic:'#e8e2d0', glass:'#c2d0d8', plush:'#b09a94', shape:'square'} },
+  circuit: { name:'CIRCUIT',    cost:55,  line:'somebody wired the inside for a purpose nobody remembers.', studs:{plastic:'#4ce07a', glass:'#7fd6e8', plush:'#a77bd0', shape:'bolt'} },
+  coral:   { name:'CORAL',      cost:65,  line:'the reef, taken literally.',                             studs:{plastic:'#ff8c5a', glass:'#8fd0dd', plush:'#e0708f', shape:'round'} },
+  ice:     { name:'ICE',        cost:80,  line:'every hold looks like it might not forgive you.',        studs:{plastic:'#bfe6f5', glass:'#8fb8d8', plush:'#a8c2d8', shape:'gem'} },
+  punchcard:{ name:'PUNCH CARD', cost:-1, punch:3, line:'three days on the card. the machine noticed. every hold stamped like a loyalty card.', studs:{plastic:'#e0b64a', glass:'#c2cfe0', plush:'#d0708a', shape:'square'} },
+  gold:    { name:'SOLID GOLD', cost:110, line:'the whole machine upgraded into a prize nobody can win.', studs:{plastic:'#f0c64a', glass:'#d8c890', plush:'#c9a05a', shape:'gem'} },
+};
+let mode='play';            // 'play' | 'fall' | 'share' | 'appeal_intro' | 'appeal_watch' | 'appeal_play' | 'verdict'
+let bossLine = FIELD_NOTES[0], bossLineT=0, bossBig=false;
+let reveal=null, zonesThisRun=[];
+const BARKS = ["WHAT A SAVE!","STILL ALIVE, SEVEN!","HE HANGS ON!","UNBELIEVABLE!","THE CROWD WOULD BE LOSING IT!","CAUGHT."];
+
+/* fall bookkeeping */
+let fallTrack = null;       // { pts:[], lastSave:{...}, fromPct, ... } while falling
+let currentFall = null;     // the named fall being adjudicated / shared
+let ghost = null;           // appeal: sender's recorded fall for playback
+let takeover = null;        // appeal: {state0, attempts, failY}
+let incoming = null;        // parsed appeal payload
+let ledger = null;          // head-to-head running score
+let myHandle = null;
+
+/* ---------- persistence ---------- */
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem('thwap')||'{}');
+    bestPct = d.best||0; dusty = !!d.played; myHandle = d.handle||null; beaten = !!d.beaten;
+    fallCount = d.falls||0; bestFall = d.bestFall||0;
+    if(d.guide) for(const k in guide){ if(d.guide[k]) guide[k]=d.guide[k]; }
+    fallLog = d.fallLog||[]; bestTime = d.bestTime||null; archStatus = d.arch||{};
+    quarters = d.q||0; finishes = d.fin||[]; skin = d.skin||'factory';
+    if(!FINISHES[skin]) skin='factory';
+    zonesReached = d.zr||[];
+    bgOwned = d.bgOwn||[]; bgWorn = d.bgWorn||'stock';
+    studOwned = d.stOwn||[]; studWorn = d.stWorn||'stock';
+    if(!BACKDROPS[bgWorn]) bgWorn='stock';
+    if(!STUDSETS[studWorn]) studWorn='stock';
+    audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1; seenIntro = !!d.seen;
+    if(d.dg) dailyData = Object.assign(dailyData, d.dg);
+    // story v3: gating on lifetime best height dumped the whole story in one good climb.
+    // now it's one note per climb, in order — reset the hunt so it actually gets earned.
+    if(d.sv!==3){ storyIdx = 1; chaptersRead = []; }
+    storyIdx = Math.max(1, Math.min(CHAPTER_ORDER.length, storyIdx));
+    if(d.hand && typeof d.hand.y==='number'){ HAND.y = d.hand.y; HAND.x = d.hand.x; }
+  }catch(e){}
+  if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
+}
+function fmtT(s){ const m=Math.floor(s/60), ss=(s%60); return m+':'+(ss<10?'0':'')+ss.toFixed(1); }
+function save(){
+  try{ localStorage.setItem('thwap', JSON.stringify({
+    best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall,
+    guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
+    q:quarters, fin:finishes, skin:skin, zr:zonesReached,
+    bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
+    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, dg:dailyData, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+}
+
+/* ---------- helpers ---------- */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+// height is UNCAPPED above the summit — the machine is endless, so 100% is a milestone, not a ceiling
+const pctOf=y=>Math.max(0,(y-PIT_Y)/TOWER_H*100);
+function grippable(s){ return s.type!=='glass'; }
+function nearestStud(x,y,rad){
+  let best=null, bd=rad*rad;
+  for(const s of STUDS){ if(!grippable(s)) continue;
+    const dx=s.x-x, dy=s.y-y, d=dx*dx+dy*dy;
+    if(d<bd){ bd=d; best=s; } }
+  return best;
+}
+
+/* ---------- attach / fling ---------- */
+function attachTo(s, incomingVx, incomingVy){
+  HAND.mode='attach'; HAND.anchor=s;
+  HAND.r = clamp(Math.hypot(HAND.x-s.x, HAND.y-s.y), RMIN, R0);
+  HAND.ang = Math.atan2(HAND.y-s.y, HAND.x-s.x);
+  // spin direction inherits sideways momentum so the flow feels continuous
+  const tang = (-Math.sin(HAND.ang))*incomingVx + (Math.cos(HAND.ang))*incomingVy;
+  HAND.spin = tang>=0 ? 1 : -1;
+  HAND.w=W0; HAND.charge=0; HAND.wraps=0; HAND.plush = (s.type==='plush' && !s.pit) ? 0 : -1;
+  hitstop = HITSTOP; flash = 1;
+  // establish a new "high water mark" for fall accounting when we grab higher
+  if(s.y > HAND.peakY - 4) HAND.peakY = Math.max(HAND.peakY, s.y);
+}
+function recordMotion(key, margin){
+  const def = GUIDE_DEFS[key], g = guide[key];
+  const val = Math.round(margin*10)/10;
+  g.n++;
+  const isFirst = g.n===1;
+  const isPB = g.pb===null || (def.better==='lower' ? val<g.pb : val>g.pb);
+  if(isPB) g.pb = val;
+  if(isFirst){ pendingStamp = def.name+' — '+def.stamp.replace('{m}', val); }
+  else if(isPB){ pendingStamp = def.name+' — new margin: '+val+def.unit+'.'; }
+  save();
+}
+function fling(reason){
+  HAND.lastCause = reason||'manual'; hasFlung = true;
+  // field-guide release motions (detection only, play mode, manual releases)
+  if(mode==='play' && reason==='manual' && HAND.anchor){
+    const side = Math.abs(Math.cos(HAND.ang));
+    if(side<=0.12 && HAND.charge>=0.92) recordMotion('dead', side/HAND.w*1000);
+    if(HAND.wraps>=2.7 && HAND.wraps<3) recordMotion('wrap', (3-HAND.wraps)*2*Math.PI/HAND.w*1000);
+    if(HAND.plush>=1.25 && HAND.plush<1.5 && HAND.charge>=0.9) recordMotion('snipe', (1.5-HAND.plush)*1000);
+  }
+  const c = HAND.charge;
+  let spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
+  // launch is ALWAYS up (climbing is about power, not phase-timing a tangent);
+  // the side the hand is on when you let go steers left/right on a wide, readable window.
+  const side = Math.cos(HAND.ang);           // -1..1: release phase — this IS the aim
+  // launch = up, bent by release phase. release at dead vertical → clean flight;
+  // release badly → up to ~46° of your power goes sideways. bigger spin = harder timing.
+  let dx = clamp(side,-1,1)*AIM_BEND, dy = 1.0;
+  if(reason==='greed'){                      // the cap popped you: weak, flat, deserved
+    dx = (side>=0?1:-1)*1.8; dy = 0.25; spd *= 0.65;
+  }
+  const inv = 1/Math.hypot(dx,dy);
+  HAND.vx = dx*inv*spd; HAND.vy = dy*inv*spd;
+  HAND.lastAnchor = HAND.anchor; HAND.lastWraps = HAND.wraps; HAND.lastSide = side;
+  HAND.anchor=null; HAND.mode='fly'; grabLock = 0.16;   // clear the launch stud before re-grabbing
+}
+
+/* ---------- named fall detection ---------- */
+function beginFallTrack(){
+  fallTrack = { pts:[], fromY:HAND.peakY, fromPct:pctOf(HAND.peakY), lastSave:null, t:0 };
+}
+function endFallAtLanding(landY){
+  const dropPct = pctOf(HAND.peakY) - pctOf(landY);
+  // daily: falls are counted, not ceremonised — the clock is the punishment
+  if(dailyActive){
+    if(dropPct >= NAMED_FALL_PCT) dailyFalls++;
+    HAND.peakY = landY; fallTrack = null;
+    return;
+  }
+  if(dropPct >= NAMED_FALL_PCT && fallTrack){
+    const z = zoneAt(fallTrack.fromPct);
+    fallCount++;
+    const cause = HAND.lastCause==='greed'||HAND.lastCause==='rip' ? HAND.lastCause : 'manual';
+    const pool = FINDINGS[cause];
+    const ceremony = fallCount<=3 || dropPct>bestFall;
+    if(dropPct>bestFall) bestFall = Math.round(dropPct);
+    currentFall = {
+      zone:z, no:fallCount, name:FALL_NAMES[(fallCount-1)%FALL_NAMES.length], pct:Math.round(dropPct),
+      fromPct:Math.round(fallTrack.fromPct), toPct:Math.round(pctOf(landY)),
+      wraps: HAND.lastWraps||0, ceremony:ceremony,
+      pts: fallTrack.pts.slice(-46),
+      s0: fallTrack.lastSave,
+      line: pool[(fallCount + (HAND.lastWraps||0)) % pool.length],
+    };
+    const fs0 = fallTrack.lastSave;
+    fallLog.push({no:currentFall.no, name:currentFall.name, pct:currentFall.pct, from:currentFall.fromPct,
+      saved:false, att:0,
+      s0: fs0 ? [Math.round(fs0.x),Math.round(fs0.y),Math.round(fs0.vx),Math.round(fs0.vy)] : null,
+      t: currentFall.pts.map(p=>[Math.round(p.x),Math.round(p.y)]) });
+    save();
+    openFallScreen();
+  }
+  HAND.peakY = landY;         // reset high-water mark to where we landed
+  fallTrack = null;
+}
+
+/* ---------- sim ---------- */
+function step(dt){
+  simFrame++;
+  clawT = (clawT + dt) % CLAW_PERIOD;
+  const clawOpen = clawT > (CLAW_PERIOD - CLAW_OPEN);
+
+  if(HAND.mode==='attach'){
+    const s = HAND.anchor;
+    // plush timer
+    if(HAND.plush>=0){ HAND.plush += dt; if(HAND.plush > PLUSH_RIP){ /* rips loose */ HAND.charge*=0.4; fling('rip'); return; } }
+    if(held){
+      HAND.charge = clamp(HAND.charge + dt/WIND_TIME, 0, 1);
+      HAND.w = W0 + (WMAX-W0)*HAND.charge;
+      HAND.r = R0 - (R0-RMIN)*HAND.charge;
+      const dAng = HAND.w*dt*HAND.spin;
+      HAND.ang += dAng; HAND.wraps += Math.abs(dAng)/(Math.PI*2);
+      if(HAND.wraps >= WRAP_CAP){ fling('greed'); return; }
+    }
+    HAND.x = s.x + Math.cos(HAND.ang)*HAND.r;
+    HAND.y = s.y + Math.sin(HAND.ang)*HAND.r;
+  } else {
+    // FLYING
+    HAND.vy -= G*dt;
+    HAND.x += HAND.vx*dt; HAND.y += HAND.vy*dt;
+    if(HAND.x<28){HAND.x=28; HAND.vx=Math.abs(HAND.vx)*0.5;}
+    if(HAND.x>VW-28){HAND.x=VW-28; HAND.vx=-Math.abs(HAND.vx)*0.5;}
+
+    // falling? start/continue tracking a potential catastrophe
+    const falling = HAND.vy < 0;
+    if(falling){
+      if(!fallTrack && HAND.y < HAND.peakY - 40) beginFallTrack();
+      if(fallTrack){
+        fallTrack.t += dt;
+        if(fallTrack.pts.length<200 && (simFrame%4===0)) fallTrack.pts.push({x:Math.round(HAND.x),y:Math.round(HAND.y)});
+        // remember the last instant a save was live (a grippable stud in reach)
+        const live = nearestStud(HAND.x, HAND.y, REACH);
+        if(live) fallTrack.lastSave = {x:HAND.x, y:HAND.y, vx:HAND.vx, vy:HAND.vy};
+      }
+    }
+
+    // grab attempt: one timed window per tap; a whiff recoils the hand before it can try again
+    if(grabLock>0) grabLock -= dt;
+    if(whiffLock>0) whiffLock -= dt;
+    if(grabWin>0){
+      grabWin -= dt;
+      const s = nearestStud(HAND.x, HAND.y, REACH);
+      if(!s && grabWin<=0){ whiffLock = 0.24; }
+      if(s){
+        const wasFalling = HAND.vy < -650 && fallTrack;
+        const dropSoFar = fallTrack ? (pctOf(HAND.peakY)-pctOf(HAND.y)) : 0;
+        attachTo(s, HAND.vx, HAND.vy);
+        grabWin=0; whiffLock=0;
+        bursts.push({x:s.x, y:s.y, f:simFrame, col:(FINISHES[skin]&&(FINISHES[skin].glow||FINISHES[skin].body))||'#fff'});
+        if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash(BARKS[simFrame%BARKS.length], true);     // clutch save: the host loses it
+          if(dailyActive && dropSoFar>dailyBestSave) dailyBestSave=Math.round(dropSoFar); }
+        if(mode==='play'){
+          if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
+          if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
+          if(pendingStamp){ bossFlash(pendingStamp); bossLineT=2.2; pendingStamp=null; }
+        }
+        if(s.chute && mode==='play' && !beaten && !dailyActive){ openWinScreen(); }   // first summit → the reunion
+        return;
+      }
+    }
+
+    // hit the plush pit → auto-catch (zero-friction respawn), adjudicate the fall
+    if(HAND.y <= PIT_Y + 24){
+      const landY = PIT_Y + 30;
+      HAND.y = landY; HAND.vx=0; HAND.vy=0;
+      // land already gripping a pit stud
+      let pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit) || {x:HAND.x,y:landY,type:'plastic',perch:true};
+      const droppedFrom = HAND.peakY;
+      endFallAtLanding(landY);
+      if(mode==='play' || mode==='appeal_play'){
+        attachTo(pit, 0, 0); held=false; HAND.charge=0;
+        HAND.peakY = landY;
+        if(mode==='play'){
+          resetTokens(); pitLands++; zonesThisRun=[]; foundThisRun=false;
+          // (no mercy unlocks — falling is not how you earn the story. only altitude is.)
+        }
+      }
+    }
+  }
+
+  // quarters: collected by passing them — climbing is the only way to earn
+  if(mode==='play'){
+    for(const t of TOKENS){
+      if(t.got) continue;
+      const dx=t.x-HAND.x, dy=t.y-HAND.y;
+      if(dx*dx+dy*dy < TOKEN_R*TOKEN_R){
+        t.got=true; quarters+=t.v; save();
+        pickups.push({x:t.x, y:t.y, v:t.v, f:simFrame});
+      }
+    }
+  }
+  const _fin = FINISHES[skin];
+  if(_fin && _fin.trail && HAND.mode==='fly' && (simFrame%2===0)){
+    trail.push({x:HAND.x,y:HAND.y}); if(trail.length>16) trail.shift();
+  }
+
+  // keep the endless machine built out ahead of the climber (also covers shared-appeal targets)
+  if(HAND.y > builtToY - 1800) extendTowerTo(HAND.y + 2800);
+  // track best % + the return-migration clock (armed while resting in the pit)
+  const p = pctOf(HAND.y);
+  if(p<2 && HAND.mode==='attach') runStart = simFrame;
+  // THE DAILY GRAB: track the peak here; the clock itself runs in the frame loop,
+  // charged every tick — hitstop, slowmo and early returns can't stretch a ranked 3:00.
+  if(dailyActive && p > dailyPeak) dailyPeak = p;
+  // notes are found by ALTITUDE, in order: reach the next note's zone and the world stops so you read it.
+  // one continuous climb keeps discovering them — no restart needed. (the chute beat is the summit finale.)
+  if(mode==='play' && !dailyActive && storyIdx < CHAPTER_ORDER.length){
+    const nextZone = CHAPTER_ORDER[storyIdx];
+    if(nextZone!=='the chute' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
+      storyIdx++;
+      if(!chaptersRead.includes(nextZone)) chaptersRead.push(nextZone);
+      save(); updateFoyerBadge(); openNoteCard(nextZone);
+      return;
+    }
+  }
+  if(p>bestPct && !dailyActive){ bestPct=p; }
+  if(p>=99.5 && mode==='play' && !beaten && !dailyActive){ openWinScreen(); return; }   // first time reaching the summit
+  // camera
+  const targetCam = HAND.y + 60;
+  camY += (targetCam - camY) * Math.min(1, dt*6.5);
+}
+
+function bossFlash(t, big){ bossLine=t; bossLineT=1.1; bossBig=!!big; }
+
+/* ---------- input ---------- */
+function down(){
+  if(mode==='intro'){ introAdvance(); return; }
+  if(mode!=='play' && mode!=='appeal_play') return;
+  held=true;
+  if(mode==='appeal_play'){                      // reconstructions: ONE grab per attempt, timed
+    if(takeover && !takeover.saved && takeover.window<=0){ takeover.window = 0.12; }
+    return;
+  }
+  // the climb: a tap is ONE timed grab attempt; taps while recoiling or mid-launch are ignored
+  if(HAND.mode==='fly' && whiffLock<=0 && grabLock<=0 && grabWin<=0){ grabWin = 0.15; }
+}
+function up(){
+  held=false;
+  if((mode==='play'||mode==='appeal_play') && HAND.mode==='attach') fling('manual');
+}
+cv.addEventListener('pointerdown', e=>{ e.preventDefault(); down(); }, {passive:false});
+addEventListener('pointerup', e=>{ up(); });
+addEventListener('pointercancel', e=>{ up(); });
+addEventListener('keydown', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); if(!e.repeat) down(); }});
+addEventListener('keyup', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); up(); }});
+
+/* ============================================================ RENDER */
+function hexA(hex, a){
+  const h = hex.replace('#',''); const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function themeStuds(){ const t=STUDSETS[studWorn]; return (t && t.studs) || null; }
+function themeBG(){
+  const t=BACKDROPS[bgWorn];
+  if(!t || !t.zones) return {top:'#12141c', bottom:'#0a0b10', motif:'none'};
+  const zp = clamp((camY-PIT_Y)/TOWER_H*100, 0, 100);
+  const zn = zoneAt(zp).name;
+  return t.zones.find(z=>z.zone===zn) || {top:'#12141c', bottom:'#0a0b10', motif:'none'};
+}
+function studPath(X, Y, r, shape){
+  ctx.beginPath();
+  if(shape==='gem'){ ctx.moveTo(X,Y-r); ctx.lineTo(X+r,Y); ctx.lineTo(X,Y+r); ctx.lineTo(X-r,Y); ctx.closePath(); }
+  else if(shape==='square'){ ctx.rect(X-r*0.85, Y-r*0.85, r*1.7, r*1.7); }
+  else if(shape==='bolt'){ ctx.moveTo(X,Y-r); ctx.lineTo(X+r*0.9,Y+r*0.5); ctx.lineTo(X-r*0.9,Y+r*0.5); ctx.closePath(); }
+  else { ctx.arc(X,Y,r,0,7); }
+}
+function drawStud(s){
+  const X=sx(s.x), Y=sy(s.y);
+  if(Y<-30||Y>Hc+30) return;
+  // depth haze: far-from-hero studs read slightly cooler + softer (tilt-shift feel)
+  const depth = clamp(1 - Math.abs(s.y-HAND.y)/2600, 0.55, 1);
+  const glow = asanoPal?asanoPal.glow:'#ffd27a';
+  ctx.save();
+  ctx.globalAlpha = depth;
+  if(s.type==='glass'){
+    // GLASS — cool crystal, clearly see-through and untouchable. faceted diamond.
+    const r=9*S+3;
+    asanoBloom(X,Y,r*1.7,'#bcd8ff',0.16*depth);
+    studPath(X,Y,r,'gem');
+    const g=ctx.createLinearGradient(X-r,Y-r,X+r,Y+r);
+    g.addColorStop(0,'rgba(200,224,255,.30)'); g.addColorStop(0.5,'rgba(150,190,240,.12)'); g.addColorStop(1,'rgba(120,160,220,.22)');
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='rgba(210,232,255,.65)'; ctx.lineWidth=1.4*S; ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X-r*0.4,Y-r*0.2); ctx.lineTo(X,Y-r*0.7); ctx.stroke();  // facet glint
+  } else if(s.type==='plush'){
+    // PLUSH — soft glowing pom, temporary grip. round, fuzzy, warm.
+    const r=10*S+2;
+    asanoBloom(X,Y,r*1.9,'#ff9fb8',0.20*depth);
+    const g=ctx.createRadialGradient(X-r*0.3,Y-r*0.35,r*0.15,X,Y,r);
+    g.addColorStop(0,'#ffc2d2'); g.addColorStop(0.55,'#e07a94'); g.addColorStop(1,'#a84a63');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,r,0,7); ctx.fill();
+    // fuzz rim
+    ctx.strokeStyle='rgba(255,190,210,.35)'; ctx.lineWidth=2.4*S; ctx.setLineDash([1.6*S,2.2*S]); ctx.beginPath(); ctx.arc(X,Y,r+1,0,7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(X-r*0.32,Y-r*0.34,r*0.24,0,7); ctx.fill();
+  } else {
+    // PLASTIC — solid, dependable, warmly lit lantern-peg. faceted, opaque, grippable.
+    const r=8.5*S+2, chute=!!s.chute;
+    const base=chute?'#ffd968':'#9aa0b4', hi=chute?'#fff2c0':'#d6dbe8', lo=chute?'#9a6a12':'#4a4f60';
+    asanoBloom(X,Y,r*(chute?2.6:1.7), chute?'#ffd968':glow, (chute?0.5:0.22)*depth);
+    studPath(X,Y,r,'gem');
+    const g=ctx.createLinearGradient(X,Y-r,X,Y+r);
+    g.addColorStop(0,hi); g.addColorStop(0.5,base); g.addColorStop(1,lo);
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1.2*S; ctx.stroke();
+    // top facet specular
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(X,Y-r*0.9); ctx.lineTo(X+r*0.4,Y-r*0.2); ctx.lineTo(X-r*0.4,Y-r*0.2); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawMotif(kind){
+  if(!kind || kind==='none') return;
+  ctx.save(); ctx.globalAlpha=0.13;
+  const y0=Math.floor((camY-500)/160)*160;
+  for(let wy=y0; wy<camY+900; wy+=160){
+    const h=Math.abs((wy*2654435761)%997);
+    const X=sx(30+(h%370)), Y=sy(wy);
+    if(Y<-20||Y>Hc+20) continue;
+    if(kind==='stars'){ ctx.fillStyle='#e8e8ee'; ctx.fillRect(X,Y,2,2); }
+    else if(kind==='bubbles'){ ctx.strokeStyle='#e8e8ee'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(X,Y,3+(h%4),0,7); ctx.stroke(); }
+    else if(kind==='snow'){ ctx.fillStyle='#e8e8ee'; ctx.beginPath(); ctx.arc(X,Y,1.5,0,7); ctx.fill(); }
+    else if(kind==='embers'){ ctx.fillStyle='#ff6a2a'; ctx.fillRect(X,Y,2,3); }
+    else if(kind==='runes'){ ctx.strokeStyle='#e8e8ee'; ctx.lineWidth=1; ctx.strokeRect(X,Y,4,6); }
+    else if(kind==='banners'){ ctx.fillStyle='#c8677e'; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+5,Y+3); ctx.lineTo(X,Y+8); ctx.closePath(); ctx.fill(); }
+  }
+  ctx.restore();
+}
+function paintEyes(g, X, Y, r, style, vx, vy, fin){
+  const lx=clamp(vx*0.001,-1.3,1.3), ly=clamp(-vy*0.001,-1.3,1.3);
+  const ew=r*0.31, ex=r*0.36, ey=-r*0.26, pr=r*0.15;
+  const catch1=(cx,cy,er)=>{ g.fillStyle='rgba(255,255,255,0.95)'; g.beginPath(); g.arc(cx-er*0.34,cy-er*0.4,er*0.28,0,7); g.fill(); };  // glassy catchlight
+  if(style==='cyclops'){
+    g.fillStyle='#fff'; g.beginPath(); g.arc(X,Y+ey,r*0.42,0,7); g.fill();
+    g.fillStyle='#111'; g.beginPath(); g.arc(X+lx,Y+ey+ly,r*0.2,0,7); g.fill();
+    catch1(X,Y+ey,r*0.42); return;
+  }
+  [X-ex, X+ex].forEach(cx=>{
+    if(style==='hollow'){ g.strokeStyle='rgba(255,255,255,0.7)'; g.lineWidth=1.3; g.beginPath(); g.arc(cx,Y+ey,ew,0,7); g.stroke(); return; }
+    // white with a faint sphere shade so it reads as a glass dome
+    const eg=g.createRadialGradient(cx-ew*0.3,Y+ey-ew*0.3,ew*0.15,cx,Y+ey,ew);
+    eg.addColorStop(0,'#ffffff'); eg.addColorStop(1,'#d7d9e2');
+    g.fillStyle=eg; g.beginPath(); g.arc(cx,Y+ey,ew,0,7); g.fill();
+    if(style==='rimmed' && fin && fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=1.1; g.stroke(); }
+    g.fillStyle='#111'; g.beginPath(); g.arc(cx+lx,Y+ey+ly,pr,0,7); g.fill();
+    catch1(cx,Y+ey,ew);
+  });
+}
+function paintHand(g, X, Y, r, fin, vx, vy){
+  // ambient bloom — the hand is a little light source in a dark machine
+  const gl = fin.glow || (asanoPal?asanoPal.glow:null);
+  if(gl) asanoBloom(X, Y, r*2.6, gl, fin.glow?0.4:0.22);
+  // soft contact shadow beneath
+  g.save(); g.globalAlpha=0.28; g.fillStyle='#000'; g.beginPath(); g.ellipse(X,Y+r*0.9,r*0.85,r*0.32,0,0,7); g.fill(); g.restore();
+  // body with a key-light radial (light comes from upper-left, per the colour script)
+  if(fin.body2){
+    const grd=g.createRadialGradient(X-r*0.4,Y-r*0.48,r*0.1, X,Y,r*1.1);
+    if(fin.metal){ grd.addColorStop(0,'#ffffff'); grd.addColorStop(0.5,fin.body); grd.addColorStop(1,fin.body2); }
+    else { grd.addColorStop(0, hexLerp(fin.body,'#ffffff',0.35)); grd.addColorStop(0.6,fin.body); grd.addColorStop(1,fin.body2); }
+    g.fillStyle=grd;
+  } else { g.fillStyle=fin.body; }
+  g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
+  // warm rim light on the lit edge
+  g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.5;
+  g.strokeStyle= rgbaOf(asanoPal?asanoPal.key:'#ffd27a',0.9); g.lineWidth=Math.max(1,r*0.10);
+  g.beginPath(); g.arc(X,Y,r*0.96,Math.PI*1.05,Math.PI*1.75); g.stroke(); g.restore();
+  if(fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=Math.max(1,r*0.09); g.beginPath(); g.arc(X,Y,r,0,7); g.stroke(); }
+  // core highlight
+  g.save(); g.globalAlpha=0.4; g.fillStyle='#fff'; g.beginPath(); g.arc(X-r*0.36,Y-r*0.4,r*0.22,0,7); g.fill(); g.restore();
+  paintEyes(g, X, Y, r, fin.eye, vx||0, vy||0, fin);
+}
+function drawHand(){
+  const X=sx(HAND.x), Y=sy(HAND.y);
+  ctx.save();
+  // reach ring (always visible)
+  if(HAND.mode==='fly'){
+    ctx.strokeStyle = whiffLock>0 ? 'rgba(226,75,74,.55)' : (grabWin>0 ? 'rgba(232,232,238,.45)' : 'rgba(232,232,238,.10)');
+    ctx.lineWidth = grabWin>0 ? 2.5 : 1.5;
+    ctx.beginPath(); ctx.arc(X,Y,REACH*S,0,7); ctx.stroke();
+    const t = nearestStud(HAND.x,HAND.y,REACH);
+    if(t){ const TX=sx(t.x),TY=sy(t.y);
+      ctx.strokeStyle='rgba(231,192,75,.9)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(TX,TY,13*S,0,7); ctx.stroke(); }
+  }
+  // tether when attached
+  if(HAND.mode==='attach' && HAND.anchor){
+    const AX=sx(HAND.anchor.x),AY=sy(HAND.anchor.y);
+    ctx.strokeStyle= HAND.charge>0.66?'#e7c04b':'rgba(232,232,238,.5)';
+    ctx.lineWidth = 1.5 + HAND.charge*2.5;
+    ctx.beginPath(); ctx.moveTo(AX,AY); ctx.lineTo(X,Y); ctx.stroke();
+    if(HAND.wraps>WRAP_CAP-0.5){ // tremble warning
+      ctx.strokeStyle='rgba(231,110,75,.8)'; ctx.beginPath();
+      ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
+    }
+  }
+  // launch-direction tick while winding: watch it swing; it turns gold in the clean window
+  if(HAND.mode==='attach' && held && HAND.charge>0.05){
+    const sd = clamp(Math.cos(HAND.ang),-1,1);
+    let ddx=sd*AIM_BEND, ddy=1.0; const inv2=1/Math.hypot(ddx,ddy);
+    ctx.strokeStyle = Math.abs(sd)<0.19 ? '#e7c04b' : 'rgba(232,232,238,.4)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+ddx*inv2*36*S, Y-ddy*inv2*36*S); ctx.stroke();
+  }
+
+  // finish trail
+  const fin = FINISHES[skin] || FINISHES.factory;
+  if(fin.trail && trail.length){
+    const col = fin.trailCol || fin.body;
+    trail.forEach((tp,i)=>{
+      const a=(i+1)/trail.length; let rr=3.4, rise=0;
+      if(fin.trail==='after'){ rr = 9*S*a; }
+      else if(fin.trail==='fire'){ rr = 2.5+a*3.2; rise=(1-a)*12; }
+      else if(fin.trail==='sparkle'){ rr = ((i+(simFrame>>1))%3===0)?3:1.3; }
+      else if(fin.trail==='stars'){ rr=1.6; }
+      ctx.globalAlpha = a*(fin.trail==='after'?0.3:0.5); ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(sx(tp.x), sy(tp.y)-rise, rr, 0, 7); ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  }
+  // the sticky hand, wearing its finish
+  paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
+  // the eye you carry — Moose's, kept since the day the claw took him
+  if(mode==='play'){
+    const ex=X+11*S*0.66, ey=Y+11*S*0.62;
+    ctx.fillStyle='#f2efe6'; ctx.beginPath(); ctx.arc(ex,ey,3.1,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=0.8; ctx.stroke();
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(ex+0.5,ey+0.4,1.35,0,7); ctx.fill();
+  }
+  // charge as a warming rim — finish stays visible the whole wind
+  if(HAND.mode==='attach' && HAND.charge>0.02){
+    const c2=HAND.charge;
+    ctx.strokeStyle = c2>0.7 ? '#e7c04b' : `rgba(240,${180-c2*70|0},${120-c2*50|0},${0.45+c2*0.55})`;
+    ctx.lineWidth = 1.5 + c2*3;
+    ctx.beginPath(); ctx.arc(X,Y,11*S+2+c2*2,0,7); ctx.stroke();
+  }
+  if(dusty && !HAND._wiped){ ctx.fillStyle='rgba(200,190,150,.25)'; ctx.beginPath(); ctx.arc(X,Y,12*S,0,7); ctx.fill(); }
+  ctx.restore();
+}
+function drawClaw(){
+  if(!CLAW) return;
+  const open = clawT > (CLAW_PERIOD-CLAW_OPEN);
+  const X=sx(CLAW.x), Y=sy(CLAW.y), w=CLAW.w*S;
+  if(Y<-140||Y>Hc+40) return;
+  const steel1='#e6ebf5', steel2='#7a8194', steel3='#3a3f4e';
+  ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+  // the cold cathedral bloom this thing lives inside
+  asanoBloom(X,Y,w*1.1,'#c8d0e6',0.14);
+  // cable up into the dark
+  const cg=ctx.createLinearGradient(X,Y-160,X,Y); cg.addColorStop(0,'rgba(120,128,148,0)'); cg.addColorStop(1,'rgba(150,158,178,.55)');
+  ctx.strokeStyle=cg; ctx.lineWidth=2.5*S; ctx.beginPath(); ctx.moveTo(X,Y-Hc); ctx.lineTo(X,Y-14*S); ctx.stroke();
+  // the housing/knuckle
+  const hg=ctx.createLinearGradient(X,Y-22*S,X,Y+6*S); hg.addColorStop(0,steel1); hg.addColorStop(0.5,steel2); hg.addColorStop(1,steel3);
+  ctx.fillStyle=hg; ctx.beginPath(); ctx.moveTo(X-14*S,Y-14*S); ctx.lineTo(X+14*S,Y-14*S); ctx.lineTo(X+9*S,Y+2*S); ctx.lineTo(X-9*S,Y+2*S); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1*S; ctx.stroke();
+  // three tapered talons (metal fingers), lit on the near edge
+  const spread=open?1.0:0.32, tips=[-1,-0.05,1];
+  tips.forEach((dir,i)=>{
+    const bx=X+dir*10*S, tx=X+dir*(w*0.5)*spread, ty=Y+(open?26:20)*S;
+    const fg=ctx.createLinearGradient(bx,Y,tx,ty); fg.addColorStop(0,steel1); fg.addColorStop(1,steel3);
+    ctx.strokeStyle=fg; ctx.lineWidth=(i===1?5:6.5)*S;
+    ctx.beginPath(); ctx.moveTo(bx,Y-2*S); ctx.quadraticCurveTo(X+dir*w*0.32*spread, Y+12*S, tx, ty); ctx.stroke();
+    // claw-tip point
+    ctx.fillStyle=steel1; ctx.beginPath(); ctx.arc(tx,ty,2.2*S,0,7); ctx.fill();
+  });
+  // a cold pilot light on the housing — Gerald is awake
+  asanoBloom(X,Y-6*S,7*S,'#9fd0ff',0.6);
+  ctx.fillStyle='#dff0ff'; ctx.beginPath(); ctx.arc(X,Y-6*S,1.8*S,0,7); ctx.fill();
+  ctx.restore();
+}
+
+/* ============================================================ HD-2D ("ASANO") RENDER LAYER
+   a hand-crafted look in the vein of Team Asano's Octopath / Triangle Strategy: a painterly
+   per-zone colour script that cross-fades as you climb, drifting light-motes, soft god-rays,
+   parallax silhouette depth, bloom on every light source, and a cinematic vignette+grain post.
+   physics untouched — this only redraws. */
+function _hx(h){ h=h.replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function hexLerp(a,b,t){ const A=_hx(a),B=_hx(b); return `rgb(${Math.round(A[0]+(B[0]-A[0])*t)},${Math.round(A[1]+(B[1]-A[1])*t)},${Math.round(A[2]+(B[2]-A[2])*t)})`; }
+function _rgbLerp(a,b,t){ const A=_hx(a),B=_hx(b); return [Math.round(A[0]+(B[0]-A[0])*t),Math.round(A[1]+(B[1]-A[1])*t),Math.round(A[2]+(B[2]-A[2])*t)]; }
+function rgbaOf(c,a){ const A=_hx(c); return `rgba(${A[0]},${A[1]},${A[2]},${a})`; }
+// the colour script — keyframes by height %; the live palette lerps between the two around the camera.
+const ASANO_KEYS = [
+  { pct:0,   name:'the pit',      top:'#432a1b', mid:'#2e1810', bot:'#150a06', fog:'#seed', key:'#ffb457', kx:0.26, ky:0.12, dust:'#ffcf92', glow:'#ffcf7a', silh:'#170c07', grade:'#3a1d0b', gA:0.10 },
+  { pct:20,  name:'the spill',    top:'#1d3327', mid:'#152820', bot:'#0a150f', fog:'#2c5a42', key:'#8fe6c0', kx:0.70, ky:0.13, dust:'#c6ffe6', glow:'#8fe0b8', silh:'#0c1a13', grade:'#123025', gA:0.09 },
+  { pct:42,  name:'the reef',     top:'#2d1032', mid:'#231028', bot:'#110716', fog:'#5a1c52', key:'#ff77b4', kx:0.30, ky:0.10, dust:'#ffb0dc', glow:'#ff8fc4', silh:'#180820', grade:'#2a0e2c', gA:0.11 },
+  { pct:65,  name:'the gallery',  top:'#102541', mid:'#0b1a30', bot:'#05101e', fog:'#2a4a7a', key:'#c8e0ff', kx:0.76, ky:0.07, dust:'#dcecff', glow:'#bcd8ff', silh:'#08121f', grade:'#0c1a30', gA:0.12 },
+  { pct:85,  name:'claw country', top:'#1b1738', mid:'#141026', bot:'#0a0816', fog:'#3a2c66', key:'#b0a4ff', kx:0.50, ky:0.06, dust:'#c8bfff', glow:'#a99cff', silh:'#0e0a1c', grade:'#161030', gA:0.11 },
+  { pct:100, name:'the cornice',  top:'#514a2b', mid:'#2a2512', bot:'#14110a', fog:'#8a7a44', key:'#fff0c4', kx:0.50, ky:0.05, dust:'#fff0c0', glow:'#ffe6a0', silh:'#14110a', grade:'#2a2410', gA:0.09 },
+  { pct:125, name:'the beyond',   top:'#0b0e24', mid:'#07081a', bot:'#03040e', fog:'#1a2050', key:'#9fb8ff', kx:0.50, ky:0.04, dust:'#bcccff', glow:'#9fb8ff', silh:'#070a18', grade:'#0a0c22', gA:0.12 },
+];
+function asanoPalette(){
+  const pct = clamp((camY-PIT_Y)/TOWER_H*100, 0, 125);
+  let a=ASANO_KEYS[0], b=ASANO_KEYS[0];
+  for(let i=0;i<ASANO_KEYS.length-1;i++){ if(pct>=ASANO_KEYS[i].pct && pct<=ASANO_KEYS[i+1].pct){ a=ASANO_KEYS[i]; b=ASANO_KEYS[i+1]; break; } if(pct>ASANO_KEYS[ASANO_KEYS.length-1].pct){ a=b=ASANO_KEYS[ASANO_KEYS.length-1]; } }
+  const t = a===b?0: (pct-a.pct)/(b.pct-a.pct);
+  return { top:hexLerp(a.top,b.top,t), mid:hexLerp(a.mid,b.mid,t), bot:hexLerp(a.bot,b.bot,t),
+    key:hexLerp(a.key==='#seed'?a.top:a.key, b.key,t), kx:a.kx+(b.kx-a.kx)*t, ky:a.ky+(b.ky-a.ky)*t,
+    dust:hexLerp(a.dust,b.dust,t), glow:hexLerp(a.glow,b.glow,t), silh:hexLerp(a.silh,b.silh,t),
+    grade:hexLerp(a.grade,b.grade,t), gA:a.gA+(b.gA-a.gA)*t };
+}
+// drifting light-motes — the signature Octopath atmosphere
+let DUST=[]; let _asanoNow=0, _asanoLast=0; let asanoPal=null;
+function initDust(){ DUST=[]; for(let i=0;i<74;i++) DUST.push({ x:Math.random()*VW, y:camY+(Math.random()-0.5)*1400, r:0.6+Math.random()*2.2, par:0.45+Math.random()*0.6, ph:Math.random()*7, sway:6+Math.random()*16, rise:8+Math.random()*22 }); }
+function asanoDust(pal){
+  if(!DUST.length) initDust();
+  _asanoNow=performance.now()/1000; let dt=_asanoNow-_asanoLast; _asanoLast=_asanoNow; if(dt<0||dt>0.1) dt=0.016;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const m of DUST){
+    m.y += m.rise*dt;                                   // motes drift gently upward
+    const Y = Hc*0.62 - (m.y-camY)*S*m.par;
+    if(Y < -30){ m.y = camY - (Hc*0.62+40)/(S*m.par) + Math.random()*40; m.x=Math.random()*VW; continue; }
+    if(Y > Hc+30){ m.y = camY + (Hc*0.4+40)/(S*m.par) - Math.random()*40; m.x=Math.random()*VW; continue; }
+    const X = (m.x + Math.sin(_asanoNow*0.5+m.ph)*m.sway)*S;
+    const tw = 0.35 + 0.65*Math.abs(Math.sin(_asanoNow*0.8+m.ph));
+    const rr = m.r*S*(0.6+m.par*0.7);
+    const g=ctx.createRadialGradient(X,Y,0,X,Y,rr*3);
+    g.addColorStop(0, rgbaOf(pal.dust, 0.5*tw*m.par)); g.addColorStop(1, rgbaOf(pal.dust,0));
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,rr*3,0,7); ctx.fill();
+  }
+  ctx.restore();
+}
+// parallax silhouette architecture — vertical struts + arches receding into the machine
+function asanoSilhouettes(pal){
+  ctx.save();
+  for(let layer=0; layer<2; layer++){
+    const par = layer===0?0.30:0.56, alpha = layer===0?0.55:0.82, wob = layer===0?1:0.7;
+    ctx.globalAlpha=alpha; ctx.fillStyle=pal.silh;
+    const band=560, span=(wy)=> Hc*0.62 - (wy-camY)*S*par;
+    const y0=Math.floor((camY - 900/par)/band)*band;
+    for(let wy=y0; wy<camY + 1100/par; wy+=band){
+      const Y=span(wy); if(Y<-400||Y>Hc+400) continue;
+      const seed=Math.abs((wy*2654435761)%1000)/1000;
+      const pw=(26+seed*20)*S*wob;
+      // side pillars
+      ctx.fillRect(-4, Y-band*S*par*0.5, pw, band*S*par+2);
+      ctx.fillRect(Wc-pw+4, Y-band*S*par*0.5, pw, band*S*par+2);
+      // a crossbeam / arch every other band
+      if((Math.floor(wy/band))%2===0){
+        const bh=(10+seed*10)*S*wob;
+        ctx.fillRect(pw-6, Y-bh/2, Wc-2*(pw-6), bh);
+      }
+    }
+  }
+  ctx.restore();
+}
+function asanoGodRays(pal){
+  const kx=pal.kx*Wc, ky=pal.ky*Hc;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<5;i++){
+    const ang=(-0.5 + i*0.26) + Math.sin(_asanoNow*0.15+i)*0.02;
+    const len=Hc*1.25, wTop=6*S, wBot=(52+i*10)*S;
+    ctx.save(); ctx.translate(kx,ky); ctx.rotate(ang);
+    const g=ctx.createLinearGradient(0,0,0,len);
+    const a=0.05 + 0.035*Math.sin(_asanoNow*0.4+i*1.3);
+    g.addColorStop(0, rgbaOf(pal.key, Math.max(0,a))); g.addColorStop(1, rgbaOf(pal.key,0));
+    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(-wTop,0); ctx.lineTo(wTop,0); ctx.lineTo(wBot,len); ctx.lineTo(-wBot,len); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // soft key-light bloom in the corner it pours from
+  const bg=ctx.createRadialGradient(kx,ky,0,kx,ky,Hc*0.5);
+  bg.addColorStop(0, rgbaOf(pal.key,0.12)); bg.addColorStop(1, rgbaOf(pal.key,0));
+  ctx.fillStyle=bg; ctx.fillRect(0,0,Wc,Hc);
+  ctx.restore();
+}
+function asanoBackdrop(pal){
+  // rich vertical gradient (lit toward the key light near the top, deep shadow at the floor)
+  const g=ctx.createLinearGradient(0,0,0,Hc);
+  g.addColorStop(0, pal.top); g.addColorStop(0.5, pal.mid); g.addColorStop(1, pal.bot);
+  ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
+  asanoGodRays(pal);
+  asanoSilhouettes(pal);
+  asanoDust(pal);
+}
+// additive bloom halo — the whole look leans on this for every light source
+function asanoBloom(x,y,r,col,a){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0, rgbaOf(col,a)); g.addColorStop(0.5, rgbaOf(col,a*0.35)); g.addColorStop(1, rgbaOf(col,0));
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); ctx.restore();
+}
+// cinematic post: colour-grade wash, then a soft vignette, then fine film grain
+let _grain=null;
+function asanoGrain(){
+  if(_grain) return _grain;
+  const c=document.createElement('canvas'); c.width=c.height=180; const g=c.getContext('2d');
+  const im=g.createImageData(180,180); const d=im.data;
+  for(let i=0;i<d.length;i+=4){ const v=200+Math.floor(Math.random()*55); d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; }
+  g.putImageData(im,0,0); _grain=c; return c;
+}
+function asanoPost(pal){
+  // colour grade
+  ctx.save(); ctx.globalCompositeOperation='soft-light'; ctx.globalAlpha=1; ctx.fillStyle=rgbaOf(pal.grade, pal.gA);
+  ctx.fillRect(0,0,Wc,Hc); ctx.restore();
+  // vignette
+  const vg=ctx.createRadialGradient(Wc/2,Hc*0.52,Hc*0.2, Wc/2,Hc*0.52,Hc*0.85);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(0.7,'rgba(0,0,0,0.12)'); vg.addColorStop(1,'rgba(0,0,0,0.5)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,Wc,Hc);
+  // film grain (one tile, stretched + jittered, very low alpha)
+  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=0.045;
+  const gt=asanoGrain(), jx=(_asanoNow*130%40)-20, jy=(_asanoNow*90%40)-20;
+  ctx.drawImage(gt, jx, jy, Wc+40, Hc+40); ctx.restore();
+}
+
+function render(){
+  // the daily button lives only on the plain climb screen — never mid-attempt, mid-appeal, or under a panel
+  el('b_daily').style.display = (mode==='play' && !dailyActive && !noteHold && !frozen) ? 'block' : 'none';
+  ctx.clearRect(0,0,Wc,Hc);
+  // machine interior — HD-2D painterly backdrop (colour script + god-rays + depth + motes)
+  asanoPal = asanoPalette();
+  asanoBackdrop(asanoPal);
+
+  // zone thresholds as soft glowing seams instead of hard lines
+  for(const z of ZONES){
+    const y = sy(PIT_Y + TOWER_H*(z.top/100));
+    if(y>-20&&y<Hc+20){ const seam=ctx.createLinearGradient(0,y-10,0,y+10);
+      seam.addColorStop(0,'rgba(255,255,255,0)'); seam.addColorStop(0.5, rgbaOf(asanoPal?asanoPal.glow:'#ffffff',0.07)); seam.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=seam; ctx.fillRect(0,y-10,Wc,20); }
+  }
+  ctx.font='600 8px ui-monospace,monospace'; ctx.textAlign='left';
+  for(const cv2 of CARVINGS){ const cy2=sy(PIT_Y+TOWER_H*cv2.pct/100);
+    if(cy2>-8&&cy2<Hc+8){
+      const fade=Math.max(0.055, 0.17 - cv2.pct/100*0.10);   // higher = older = fainter
+      ctx.fillStyle='rgba(196,190,172,'+fade.toFixed(3)+')';
+      let X=sx(cv2.x); const w=ctx.measureText(cv2.t).width;
+      if(X+w>Wc-6) X=Math.max(6, Wc-6-w);
+      ctx.fillText(cv2.t, X, cy2);
+    } }
+
+  const zc = zoneAt(pctOf(HAND.y));
+  ctx.fillStyle='rgba(180,183,200,.18)'; ctx.font=`600 ${Math.round(11)}px ui-monospace,monospace`;
+  ctx.textAlign='left'; ctx.fillText(zc.name.toUpperCase(), 12, Hc-16);
+
+  drawClaw();
+  for(const s of STUDS) drawStud(s);
+  for(const t of TOKENS){
+    if(t.got) continue;
+    const X=sx(t.x), Y=sy(t.y);
+    if(Y<-20||Y>Hc+20) continue;
+    const bob=Math.sin(_asanoNow*1.6 + t.x*0.05)*1.4;                 // coins breathe
+    asanoBloom(X, Y+bob, 15*S, '#ffe08a', 0.5);                       // warm coin bloom
+    const cg=ctx.createRadialGradient(X-2,Y-2+bob,1,X,Y+bob,6.5*S);
+    cg.addColorStop(0,'#fff2c0'); cg.addColorStop(0.6,'#e7c04b'); cg.addColorStop(1,'#a9781f');
+    ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(X,Y+bob,5.5*S,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(120,80,20,.7)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.75)'; ctx.beginPath(); ctx.arc(X-1.6*S,Y-1.6*S+bob,1.3*S,0,7); ctx.fill();
+  }
+  pickups = pickups.filter(pk=>simFrame-pk.f<50);
+  for(const pk of pickups){
+    const a=1-(simFrame-pk.f)/50;
+    ctx.globalAlpha=Math.max(0,a); ctx.fillStyle='#e7c04b'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText('+'+pk.v+'¢', sx(pk.x), sy(pk.y)-(1-a)*26); ctx.globalAlpha=1;
+  }
+  // grab-impact ring, tinted to the worn finish
+  bursts = bursts.filter(b=>simFrame-b.f<16);
+  for(const b of bursts){
+    const a=(simFrame-b.f)/16;
+    ctx.globalAlpha=(1-a)*0.85; ctx.strokeStyle=b.col; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.arc(sx(b.x), sy(b.y), (5+a*20)*S, 0, 7); ctx.stroke(); ctx.globalAlpha=1;
+  }
+
+  // dotted "should-have-released" receipt while a fall screen is up
+  if((mode==='fall') && currentFall && HAND.lastAnchor){
+    const a=HAND.lastAnchor; const up = nearestStud(a.x, a.y+260, 320);
+    if(up){ ctx.strokeStyle='rgba(231,192,75,.55)'; ctx.lineWidth=2; ctx.setLineDash([5,7]);
+      ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(up.x),sy(up.y)); ctx.stroke(); ctx.setLineDash([]); }
+  }
+
+  // appeal ghost playback
+  if(mode==='appeal_watch' && ghost){
+    ctx.strokeStyle='rgba(231,110,75,.5)'; ctx.lineWidth=2; ctx.beginPath();
+    for(let i=0;i<=ghost.i && i<ghost.pts.length;i++){ const p=ghost.pts[i];
+      const X=sx(p.x),Y=sy(p.y); i===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y); }
+    ctx.stroke();
+    const p=ghost.pts[Math.min(ghost.i,ghost.pts.length-1)];
+    if(p){ ctx.fillStyle='#e85c3c'; ctx.beginPath(); ctx.arc(sx(p.x),sy(p.y),11*S,0,7); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx(p.x)-4,sy(p.y)-3,3,0,7); ctx.arc(sx(p.x)+4,sy(p.y)-3,3,0,7); ctx.fill(); }
+  } else {
+    drawHand();
+  }
+
+  // cinematic post over the WORLD only — grade, vignette, grain. HUD stays crisp on top.
+  if(asanoPal) asanoPost(asanoPal);
+
+  // flash
+  if(flash>0){ ctx.fillStyle=`rgba(255,255,255,${flash*0.5})`; ctx.fillRect(0,0,Wc,Hc); }
+
+  // HUD: giant % (reads across a room)
+  const showPct = mode==='appeal_watch'? (ghost?ghost.pct:0) : Math.round(pctOf(HAND.y));
+  ctx.textAlign='right'; ctx.fillStyle='rgba(232,232,238,.92)';
+  ctx.font=`700 ${Math.round(40)}px ui-monospace,monospace`;
+  ctx.fillText(showPct+'%', Wc-14, 52);
+  ctx.font=`600 ${Math.round(10)}px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.4)';
+  ctx.fillText('BEST '+Math.round(bestPct)+'%', Wc-14, 68);
+
+  // THE DAILY GRAB: the clock is the whole HUD story
+  if(dailyActive){
+    const t=Math.max(0,dailyT), mm=Math.floor(t/60), ss=Math.floor(t%60);
+    ctx.textAlign='center';
+    ctx.fillStyle = t<=30 ? 'rgba(226,75,74,.95)' : 'rgba(231,192,75,.95)';
+    ctx.font='700 27px ui-monospace,monospace';
+    ctx.fillText(mm+':'+(ss<10?'0':'')+ss, Wc/2, 46);
+    ctx.font='600 9px ui-monospace,monospace'; ctx.fillStyle='rgba(231,192,75,.6)';
+    ctx.fillText('THE DAILY GRAB · PEAK '+Math.round(dailyPeak)+'%', Wc/2, 60);
+    ctx.textAlign='right';
+  }
+
+  // the loss, live: watch your progress drain while you fall
+  if(fallTrack && HAND.mode==='fly' && mode==='play'){
+    const d = pctOf(HAND.peakY)-pctOf(HAND.y);
+    if(d>1.5){ ctx.fillStyle='#e24b4a';
+      ctx.font=`700 ${Math.min(34, Math.round(13+d*0.55))}px ui-monospace,monospace`;
+      ctx.fillText('−'+Math.floor(d)+'%', Wc-14, 98); }
+  }
+  // return-migration clock (only shown once you've cleared the tower once)
+  if(beaten && runStart!==null && mode==='play' && !dailyActive && pctOf(HAND.y)>=2){
+    ctx.fillStyle='rgba(231,192,75,.75)'; ctx.font='600 12px ui-monospace,monospace'; ctx.textAlign='left';
+    ctx.fillText('RM '+fmtT((simFrame-runStart)/120), 12, 52); ctx.textAlign='right';
+  }
+  // the quarter count
+  if(quarters>0 || finishes.length || bgOwned.length || studOwned.length){
+    ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='left';
+    ctx.fillText('¢ '+quarters, 12, 76); ctx.textAlign='right';
+  }
+
+  // charge pip
+  if(HAND.mode==='attach' && HAND.charge>0.02){
+    const bw=Math.min(Wc-24,120), bx=(Wc-bw)/2, by=Hc-40;
+    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.fillRect(bx,by,bw,5);
+    ctx.fillStyle= HAND.charge>0.9?'#e76e4b':'#e7c04b'; ctx.fillRect(bx,by,bw*HAND.charge,5);
+  }
+
+  // one-line onboarding: visible until the first fling, then gone forever this session
+  if(!hasFlung && mode==='play'){
+    ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.7)';
+    ctx.font='600 13px ui-monospace,monospace';
+    ctx.fillText('HOLD to wind · LET GO to fly · TAP mid-air to grab', Wc/2, Hc*0.8);
+  }
+  // the pit remembers him — quiet chorus while you rest at the bottom
+  else if(mode==='play' && HAND.mode==='attach' && pctOf(HAND.y)<3.5){
+    const c=PIT_CHORUS[Math.floor(simFrame/(120*6))%PIT_CHORUS.length];
+    ctx.textAlign='center'; ctx.font='500 10.5px ui-monospace,monospace';
+    const lines=wrapLines(ctx, '“'+c.t+'”', Wc-46);
+    const baseY=Hc-34-lines.length*13;
+    ctx.fillStyle='rgba(202,205,218,.5)';
+    lines.forEach((ln,i)=>ctx.fillText(ln, Wc/2, baseY+i*13));
+    ctx.fillStyle='rgba(202,205,218,.34)'; ctx.font='600 8px ui-monospace,monospace';
+    ctx.fillText('— '+c.who, Wc/2, baseY+lines.length*13+2);
+  }
+
+  // boss / clutch line
+  if(bossLineT>0){ ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,bossLineT);
+    ctx.fillStyle='#e7c04b'; ctx.font=`700 ${Math.round(bossBig?26:14)}px ui-monospace,monospace`;
+    ctx.fillText(bossLine, Wc/2, Hc*0.4); ctx.globalAlpha=1; }
+
+  // the climb narrates itself: a beat that lands as you cross into a new zone
+  if(reveal){
+    const a = reveal.t<0.35 ? reveal.t/0.35 : (reveal.t>3.9 ? Math.max(0,(4.6-reveal.t)/0.7) : 1);
+    ctx.save(); ctx.textAlign='center'; ctx.globalAlpha=a;
+    const cy=Hc*0.24;
+    ctx.fillStyle='rgba(231,192,75,.9)'; ctx.font='600 10px ui-monospace,monospace';
+    ctx.fillText(reveal.title.toUpperCase(), Wc/2, cy);
+    ctx.fillStyle='rgba(242,240,246,.98)'; ctx.font='500 16px ui-monospace,monospace';
+    const lines=wrapLines(ctx, reveal.lede, Wc-52);
+    lines.forEach((ln,i)=>ctx.fillText(ln, Wc/2, cy+22+i*22));
+    ctx.globalAlpha=1; ctx.restore();
+  }
+
+  // takeover prompt
+  if(mode==='appeal_play' && takeover){ ctx.textAlign='center'; ctx.fillStyle='rgba(232,232,238,.9)';
+    ctx.font=`700 14px ui-monospace,monospace`; ctx.fillText('SAVE IT.', Wc/2, 96);
+    ctx.font=`600 11px ui-monospace,monospace`; ctx.fillStyle='rgba(232,232,238,.5)';
+    ctx.fillText('one grab · press at the instant · attempt '+(takeover.attempts+1), Wc/2, 114); }
+}
+
+/* ============================================================ MAIN LOOP */
+let last=performance.now()/1000, acc=0, frozen=false;
+function frame(t){
+  requestAnimationFrame(frame);
+  const now=t/1000; let real=now-last; last=now; if(real>0.2) real=0.2;
+  if(mode==='intro'){ introT+=real; renderIntro(); return; }   // the opening plays on a fresh start
+  if(frozen || noteHold){ render(); return; }   // note card up: the world holds while you read
+  acc+=real;
+  while(acc>=DT){
+    // timers (real time)
+    if(hitstop>0) hitstop-=DT;
+    if(slowmo>0) slowmo-=DT;
+    if(flash>0) flash=Math.max(0,flash-DT*4);
+    if(bossLineT>0) bossLineT-=DT;
+    if(reveal){ reveal.t+=DT; if(reveal.t>4.6) reveal=null; }
+    // THE DAILY GRAB clock: full rate through hitstop and slowmo, clamped to wall time
+    // so backgrounding the tab burns the ranked 3:00 instead of pausing it
+    if(dailyActive && mode==='play'){
+      dailyT -= DT;
+      const wallLeft = DAILY_LEN - (Date.now()-dailyWall)/1000;
+      if(wallLeft < dailyT) dailyT = wallLeft;
+      if(dailyT <= 0){ endDaily(); acc=0; break; }
+    }
+    const active = (mode==='play'||mode==='appeal_play');
+    if(active && hitstop<=0){
+      const scale = slowmo>0?0.4:1;
+      if(mode==='appeal_play') stepTakeover(DT*scale);
+      else step(DT*scale);
+    } else if(mode==='appeal_watch'){
+      advanceGhost(DT);
+    }
+    acc-=DT;
+  }
+  render();
+}
+
+/* ============================================================ FALL / SHARE UI */
+const el = id=>document.getElementById(id);
+function openFallScreen(){
+  mode='fall';
+  if(!dusty){ dusty=false; } save();
+  const f=currentFall;
+  el('fall_doc').innerHTML =
+    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">THE CLAW HAS YOU</div>`+
+    `<h1>FALL №${f.no} — “${esc(f.name)}”<br><span class="dmg">${f.fromPct}% → ${f.toPct}%</span></h1>`+
+    `<div class="sub">A drop of ${f.pct}%, out of ${esc(f.zone.name)}.<br>${esc(f.line)}</div>`+
+    (f.ceremony ? `<div class="rule"></div><div class="sub">${esc(CEREMONY_LINE)}</div>` : '')+
+    `<div class="rule"></div>`+
+    `<div class="sub" style="color:#8a8796;">it took you at ${f.toPct}%. the same way it took him. get up. climb.</div>`;
+  const chOrder=['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
+  const nextCh=chOrder.find(z=>STORY.chapters[z] && !zonesReached.includes(z));
+  if(nextCh){ el('fall_doc').innerHTML += `<div class="rule"></div><div class="sub" style="color:#8a8796;font-size:11px;">still above you: “${esc(STORY.chapters[nextCh].title)}”</div>`; }
+  el('p_fall').classList.add('on');
+}
+el('b_takeL').onclick=()=>{ el('p_fall').classList.remove('on'); currentFall=null; mode='play'; };
+el('b_appeal').onclick=()=>{ el('p_fall').classList.remove('on'); openShare(); };
+
+function openShare(){
+  mode='share';
+  const link = buildAppealLink(currentFall);
+  el('shareimg').src = renderShareCard(currentFall);
+  el('p_share').classList.add('on');
+  el('b_copy').onclick = ()=>doShare(link, 'appeal');
+  el('share_note').textContent = 'they get one shot at the grab you missed. send it.';
+  window.__lastLink = link;
+}
+el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=null; mode='play'; };
+
+function openRecord(){
+  if(mode!=='play' || dailyActive) return;
+  mode='record';
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE ARCHIVE · ${SEASON.name}</div>`+
+    `<h1>standing footage</h1>`+
+    `<div class="sub">every entry is enterable. one grab each.</div>`+
+    `<div class="rule"></div>`;
+  CASES.forEach(c=>{
+    const st = archStatus[c.id];
+    h += `<div style="margin-top:8px;"><div class="big" style="font-size:13px;">${esc(c.title)}</div>`+
+      `<div class="sub">${esc(c.sub)}<br>`+
+      (st && st.saved ? `<span class="ok">overturned — attempt ${st.att}.</span>` : `survived by: nothing, yet.`)+`</div>`+
+      `<button class="btn hot" style="width:100%;margin-top:6px;padding:9px;font-size:12px;" onclick="__enterCase('${c.id}')">ENTER THE FOOTAGE</button></div>`;
+  });
+  const replayable = fallLog.filter(f=>f.s0).slice(-4).reverse();
+  if(replayable.length){
+    h += `<div class="rule"></div><div class="big" style="font-size:13px;">YOUR FOOTAGE</div>`;
+    replayable.forEach(f=>{
+      h += `<div class="sub" style="margin-top:7px;">№${f.no} “${esc(f.name)}” — <span class="dmg">−${f.pct}%</span> from ${f.from}%`+
+        (f.saved ? ` · <span class="ok">overturned, attempt ${f.att}</span>` : ` · unsaved`)+
+        `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__reenter(${f.no})">RE-ENTER YOUR FALL</button></div>`;
+    });
+  }
+  const sealed = Object.keys(GUIDE_DEFS).filter(k=>guide[k].n===0);
+  h += `<div class="rule"></div><div class="sub" style="font-size:11px;">field guide: ${5-sealed.length} of 5 behaviors documented.`+
+    (sealed.length? `<br>next sealed case ${esc(GUIDE_DEFS[sealed[0]].riddle)}`:' the guide is complete.')+`</div>`;
+  el('record_doc').innerHTML = h;
+  el('p_record').classList.add('on');
+}
+window.__enterCase = (id)=>{ const c=CASES.find(x=>x.id===id);
+  if(c && mode==='record'){ el('p_record').classList.remove('on'); resetToPit(); startAppeal(casePayload(c)); } };
+window.__reenter = (no)=>{ const e=fallLog.find(f=>f.no===no);
+  if(e && e.s0 && mode==='record'){ el('p_record').classList.remove('on'); resetToPit(); startAppeal(footagePayload(e)); } };
+el('b_recclose').onclick = ()=>{ el('p_record').classList.remove('on'); mode='play'; };
+
+function finishRow(id){
+  const f=FINISHES[id];
+  const own = id==='factory' || finishes.includes(id);
+  const worn = skin===id;
+  return `<div class="sub" style="margin-top:9px;display:flex;gap:10px;align-items:flex-start;">`+
+    `<canvas class="finprev" data-fin="${id}" width="48" height="48" style="width:40px;height:40px;flex:none;background:#0c0d12;border-radius:9px;"></canvas>`+
+    `<div style="flex:1;min-width:0;"><b>${esc(f.name)}</b> — ${esc(f.line)}`+
+    (worn ? `<div class="ok" style="margin-top:4px;">worn.</div>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wear('${id}')">WEAR</button>`
+      : f.cost<0 ? `<div style="margin-top:5px;color:#8a8796;font-size:11px;">🔒 daily punch card prize — day ${f.punch}</div>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyFin('${id}')">BUY · ¢${f.cost}</button>`)+
+    `</div></div>`;
+}
+function renderFinishPreviews(){
+  document.querySelectorAll('canvas.finprev').forEach(cv2=>{
+    const g=cv2.getContext('2d'); g.clearRect(0,0,48,48);
+    paintHand(g, 24, 25, 14, FINISHES[cv2.dataset.fin]||FINISHES.factory, 0, 0);
+  });
+}
+function wrapLines(g, text, maxW){
+  const words=String(text).split(' '); const lines=[]; let cur='';
+  for(const w of words){ const t=cur?cur+' '+w:w; if(g.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else cur=t; }
+  if(cur) lines.push(cur); return lines;
+}
+function unreadChapters(){ return CHAPTER_ORDER.slice(0, storyIdx).filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length; }
+function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE MACHINE'+(unreadChapters()>0?' ●':''); }
+function openFoyer(){
+  if(mode!=='play' || dailyActive) return;
+  mode='foyer';
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE MACHINE</div>`+
+    `<h1>¢ ${quarters}</h1>`+
+    `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
+    `<div class="sub" style="font-size:11px;color:#8a8796;">notes found · ${storyIdx} of ${CHAPTER_ORDER.length} — one per climb</div>`+
+    `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;" onclick="__playIntro()">↻ the beginning</button>`;
+  CHAPTER_ORDER.slice(0, storyIdx).forEach(zn=>{
+    const ch=STORY.chapters[zn]; if(!ch) return;
+    const isNew = !chaptersRead.includes(zn);
+    h += `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;${isNew?'box-shadow:inset 0 0 0 1px #e7c04b;':''}" onclick="__readCh('${zn}')">📖 ${esc(ch.title)}${isNew?' <span style="color:#e7c04b;">◆ new</span>':''}</button>`;
+  });
+  if(storyIdx < CHAPTER_ORDER.length){
+    const nz = CHAPTER_ORDER[storyIdx];
+    h += `<div class="sub" style="margin-top:8px;color:#e7c04b;">the next note is somewhere in <b>${esc(nz)}</b>.</div>`;
+    if(foundThisRun) h += `<div class="sub" style="color:#8a8796;font-size:11px;">you've already found one this climb. get back to the pit and go again.</div>`;
+    const left = CHAPTER_ORDER.length - storyIdx - 1;
+    if(left>0) h += `<div class="sub" style="color:#5b584c;font-size:11px;">${left} more after that, further up.</div>`;
+  } else {
+    h += `<div class="sub" style="margin-top:8px;color:#8a8796;">every note found. he wrote them all for you.</div>`;
+  }
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE HOLDS <span style="color:#8a8796;font-weight:400;">— what you grab</span></div>`;
+  Object.keys(STUDSETS).forEach(id=>{ h += studRow(id); });
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">THE MACHINE <span style="color:#8a8796;font-weight:400;">— what you climb through</span></div>`;
+  Object.keys(BACKDROPS).forEach(id=>{ h += bgRow(id); });
+  h += `<div class="rule"></div><div class="big" style="font-size:13px;">YOUR HAND</div>`;
+  Object.keys(FINISHES).forEach(id=>{ h += finishRow(id); });
+  // start over — two taps, because this cannot be undone
+  h += `<div class="rule"></div>`;
+  if(!resetArmed){
+    h += `<button class="btn ghost" style="width:100%;margin-top:4px;padding:9px;font-size:11px;color:#8a8796;" onclick="__resetAsk()">start over</button>`;
+  } else {
+    h += `<div class="sub" style="color:#a3231f;"><b>this wipes everything.</b> your height, every note you've found, every quarter, every finish. Moose goes back to being a rumour, and you start again on the floor.</div>`+
+      `<button class="btn hot" style="width:100%;margin-top:6px;padding:10px;font-size:12px;background:#a3231f;color:#fff;" onclick="__resetDo()">YES — WIPE IT ALL</button>`+
+      `<button class="btn ghost" style="width:100%;margin-top:6px;padding:9px;font-size:11px;" onclick="__resetCancel()">no, keep my climb</button>`;
+  }
+  el('foyer_doc').innerHTML = h;
+  renderFinishPreviews();
+  renderStudPreviews();
+  el('p_foyer').classList.add('on');
+}
+function studRow(id){
+  const t=STUDSETS[id];
+  const own = id==='stock' || studOwned.includes(id);
+  const worn = studWorn===id;
+  return `<div class="sub" style="margin-top:9px;display:flex;gap:10px;align-items:flex-start;">`+
+    `<canvas class="studprev" data-set="${id}" width="56" height="48" style="width:46px;height:40px;flex:none;background:#0c0d12;border-radius:9px;"></canvas>`+
+    `<div style="flex:1;min-width:0;"><b>${esc(t.name)}</b> — ${esc(t.line)}`+
+    (worn ? `<div class="ok" style="margin-top:4px;">in the machine.</div>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearStuds('${id}')">FIT THEM</button>`
+      : t.cost<0 ? `<div style="margin-top:5px;color:#8a8796;font-size:11px;">🔒 daily punch card prize — day ${t.punch}</div>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyStuds('${id}')">BUY · ¢${t.cost}</button>`)+
+    `</div></div>`;
+}
+function bgRow(id){
+  const t=BACKDROPS[id];
+  const own = id==='stock' || bgOwned.includes(id);
+  const worn = bgWorn===id;
+  const sw = t.zones ? t.zones.slice(0,5).map(z=>z.bottom) : ['#12141c','#0f1119','#0a0b10','#0f1119','#12141c'];
+  const swatch = `<div style="display:flex;gap:3px;margin:5px 0;">`+sw.map(c=>`<span style="flex:1;height:16px;border-radius:3px;background:${c};display:inline-block;"></span>`).join('')+`</div>`;
+  return `<div class="sub" style="margin-top:8px;"><b>${esc(t.name)}</b> — ${esc(t.line)}`+swatch+
+    (worn ? `<span class="ok">hung.</span>`
+      : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wearBg('${id}')">HANG IT</button>`
+      : `<button class="btn hot" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__buyBg('${id}')">BUY · ¢${t.cost}</button>`)+`</div>`;
+}
+function renderStudPreviews(){
+  document.querySelectorAll('canvas.studprev').forEach(cv2=>{
+    const g=cv2.getContext('2d'); g.clearRect(0,0,56,48);
+    const th=(STUDSETS[cv2.dataset.set]||{}).studs;
+    const shape = th? th.shape : 'round';
+    const P = th? th.plastic : '#8b8f9e', GL = th? th.glass : '#78aad2', PL = th? th.plush : '#c8677e';
+    // plastic (solid), glass (translucent), plush (always soft + round) — legibility law holds in every set
+    g.fillStyle=P; studPathOn(g, 14, 17, 8, shape); g.fill();
+    g.strokeStyle='rgba(0,0,0,.35)'; g.lineWidth=1.5; g.stroke();
+    g.fillStyle=hexA(GL,.16); g.strokeStyle=hexA(GL,.5); g.lineWidth=1.5; studPathOn(g, 34, 17, 9, shape); g.fill(); g.stroke();
+    g.fillStyle=PL; g.beginPath(); g.arc(24, 35, 9, 0, 7); g.fill();
+    g.fillStyle='rgba(255,255,255,.15)'; g.beginPath(); g.arc(21, 32, 3, 0, 7); g.fill();
+  });
+}
+function studPathOn(g, X, Y, r, shape){
+  g.beginPath();
+  if(shape==='gem'){ g.moveTo(X,Y-r); g.lineTo(X+r,Y); g.lineTo(X,Y+r); g.lineTo(X-r,Y); g.closePath(); }
+  else if(shape==='square'){ g.rect(X-r*0.85, Y-r*0.85, r*1.7, r*1.7); }
+  else if(shape==='bolt'){ g.moveTo(X,Y-r); g.lineTo(X+r*0.9,Y+r*0.5); g.lineTo(X-r*0.9,Y+r*0.5); g.closePath(); }
+  else { g.arc(X,Y,r,0,7); }
+}
+window.__buyStuds = (id)=>{ const t=STUDSETS[id];
+  if(!t || t.cost<0 || mode!=='foyer' || quarters<t.cost || studOwned.includes(id)) return;
+  quarters-=t.cost; studOwned.push(id); studWorn=id; save(); mode='play'; openFoyer(); };
+window.__wearStuds = (id)=>{ if(mode!=='foyer') return;
+  if(id!=='stock' && !studOwned.includes(id)) return;
+  studWorn=id; save(); mode='play'; openFoyer(); };
+window.__buyBg = (id)=>{ const t=BACKDROPS[id];
+  if(!t || t.cost<0 || mode!=='foyer' || quarters<t.cost || bgOwned.includes(id)) return;
+  quarters-=t.cost; bgOwned.push(id); bgWorn=id; save(); mode='play'; openFoyer(); };
+window.__wearBg = (id)=>{ if(mode!=='foyer') return;
+  if(id!=='stock' && !bgOwned.includes(id)) return;
+  bgWorn=id; save(); mode='play'; openFoyer(); };
+window.__readCh = (zn)=>{
+  const ch=STORY.chapters[zn]; if(!ch || mode!=='foyer') return;
+  if(!chaptersRead.includes(zn)){ chaptersRead.push(zn); if(audienceN===0) audienceN=1; save(); updateFoyerBadge(); }
+  el('foyer_doc').innerHTML =
+    `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">${esc(STORY.title)} · ${esc(zn)}</div>`+
+    `<h1 style="font-size:17px;">${esc(ch.title)}</h1><div class="rule"></div>`+
+    `<div class="sub" style="font-size:12.5px; line-height:1.75; white-space:pre-wrap;">${esc(ch.text)}</div>`+
+    `<div class="rule"></div>`+
+    `<button class="btn ghost" style="width:100%;padding:8px;font-size:11px;" onclick="(function(){mode='play';openFoyer();})()">back to the foyer</button>`;
+};
+window.__buyFin = (id)=>{
+  const f=FINISHES[id];
+  if(!f || f.cost<0 || mode!=='foyer' || finishes.includes(id) || quarters<f.cost) return;
+  quarters-=f.cost; finishes.push(id); skin=id; trail=[]; save(); mode='play'; openFoyer();
+};
+window.__wear = (id)=>{
+  if(mode!=='foyer') return;
+  if(id!=='factory' && !finishes.includes(id)) return;
+  skin=id; trail=[]; save(); mode='play'; openFoyer();
+};
+window.__resetAsk = ()=>{ if(mode!=='foyer') return; resetArmed=true; mode='play'; openFoyer(); };
+window.__resetCancel = ()=>{ if(mode!=='foyer') return; resetArmed=false; mode='play'; openFoyer(); };
+window.__resetDo = ()=>{
+  if(mode!=='foyer') return;
+  try{ localStorage.removeItem('thwap'); }catch(e){}
+  // hard reload to a clean URL — guarantees a genuinely fresh boot with no stale state
+  location.replace(location.pathname);
+};
+el('b_foyclose').onclick = ()=>{ el('p_foyer').classList.remove('on'); resetArmed=false; mode='play'; };
+
+function openNoteCard(zn){
+  const ch=STORY.chapters[zn]; if(!ch) return;
+  noteHold=true;
+  const note = ch.lede||ch.title;
+  const found = storyIdx-1;   // this is note N of the set
+  el('note_doc').innerHTML =
+    `<div class="kick" style="letter-spacing:.16em;font-size:10px;margin-bottom:8px;color:#8a6510;">YOU FIND ANOTHER OF HIS NOTES · ${found} of ${CHAPTER_ORDER.length-1}</div>`+
+    `<div style="border:1px dashed #b9b4a4;border-radius:4px;padding:12px 14px;margin-bottom:12px;transform:rotate(-.5deg);">`+
+      `<div style="font-family:'Bradley Hand','Segoe Print',cursive;font-size:18px;line-height:1.35;color:#2a2a22;">${esc(note)}</div>`+
+    `</div>`+
+    `<h1 style="font-size:15px;">${esc(ch.title)}</h1>`+
+    `<div class="sub" style="font-size:12.5px;line-height:1.75;white-space:pre-wrap;margin-top:4px;">${esc(ch.text)}</div>`;
+  el('p_note').classList.add('on');
+}
+el('b_noteclose').onclick = ()=>{ el('p_note').classList.remove('on'); noteHold=false; };
+
+function openWinScreen(){
+  if(mode==='win') return;
+  // the finale note is earned only once every other note is found — reaching the top can't dump the story
+  if(storyIdx === CHAPTER_ORDER.length-1){
+    storyIdx = CHAPTER_ORDER.length;
+    if(!chaptersRead.includes('the chute')) chaptersRead.push('the chute');
+    updateFoyerBadge();
+  }
+  mode='win';
+  const firstTime = !beaten;
+  let tLine='';
+  if(!firstTime && runStart!==null){
+    const t=(simFrame-runStart)/120;
+    const rec = bestTime===null || t<bestTime;
+    if(rec) bestTime=t;
+    tLine = `<div class="rule"></div><div class="sub">THE RETURN MIGRATION: ${fmtT(t)}${rec?' — the literature has been updated.':' · best: '+fmtT(bestTime)}</div>`;
+  }
+  beaten = true; bestPct = Math.max(bestPct, pctOf(HAND.y)); save();
+  el('win_doc').innerHTML =
+    `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ONE HUNDRED PERCENT · THE TOP</div>`+
+    `<h1>MOOSE.</h1>`+
+    `<div class="sub">He turns. "Figured you forgot," he says — then he sees his own eye, in your hand, carried up an entire machine. "...you kept it?"<br><br>The Claw comes down one last time. You don't run. You catch it, and send it to deliver the one thing it's allowed to: itself. Down the chute.<br><br>Two eyes again. You go home the other way — down, together. HANDS UP, kid.</div>`+
+    (firstTime?`<div class="rule"></div><div class="sub"><b>Somewhere above, another motor just kicked on.</b> Another toy at another ceiling its pit has turned into a monster. You know better now. The machine doesn't end here — it never did. Keep climbing, and see how high you can get. Be the hand that comes.</div>`:'')+
+    tLine+
+    `<div class="rule"></div>`+
+    `<div class="sub" style="text-align:center;color:#8a8796;">— the marquee flickers: EVERYBODY GOES HOME —</div>`;
+  el('p_win').classList.add('on');
+  const brag = location.origin + location.pathname;
+  el('b_winshare').onclick = ()=>{
+    const txt = 'i left machine no. 7 on my own. 100%. what % are you?';
+    if(navigator.share){ navigator.share({text:txt, url:brag}).catch(()=>{}); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(txt+' '+brag).then(()=>{ el('b_winshare').textContent='COPIED — go flex'; },()=>{}); }
+    else prompt('copy this', txt+' '+brag);
+  };
+  el('b_wincont').onclick = ()=>{ el('p_win').classList.remove('on'); mode='play'; extendTowerTo(HAND.y+2800); };
+}
+
+function doShare(link, kind){
+  const txt = kind==='appeal' ? "i couldn't reach him. catch the grab i missed: " : 'the call came back: ';
+  if(navigator.share){ navigator.share({text:txt, url:link}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(link).then(()=>{
+    el('b_copy').textContent='COPIED — now go send it'; },()=>{}); }
+  else { prompt('copy this link', link); }
+}
+
+/* ---------- share card (rendered to a data URL, phone-saveable) ---------- */
+function renderShareCard(f){
+  const c=document.createElement('canvas'); c.width=600; c.height=760; const x=c.getContext('2d');
+  x.fillStyle='#f3f0e7'; x.fillRect(0,0,600,760);
+  x.fillStyle='#14140f'; x.textAlign='left';
+  x.font='700 26px ui-monospace,monospace'; x.fillText('ENTERED INTO THE RECORD', 40, 70);
+  x.font='600 18px ui-monospace,monospace'; x.fillText('specimen: '+myHandle+' · '+SEASON.name, 40, 102);
+  x.strokeStyle='#b9b4a4'; x.setLineDash([6,8]); x.beginPath(); x.moveTo(40,130); x.lineTo(560,130); x.stroke(); x.setLineDash([]);
+  x.font='700 40px ui-monospace,monospace'; x.fillText('FALL №'+(f.no||'?')+' — '+f.name, 40, 190);
+  x.fillStyle='#a3231f'; x.font='700 64px ui-monospace,monospace'; x.fillText(f.fromPct+'% → '+f.toPct+'%', 40, 268);
+  // mini fall diagram
+  x.fillStyle='#14140f'; x.font='600 15px ui-monospace,monospace';
+  x.fillText('charge on record: '+f.wraps+' wrap'+(f.wraps===1?'':'s')+'   ·   fell from '+f.fromPct+'%', 40, 320);
+  // trajectory sketch
+  const bx=40,by=360,bw=520,bh=250;
+  x.strokeStyle='#d8d3c4'; x.strokeRect(bx,by,bw,bh);
+  if(f.pts&&f.pts.length){
+    let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    f.pts.forEach(p=>{minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);});
+    const sxx=v=>bx+20+((v-minX)/((maxX-minX)||1))*(bw-40);
+    const syy=v=>by+20+(1-(v-minY)/((maxY-minY)||1))*(bh-40);
+    x.strokeStyle='#a3231f'; x.lineWidth=3; x.beginPath();
+    f.pts.forEach((p,i)=>{ i?x.lineTo(sxx(p.x),syy(p.y)):x.moveTo(sxx(p.x),syy(p.y)); }); x.stroke();
+    const last=f.pts[f.pts.length-1]; x.fillStyle='#a3231f'; x.beginPath(); x.arc(sxx(last.x),syy(last.y),7,0,7); x.fill();
+  }
+  x.fillStyle='#5b584c'; x.font='600 14px ui-monospace,monospace';
+  x.fillText('TIME OBSERVED ........ not released', 40, 660);
+  x.fillStyle='#14140f'; x.font='700 22px ui-monospace,monospace';
+  x.fillText('catch the grab '+myHandle+' missed.', 40, 710);
+  return c.toDataURL('image/png');
+}
+
+/* ---------- HTML escaping ---------- */
+function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+/* ============================================================ APPEAL LINK (no backend) */
+function b64urlEncode(obj){
+  const s = JSON.stringify(obj);
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64urlDecode(str){
+  str = str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4)str+='=';
+  return JSON.parse(decodeURIComponent(escape(atob(str))));
+}
+function buildAppealLink(f){
+  // quantize trajectory to keep it ~1KB
+  const pts = f.pts.map(p=>[p.x|0, p.y|0]);
+  const s0 = f.s0 || {x:HAND.x,y:HAND.y,vx:0,vy:-400};
+  const payload = { v:1, k:'A', from:myHandle, sn:SEASON.id,
+    f:{n:'FALL №'+(f.no||'?')+' — '+f.name, p:f.pct, a:f.fromPct, b:f.toPct, w:f.wraps},
+    t:pts, s0:[Math.round(s0.x),Math.round(s0.y),Math.round(s0.vx),Math.round(s0.vy)],
+    L: ledger || {vs:null, c:0, g:0, d:0, dmg:0} };
+  const base = location.origin + location.pathname;
+  return base + '#a=' + b64urlEncode(payload);
+}
+function buildVerdictLink(v){
+  const payload = { v:1, k:'V', from:myHandle, to:incoming.from, sn:SEASON.id,
+    verdict:v.kind, n:v.attempts, pct:Math.round(bestPct),
+    orig:incoming.f, L:v.ledger };
+  const base = location.origin + location.pathname;
+  return base + '#a=' + b64urlEncode(payload);
+}
+
+/* ---------- parse an incoming link on load ---------- */
+function parseIncoming(){
+  const m = location.hash.match(/[#&]a=([^&]+)/);
+  if(!m) return null;
+  try{ return b64urlDecode(m[1]); }catch(e){ return null; }
+}
+
+/* ============================================================ APPEAL RECEIVER FLOW */
+function startAppeal(pl){
+  incoming = pl;
+  if(pl.k==='V'){ showReceivedVerdict(pl); return; }
+  // ghost playback data
+  ghost = { pts: pl.t.map(p=>({x:p[0],y:p[1]})), i:0, pct:pl.f.a, done:false };
+  el('b_archive').style.display='none'; el('b_foyer').style.display='none';
+  el('ai_kick').textContent = pl.self ? 'your own last second' : (pl.archive ? 'the fall nothing has caught' : 'a hand, called');
+  const kickLine = pl.self ? 'YOUR FALL, AGAIN' : (pl.archive ? 'THE ELDER · nobody has ever caught this one' : esc(pl.from)+' CALLED YOUR HAND');
+  const subLine = pl.self ? 'You were there. You are about to be there again.'
+    : (pl.archive ? 'Nothing has ever caught this fall. Your hand. One shot.' : esc(pl.from)+" reached for the grab and missed. Now it's your hand.");
+  el('ai_doc').innerHTML =
+    `<div class="kick" style="color:#8a2b1f;letter-spacing:.18em;font-size:11px;margin-bottom:6px">${kickLine}</div>`+
+    `<h1>${esc(pl.from)} FELL<br>FROM ${pl.f.a}%<br><span class="dmg">${esc(pl.f.n)} · −${pl.f.p}%</span></h1>`+
+    `<div class="sub">${subLine}</div>`+
+    `<div class="sub" style="margin-top:6px;">One hand. One shot. Was the grab there, or not?</div>`+
+    `<div class="rule"></div><div class="sub big">your hand now.</div>`;
+  el('p_appeal_intro').classList.add('on');
+  mode='appeal_intro';
+  // center camera on the fall
+  if(ghost.pts.length){ camY = ghost.pts[0].y; }
+}
+el('b_watch').onclick=()=>{ el('p_appeal_intro').classList.remove('on'); mode='appeal_watch';
+  ghost.i=0; ghost.acc=0; };
+
+function advanceGhost(dt){
+  if(!ghost) return;
+  ghost.acc=(ghost.acc||0)+dt;
+  if(ghost.acc>0.045){ ghost.acc=0; ghost.i++; }
+  if(ghost.pts[ghost.i]) camY += (ghost.pts[ghost.i].y+40 - camY)*Math.min(1,dt*6);
+  if(ghost.i>=ghost.pts.length-1 && !ghost.done){ ghost.done=true; setTimeout(beginTakeover, 500); }
+}
+
+function beginTakeover(){
+  mode='appeal_play';
+  const s0 = incoming.s0;
+  HAND.mode='fly'; HAND.x=s0[0]; HAND.y=s0[1]; HAND.vx=s0[2]; HAND.vy=s0[3];
+  HAND.peakY = HAND.y + 500;
+  takeover = { attempts:0, failY: HAND.y - 620, saved:false, s0:s0.slice(), window:0 };
+  held=false; grabWin=0; whiffLock=0;
+  bossFlash('YOUR HAND NOW. CATCH IT.');
+  const gv=el('b_giveup'); gv.style.display='block';
+  gv.onclick=()=>{ gv.style.display='none'; resolveVerdict('DENIED'); };
+}
+function toReset(msg){
+  takeover.attempts++; takeover.window=0;
+  const s0=takeover.s0; HAND.x=s0[0];HAND.y=s0[1];HAND.vx=s0[2];HAND.vy=s0[3];
+  flash=0.6; if(msg) bossFlash(msg);
+}
+function stepTakeover(dt){
+  simFrame++;
+  // ONE grab: the window opens on press and lasts ~160ms; miss = attempt spent
+  if(takeover.window>0 && !takeover.saved){
+    takeover.window -= dt;
+    const s=nearestStud(HAND.x,HAND.y,REACH);
+    if(s){ attachTo(s,HAND.vx,HAND.vy); slowmo=0.45; bossFlash('CAUGHT.', true);
+      takeover.saved=true; takeover.window=0; setTimeout(()=>resolveVerdict('GRANTED'), 700); return; }
+    if(takeover.window<=0){ toReset('the grab met nothing.'); return; }
+  }
+  if(takeover.saved) return;                        // caught: hold the frame for the verdict
+  HAND.vy-=G*dt; HAND.x+=HAND.vx*dt; HAND.y+=HAND.vy*dt;
+  if(HAND.x<28){HAND.x=28;HAND.vx*=-0.5;} if(HAND.x>VW-28){HAND.x=VW-28;HAND.vx*=-0.5;}
+  camY += (HAND.y+60 - camY)*Math.min(1,dt*7);
+  // fell past the footage → reset to the same doomed instant, count the attempt
+  if(HAND.y < takeover.failY && !takeover.saved){ toReset(null); }
+}
+
+/* ---------- verdict engine + ledger ---------- */
+function resolveVerdict(kind){
+  mode='verdict';
+  el('b_giveup').style.display='none';
+  const att = takeover.attempts;
+  // update head-to-head ledger (rides inside links)
+  const L = incoming.L || {vs:null, c:0, g:0, d:0, dmg:0};
+  const newL = { vs:incoming.from, c:(L.c||0)+1, g:(L.g||0)+(kind==='GRANTED'?1:0),
+    d:(L.d||0)+(kind==='DENIED'?1:0), dmg:(L.dmg||0)+ (incoming.f? incoming.f.p:0) };
+  let title, body, klass;
+  if(incoming.self){
+    if(kind==='DENIED'){
+      title='THE FALL STANDS.'; klass='dmg';
+      body=`you have now declined it twice. the footage is patient.`;
+    } else {
+      title=`FALL №${incoming.no} — OVERTURNED.${att===0?'<br>FIRST ATTEMPT.':''}`; klass='ok';
+      body=`survivable after all. it was you both times.<br><br>the record has been amended. the fall keeps its name; you keep the last word.`;
+      const e=fallLog.find(f=>f.no===incoming.no); if(e){ e.saved=true; e.att=att+1; } save();
+    }
+  } else if(incoming.archive){
+    if(kind!=='DENIED'){ const cur=archStatus[incoming.caseId];
+      if(!cur || !cur.saved || att+1<cur.att){ archStatus[incoming.caseId]={saved:true, att:att+1}; } save(); }
+    if(kind==='DENIED'){
+      title='RECONSTRUCTION ABANDONED.<br>THE FALL STANDS.'; klass='dmg';
+      body=`the archive expected nothing less.<br><br>${esc(incoming.from)} can wait. ${esc(incoming.from)} has been waiting since Season 1.`;
+    } else {
+      title=`${esc(incoming.from)}'S FALL:<br>SURVIVED.${att===0?'<br>FIRST ATTEMPT.':''}`; klass='ok';
+      body=`nothing had ever survived this footage.<br><br>the archive has been corrected. it will not apologize. attempt count on record: ${att+1}.`;
+    }
+  } else if(kind==='DENIED'){
+    title='NO HAND COULD\'VE.'; klass='dmg';
+    body=`${att+1} tr${att===0?'y':'ies'}, and nobody reaches that. the claw just had ${esc(incoming.from)}.<br><br>${esc(incoming.from)} is cleared. it wasn't their grip — it was the machine.`;
+  } else if(att===0){
+    title='CAUGHT IT.<br>FIRST TRY.'; klass='ok';
+    body=`the grab was right there the whole time. ${esc(incoming.from)} just missed it.<br><br>it's on the record now:<br><b>${esc(incoming.f.n)}: −${incoming.f.p}% (${esc(myHandle)} caught it in one)</b>`;
+  } else {
+    title=`CAUGHT IT.<br>try ${att+1}.`; klass='ok';
+    body=`reachable — proven. easy — the ${att} miss${att===1?'':'es'} before it beg to differ.`;
+  }
+  el('verdict_doc').innerHTML =
+    `<h1 class="${klass}">${title}</h1><div class="rule"></div><div class="sub">${body}</div>`+
+    (incoming.archive||incoming.self ? '' :
+      `<div class="rule"></div><div class="ledger"><span>${esc(myHandle)} v ${esc(incoming.from)}</span>`+
+      `<span>${newL.c} call${newL.c===1?'':'s'}</span><span class="ok">${newL.g} caught</span><span class="dmg">${newL.d} unreachable</span></div>`);
+  el('p_verdict').classList.add('on');
+  if(incoming.archive || incoming.self){
+    el('b_reply').style.display='none';
+  } else {
+    el('b_reply').style.display='';
+    const vlink = buildVerdictLink({kind, attempts:att, ledger:newL});
+    el('b_reply').onclick = ()=>doShare(vlink, 'verdict');
+  }
+  el('b_climb').onclick = ()=>enterOwnTower();
+}
+
+/* the on-ramp: after judging, the cold receiver is DEPOSITED into their own tower */
+function enterOwnTower(){
+  el('p_verdict').classList.remove('on');
+  incoming=null; ghost=null; takeover=null;
+  history.replaceState(null,'',location.pathname);   // clear the footage from the URL
+  resetToPit();
+  mode='play';
+  el('b_archive').style.display='block'; el('b_foyer').style.display='block';
+}
+function showReceivedVerdict(pl){
+  // the sender opening the classification they got back
+  const win = pl.verdict==='GRANTED';
+  el('verdict_doc').innerHTML =
+    `<div class="kick" style="letter-spacing:.18em;font-size:11px;color:#8a2b1f;margin-bottom:6px">RE: ${esc(pl.orig?pl.orig.n:'your footage')}</div>`+
+    `<h1 class="${win?'dmg':'ok'}">${win?'THEY CAUGHT IT.':'NO HAND COULD.'}</h1>`+
+    `<div class="rule"></div><div class="sub">${win?`${esc(pl.from)} caught the grab you missed, on try ${(pl.n||0)+1}. it was reachable the whole time. that one's on you.`:`${esc(pl.from)} reached for it and missed too. the claw had you. you're cleared — nobody was catching that.`}</div>`;
+  el('p_verdict').classList.add('on');
+  el('b_reply').style.display='';
+  el('b_reply').textContent='CALL ANOTHER HAND'; el('b_reply').onclick=()=>enterOwnTower();
+  el('b_climb').onclick=()=>enterOwnTower();
+  mode='verdict';
+}
+
+/* ---------- reset ---------- */
+function resetToPit(){
+  zonesThisRun=[]; foundThisRun=false;
+  const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
+  HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
+  attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
+  camY = HAND.y+60;
+}
+
+/* ============================================================ THE DAILY GRAB */
+function dailyDoneToday(){ return dailyData.day >= dayNum(); }   // >= : a wound-back clock can't replay past days
+function dailyBar(pct){
+  const f=Math.max(0,Math.min(10,Math.round(pct/10)));
+  return '🟧'.repeat(f)+'⬛'.repeat(10-f);
+}
+function punchCardHTML(){
+  const p=dailyData.punches;
+  const next = p<3?3 : p<7?7 : p<30?30 : null;
+  const show = next||30;
+  let dots='';
+  for(let i=0;i<Math.min(show,30);i++)
+    dots += `<span style="display:inline-block;width:11px;height:11px;border-radius:50%;margin:1.5px;${i<p?'background:#e7c04b;':'border:1px solid #4a473c;'}"></span>`;
+  return `<div class="sub" style="margin-top:8px;"><b>the punch card</b> · 🔥 ${p}${next?` · next prize at ${next}`:' · the card is full'}`+
+    `<div style="margin-top:5px;line-height:1;">${dots}</div>`+
+    `<div style="color:#8a8796;font-size:11px;margin-top:4px;">OUT SICK notes: ${dailyData.sick} — miss one day and the card survives. refills weekly.</div></div>`;
+}
+function dailyResultHTML(){
+  const d=dailyData;
+  return `<h1>${d.pct}%${d.pct>=100?' 💯':''}</h1>`+
+    `<div class="sub" style="font-size:15px;letter-spacing:1px;">${dailyBar(d.pct)}</div>`+
+    `<div class="sub">${d.falls} fall${d.falls===1?'':'s'}${d.bestSave?` · best save −${d.bestSave}%`:''} · 🔥 ${d.punches}</div>`+
+    `<div class="rule"></div>`+punchCardHTML()+
+    `<div class="sub" style="color:#8a8796;font-size:11px;margin-top:8px;">the machine rebuilds at midnight. come take tomorrow's shot.</div>`;
+}
+function dailyShareText(){
+  const d=dailyData;
+  return `THE DAILY GRAB #${d.day-DAILY_EPOCH}\n${dailyBar(d.pct)} ${d.pct}%${d.pct>=100?' 💯':''}\n`+
+    `${d.falls} fall${d.falls===1?'':'s'}${d.bestSave?` · clutch save −${d.bestSave}%`:''} · 🔥${d.punches}\n`+
+    location.origin+location.pathname;
+}
+function openDaily(){
+  if(mode!=='play' || dailyActive) return;
+  mode='daily_menu';
+  const dayNo = dayNum()-DAILY_EPOCH;
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#85510b;">THE DAILY GRAB · day ${dayNo}</div>`;
+  if(dailyDoneToday()){
+    h += dailyResultHTML();
+    el('b_dailygo').style.display='none'; el('b_dailyshare').style.display='block';
+  } else {
+    const prev = dailyData.day>0 ? dailyData.pct : 0;
+    h += `<h1>one machine. one day. one shot.</h1>`+
+      `<div class="sub">today the whole world climbs the <b>same strange machine</b> — built this morning, gone at midnight. `+
+      `<b>3:00</b> on the clock. your highest point is your number.</div>`+
+      `<div class="rule"></div>`+
+      `<div class="sub"><b>the pot:</b> 2¢ for clocking in + 5¢ a zone cleared${prev>0?` — <b>doubled</b> if you beat your last daily (${prev}%)`:''}.<br>`+
+      `<b>the card:</b> a punch for showing up. 3 punches — holds. 7 — a finish. 30 — the gold one.</div>`+
+      punchCardHTML()+
+      `<div class="sub" style="color:#8a8796;font-size:11px;margin-top:8px;">one ranked shot per day. no notes up there, no summit — just you, the clock, and everyone else's number.</div>`;
+    el('b_dailygo').style.display='block'; el('b_dailyshare').style.display='none';
+  }
+  el('daily_doc').innerHTML = h;
+  el('p_daily').classList.add('on');
+}
+function startDaily(){
+  if(dailyDoneToday() || dailyActive || mode!=='daily_menu') return;
+  el('p_daily').classList.remove('on');
+  const dn = dayNum();
+  buildTower(70707 + dn);                // today's machine — same for the whole world
+  // THE CARD SETTLES WHEN YOU CLOCK IN. showing up is the currency; the result comes at 0:00.
+  // stamping the day NOW also burns the attempt — a reload mid-shot forfeits it (0%), never retries it.
+  dailyPrevPct = dailyData.day>0 ? dailyData.pct : 0;    // last completed daily = the bar to beat
+  const wk=Math.floor(dn/7);             // weekly OUT SICK refill, before the gap check
+  if(wk!==dailyData.sickWk){ dailyData.sick=1; dailyData.sickWk=wk; }
+  dailySickUsed=false;
+  if(dailyData.day>0){
+    const gap = dn - dailyData.day;      // 1 = consecutive; 2 = missed one day; 3+ = the card resets
+    if(gap===2 && dailyData.sick>0){ dailyData.sick--; dailySickUsed=true; }
+    else if(gap>1){ dailyData.punches=0; }
+  }
+  dailyData.punches++;
+  // punch prizes — earned by showing up, never buyable, kept forever even if the streak breaks
+  dailyPrizes=[];
+  if(dailyData.punches>=3 && !studOwned.includes('punchcard')){ studOwned.push('punchcard'); dailyPrizes.push('THE PUNCH CARD holds — stamped into the machine.'); }
+  if(dailyData.punches>=7 && !finishes.includes('regular')){ finishes.push('regular'); dailyPrizes.push('THE REGULAR — a finish for hands that keep showing up.'); }
+  if(dailyData.punches>=30 && !finishes.includes('employee')){ finishes.push('employee'); dailyPrizes.push('EMPLOYEE OF THE MONTH. gold. obviously.'); }
+  dailyData.day=dn; dailyData.pct=0; dailyData.falls=0; dailyData.bestSave=0;
+  save();
+  dailyActive=true; dailyT=DAILY_LEN; dailyWall=Date.now(); dailyPeak=0; dailyFalls=0; dailyBestSave=0;
+  currentFall=null; fallTrack=null; hasFlung=true;
+  resetToPit(); mode='play';
+}
+function endDaily(){
+  dailyActive=false;
+  const pct=Math.floor(dailyPeak);
+  // the pot: clocking in pays, altitude pays more, beating yourself pays double
+  const zonesCleared = ZONES.filter(z=>pct>=Math.min(z.top,100)).length;   // a 100% summit clears them all
+  let pot = 2 + 5*zonesCleared;
+  const doubled = dailyPrevPct>0 && pct>dailyPrevPct;
+  if(doubled) pot*=2;
+  quarters += pot;
+  dailyData.pct=pct; dailyData.falls=dailyFalls; dailyData.bestSave=dailyBestSave;
+  save();
+  currentFall=null; fallTrack=null;      // nothing from the daily tower survives into the main machine
+  buildTower(70707); resetToPit();       // the main machine comes back
+  // the receipt
+  mode='daily_menu';
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#85510b;">THE DAILY GRAB · day ${dailyData.day-DAILY_EPOCH} · TIME.</div>`+
+    dailyResultHTML()+
+    `<div class="rule"></div>`+
+    `<div class="sub"><b>the pot: ¢${pot}</b>${doubled?' — DOUBLED. yesterday has been informed.':''}</div>`+
+    (dailySickUsed?`<div class="sub" style="color:#e7c04b;">an OUT SICK note covered the day you missed. the card lives.</div>`:'')+
+    dailyPrizes.map(p=>`<div class="sub ok" style="margin-top:5px;">★ ${p}</div>`).join('');
+  el('daily_doc').innerHTML = h;
+  el('b_dailygo').style.display='none'; el('b_dailyshare').style.display='block';
+  el('p_daily').classList.add('on');
+}
+
+/* ============================================================ THE OPENING (cold open) */
+function iHand(g,x,y,r,carry){
+  g.fillStyle='#e85c3c'; g.beginPath(); g.arc(x,y,r,0,7); g.fill();
+  g.fillStyle='#fff'; g.beginPath(); g.arc(x-r*0.35,y-r*0.26,r*0.3,0,7); g.arc(x+r*0.35,y-r*0.26,r*0.3,0,7); g.fill();
+  g.fillStyle='#111'; g.beginPath(); g.arc(x-r*0.35,y-r*0.22,r*0.14,0,7); g.arc(x+r*0.35,y-r*0.22,r*0.14,0,7); g.fill();
+  if(carry){ g.fillStyle='#f2efe6'; g.beginPath(); g.arc(x+r*0.72,y+r*0.6,r*0.3,0,7); g.fill();
+    g.fillStyle='#111'; g.beginPath(); g.arc(x+r*0.74,y+r*0.62,r*0.13,0,7); g.fill(); }
+}
+function iMoose(g,x,y,s){
+  g.fillStyle='#9a7b57';
+  g.beginPath(); g.ellipse(x-s*0.85,y-s*0.55,s*0.28,s*0.42,-0.5,0,7); g.ellipse(x+s*0.85,y-s*0.55,s*0.28,s*0.42,0.5,0,7); g.fill();
+  g.beginPath(); g.ellipse(x,y,s*1.12,s,0,0,7); g.fill();
+  g.fillStyle='#fff'; g.beginPath(); g.arc(x,y-s*0.12,s*0.4,0,7); g.fill();
+  g.fillStyle='#111'; g.beginPath(); g.arc(x,y-s*0.07,s*0.18,0,7); g.fill();
+  g.strokeStyle='rgba(0,0,0,.28)'; g.lineWidth=2; g.beginPath(); g.arc(x,y+s*0.28,s*0.34,0.15*Math.PI,0.85*Math.PI); g.stroke();
+}
+function iClaw(g,x,y){ g.strokeStyle='#c6cad8'; g.lineWidth=3; g.lineCap='round';
+  g.beginPath(); g.moveTo(x,y-34); g.lineTo(x,y); g.moveTo(x,y); g.lineTo(x-15,y+20); g.moveTo(x,y); g.lineTo(x+15,y+20); g.moveTo(x,y); g.lineTo(x,y+22); g.stroke(); }
+function renderIntro(){
+  ctx.clearRect(0,0,Wc,Hc);
+  const g=ctx.createLinearGradient(0,0,0,Hc); g.addColorStop(0,'#0e0f16'); g.addColorStop(1,'#07080d'); ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
+  const b=INTRO[introBeat]||INTRO[0]; const cx=Wc/2, midY=Hc*0.38, t=Math.min(1,introT/1.5);
+  if(b.key==='pit'){ for(let i=0;i<6;i++){ ctx.fillStyle='#8b4a5c'; ctx.beginPath(); ctx.arc(34+i*(Wc-68)/5,Hc*0.6,16,0,7); ctx.fill(); } iHand(ctx,cx,Hc*0.6-15,12); }
+  else if(b.key==='moose'){ iMoose(ctx,cx-24,midY,58); iHand(ctx,cx+74,midY+30,13); }
+  else if(b.key==='count'){ iMoose(ctx,cx-24,midY,56); iHand(ctx,cx+74,midY+28,13);
+    ctx.fillStyle='rgba(198,200,214,.55)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillText('one · two · hands up', cx, Hc*0.18); }
+  else if(b.key==='taught'){ iMoose(ctx,cx-6,midY+46,50); iHand(ctx,cx+44,midY-36,13);
+    ctx.strokeStyle='rgba(231,192,75,.4)'; ctx.setLineDash([4,5]); ctx.beginPath(); ctx.moveTo(cx-6,midY+16); ctx.quadraticCurveTo(cx+14,midY-64,cx+44,midY-36); ctx.stroke(); ctx.setLineDash([]); }
+  else if(b.key==='sacrifice'){ const cy=-20+t*(midY+14); iHand(ctx,cx,midY+18,11); iMoose(ctx,cx,midY-6,42*(0.75+t*0.35)); iClaw(ctx,cx,cy);
+    if(t>0.86){ ctx.fillStyle='rgba(255,255,255,'+((t-0.86)/0.14*0.6).toFixed(2)+')'; ctx.fillRect(0,0,Wc,Hc); } }
+  else if(b.key==='eye'){ ctx.strokeStyle='rgba(150,150,160,.2)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,midY-30); ctx.lineTo(cx,-4); ctx.stroke();
+    const ex=cx-t*(cx-42), ey=midY+t*(Hc*0.6-midY); ctx.fillStyle='#f2efe6'; ctx.beginPath(); ctx.arc(ex,ey,8,0,7); ctx.fill(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(ex,ey,3.4,0,7); ctx.fill();
+    iHand(ctx,42,Hc*0.6,12); }
+  else if(b.key==='decide'){ ctx.strokeStyle='rgba(140,143,158,.22)'; ctx.lineWidth=1;
+    for(let i=0;i<9;i++){ ctx.beginPath(); ctx.arc(cx+(i%2?30:-30),Hc*0.5-i*26,5,0,7); ctx.stroke(); }
+    iHand(ctx,cx,Hc*0.62,16,true); }
+  // dialogue
+  ctx.textAlign='center'; ctx.font='500 14px ui-monospace,monospace';
+  const raw=[]; (b.lines||[]).forEach(L=> String(L).split('\n').forEach(sub=> wrapLines(ctx,sub,Wc-52).forEach(w=>raw.push({w, q:sub.trim().startsWith('"')})) ));
+  let ty=Hc*0.74-raw.length*11;
+  raw.forEach((o,i)=>{ ctx.fillStyle=o.q?'rgba(231,206,120,.96)':'rgba(226,228,236,.9)'; ctx.fillText(o.w, cx, ty+i*22); });
+  ctx.fillStyle='rgba(200,203,216,.42)'; ctx.font='600 10px ui-monospace,monospace';
+  ctx.fillText(introBeat>=INTRO.length-1?'tap to climb':'tap to continue', cx, Hc-22);
+}
+function introAdvance(){ introBeat++; introT=0; if(introBeat>=INTRO.length) finishIntro(); }
+function finishIntro(){ seenIntro=true; save(); el('b_introskip').style.display='none';
+  mode='play'; el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }
+function playIntro(){ introBeat=0; introT=0; mode='intro'; el('b_introskip').style.display='block';
+  el('b_archive').style.display='none'; el('b_foyer').style.display='none'; el('p_foyer').classList.remove('on'); }
+window.__playIntro = ()=>{ if(mode==='foyer'||mode==='play') playIntro(); };
+
+/* ============================================================ BOOT */
+function boot(){
+  resize(); buildTower(); load();
+  bossLine = FIELD_NOTES[(Date.now()>>10)%FIELD_NOTES.length];
+  el('b_archive').onclick = ()=>openRecord();
+  el('b_foyer').onclick = ()=>openFoyer();
+  el('b_introskip').onclick = ()=>finishIntro();
+  el('b_daily').onclick = ()=>openDaily();
+  el('b_dailyclose').onclick = ()=>{ el('p_daily').classList.remove('on'); if(mode==='daily_menu') mode='play'; };
+  el('b_dailygo').onclick = ()=>startDaily();
+  el('b_dailyshare').onclick = ()=>{
+    const txt = dailyShareText();
+    if(navigator.share){ navigator.share({text:txt}).catch(()=>{}); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>{ el('b_dailyshare').textContent='COPIED — go compare'; },()=>{}); }
+    else prompt('copy this', txt);
+  };
+  updateFoyerBadge();
+  const inc = parseIncoming();
+  if(inc){ resetToPit(); startAppeal(inc); }
+  else {
+    // land on the nearest pit stud, already gripping, dusty if returning
+    resetToPit();
+    if(dusty){ setTimeout(()=>{ HAND._wiped=true; }, 900); }
+    if(!seenIntro){ playIntro(); }                 // fresh start: play the opening
+    else { mode='play'; el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* one fixed-step of the sim, mirroring the main loop body (for headless driving) */
+function tickOnce(){
+  if(noteHold || mode==='intro') return;
+  if(hitstop>0) hitstop-=DT;
+  if(slowmo>0) slowmo-=DT;
+  if(flash>0) flash=Math.max(0,flash-DT*4);
+  if(bossLineT>0) bossLineT-=DT;
+  if(reveal){ reveal.t+=DT; if(reveal.t>4.6) reveal=null; }
+  if(dailyActive && mode==='play'){                 // mirror of the frame-loop daily clock
+    dailyT -= DT;
+    const wallLeft = DAILY_LEN - (Date.now()-dailyWall)/1000;
+    if(wallLeft < dailyT) dailyT = wallLeft;
+    if(dailyT <= 0){ endDaily(); return; }
+  }
+  const active = (mode==='play'||mode==='appeal_play');
+  if(active && hitstop<=0){ const scale=slowmo>0?0.4:1;
+    if(mode==='appeal_play') stepTakeover(DT*scale); else step(DT*scale); }
+  else if(mode==='appeal_watch'){ advanceGhost(DT); }
+}
+
+/* debug hooks (like his other games: __bfe etc.) */
+window.__thwap = {
+  goto:(pct)=>{ const y=PIT_Y+TOWER_H*pct/100; const s=nearestStud(CX,y,600)||{x:CX,y,type:'plastic'};
+    HAND.x=s.x;HAND.y=s.y;HAND.peakY=s.y; attachTo(s,0,0); camY=s.y+60; },
+  fall:()=>{ HAND.mode='fly'; HAND.vx=120; HAND.vy=-1500; fallTrack=null; },
+  press:()=>down(), release:()=>up(),
+  tick:(n=1)=>{ for(let i=0;i<n;i++) tickOnce(); return window.__thwap.state(); },
+  paint:()=>{ render(); return true; },        // force a frame while headless
+  studs:()=>STUDS.length,
+  towerSig:()=>STUDS.map(s=>Math.round(s.x)+':'+Math.round(s.y)+s.type[0]).join('|').length,
+  ys:()=>STUDS.filter(grippable).map(s=>Math.round(s.y)).sort((a,b)=>a-b),
+  // for each grippable stud, is there another grippable stud reachable above it?
+  climbAudit:()=>{ const g=STUDS.filter(grippable).slice().sort((a,b)=>a.y-b.y);
+    const APEX=397, RE=REACH; let worst=null, wallY=null;
+    for(const s of g){ if(s.y>TOP_Y-260) continue;
+      // best reachable higher stud: within horizontal span and vertical <= apex+reach
+      let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue;
+        const dx=Math.abs(t.x-s.x); if(dx>240) continue;
+        const need=dy - RE; if(need<best) best=need; }
+      if(best>APEX){ if(!worst||best>worst){worst=best; wallY=Math.round(s.y);} } }
+    return {climbable: worst===null, hardestNeed:worst, wallY, apexBudget:APEX+RE}; },
+  consts:()=>({REACH, apex:Math.round(LAUNCH_MAX*0.88*LAUNCH_MAX*0.88/(2*G))}),
+  handle:(h)=>{ myHandle=h; save(); },
+  link:()=>window.__lastLink,
+  makeAppeal:()=>{ // build a fake named fall and its footage link (round-trip test)
+    currentFall={zone:ZONES[2],no:7,name:'THE OPTIMIST',pct:61,fromPct:54,toPct:12,wraps:3,ceremony:true,
+      pts:[[210,3200],[190,3000],[240,2600],[160,2100],[200,1700]].map(p=>({x:p[0],y:p[1]})),
+      s0:{x:200,y:2000,vx:120,vy:-900},line:FINDINGS.manual[0]};
+    return buildAppealLink(currentFall); },
+  caseStart:(id)=>{ resetToPit(); startAppeal(casePayload(CASES.find(c=>c.id===id)||CASES[0])); return 'case '+id; },
+  freeze:(v)=>{ frozen=!!v; return frozen; },
+  intro:()=>({mode, beat:introBeat, key:(INTRO[introBeat]||{}).key, total:INTRO.length, seen:seenIntro}),
+  endless:()=>({builtToY, studs:STUDS.length, maxStudY:Math.round(Math.max.apply(null,STUDS.map(s=>s.y))), TOP_Y}),
+  extend:(y)=>{ extendTowerTo(y); return builtToY; },
+  daily:()=>({active:dailyActive, t:+dailyT.toFixed(1), peak:+dailyPeak.toFixed(1), falls:dailyFalls,
+    bestSave:dailyBestSave, seed:towerSeed, data:JSON.parse(JSON.stringify(dailyData))}),
+  dailyOpen:()=>{ openDaily(); return mode; },
+  dailyStart:()=>{ startDaily(); return {seed:towerSeed, active:dailyActive}; },
+  dailyEnd:()=>{ if(dailyActive) endDaily(); return dailyShareText(); },
+  setDay:(n)=>{ dayOverride=n; return dayNum(); },
+  dailySet:(o)=>{ Object.assign(dailyData,o); return JSON.parse(JSON.stringify(dailyData)); },
+  audit:(loY,hiY)=>{ const g=STUDS.filter(s=>grippable(s)&&s.y>=loY&&s.y<=hiY).sort((a,b)=>a.y-b.y);
+    let worst=0, walls=0, at=null;
+    for(const s of g){ let best=1e9;
+      for(const t of g){ const dy=t.y-s.y; if(dy<40) continue; if(Math.abs(t.x-s.x)>240) continue; const need=dy-REACH; if(need<best) best=need; }
+      if(best>397){ walls++; if(best>worst){worst=best; at=Math.round(s.y);} } }
+    return {count:g.length, worstGap:Math.round(worst), unclearableWalls:walls, wallAt:at}; },
+  introAdvance:()=>{ introAdvance(); return {mode, beat:introBeat}; },
+  grantQ:(n)=>{ quarters+=n; save(); return quarters; },
+  story:()=>({zones:zonesReached.slice(), chapters:Object.keys(STORY.chapters), read:chaptersRead.slice()}),
+  foyer:()=>({quarters, finishes:finishes.slice(), skin, bgWorn, studWorn, bgOwned:bgOwned.slice(), studOwned:studOwned.slice(), tokenCount:TOKENS.length}),
+  tokens:()=>TOKENS.map(t=>[Math.round(t.x),Math.round(t.y),t.v,t.got?1:0]),
+  tp:(x,y)=>{ HAND.mode='fly'; HAND.x=x; HAND.y=y; HAND.vx=0; HAND.vy=-160; HAND.peakY=y; camY=y+60; },
+  grippableStuds:()=>STUDS.filter(grippable).map(s=>[Math.round(s.x),Math.round(s.y)]),
+  motion:(k,m)=>{ recordMotion(k,m); return {guide:guide[k], pending:pendingStamp}; },
+  record:()=>JSON.parse(JSON.stringify({guide:guide, fallLog:fallLog, arch:archStatus})),
+  parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
+  hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
+    charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null,cause:HAND.lastCause||null,
+    side:HAND.mode==='attach'?+Math.cos(HAND.ang).toFixed(2):null}),
+  state:()=>({mode,pct:+pctOf(HAND.y).toFixed(1),best:+bestPct.toFixed(1),handle:myHandle,frame:simFrame,
+    handMode:HAND.mode,attempts:takeover?takeover.attempts:null,
+    noteHold:noteHold, storyIdx:storyIdx,
+    tw:takeover?+(takeover.window||0).toFixed(3):null, tsaved:takeover?takeover.saved:null,
+    ty:takeover?Math.round(HAND.y-takeover.failY):null}),
+};
+
+// a link dropped into an already-open tab should also fire the appeal
+addEventListener('hashchange', ()=>{
+  // never hijack a ranked daily attempt (or its menu) — the appeal would be judged on the wrong tower
+  if(dailyActive || mode==='daily_menu') return;
+  if(mode==='appeal_intro'||mode==='appeal_watch'||mode==='appeal_play'||mode==='verdict') return;
+  const inc = parseIncoming();
+  if(inc){ resetToPit(); startAppeal(inc); }
+});
+
+boot();
+</script>
+</body>
+</html>
