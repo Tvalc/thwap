@@ -992,21 +992,21 @@ function paintHand(g, X, Y, r, fin, vx, vy){
   if(gl) asanoBloom(X, Y, r*2.6, gl, fin.glow?0.4:0.22);
   // soft contact shadow beneath
   g.save(); g.globalAlpha=0.28; g.fillStyle='#000'; g.beginPath(); g.ellipse(X,Y+r*0.9,r*0.85,r*0.32,0,0,7); g.fill(); g.restore();
-  // body with a key-light radial (light comes from upper-left, per the colour script)
-  if(fin.body2){
-    const grd=g.createRadialGradient(X-r*0.4,Y-r*0.48,r*0.1, X,Y,r*1.1);
-    if(fin.metal){ grd.addColorStop(0,'#ffffff'); grd.addColorStop(0.5,fin.body); grd.addColorStop(1,fin.body2); }
-    else { grd.addColorStop(0, hexLerp(fin.body,'#ffffff',0.35)); grd.addColorStop(0.6,fin.body); grd.addColorStop(1,fin.body2); }
-    g.fillStyle=grd;
-  } else { g.fillStyle=fin.body; }
-  g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
-  // warm rim light on the lit edge
-  g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.5;
+  // BODY: pixel-art sprite (palette-swapped per finish), else primitive for rgba finishes (ghost)
+  const bands=handBands(fin);
+  if(bands){
+    blitSprite(g, 'hand', X, Y, r*2.5, bands);
+  } else {
+    if(fin.body2){ const grd=g.createRadialGradient(X-r*0.4,Y-r*0.48,r*0.1, X,Y,r*1.1);
+      grd.addColorStop(0, hexLerp('#cfd6e2','#ffffff',0.2)); grd.addColorStop(1,fin.body); g.fillStyle=grd; }
+    else g.fillStyle=fin.body;
+    g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
+  }
+  // warm rim light on the lit edge — sits over the sprite silhouette
+  g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.45;
   g.strokeStyle= rgbaOf(asanoPal?asanoPal.key:'#ffd27a',0.9); g.lineWidth=Math.max(1,r*0.10);
-  g.beginPath(); g.arc(X,Y,r*0.96,Math.PI*1.05,Math.PI*1.75); g.stroke(); g.restore();
+  g.beginPath(); g.arc(X,Y,r*1.02,Math.PI*1.05,Math.PI*1.72); g.stroke(); g.restore();
   if(fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=Math.max(1,r*0.09); g.beginPath(); g.arc(X,Y,r,0,7); g.stroke(); }
-  // core highlight
-  g.save(); g.globalAlpha=0.4; g.fillStyle='#fff'; g.beginPath(); g.arc(X-r*0.36,Y-r*0.4,r*0.22,0,7); g.fill(); g.restore();
   paintEyes(g, X, Y, r, fin.eye, vx||0, vy||0, fin);
 }
 function drawHand(){
@@ -1216,6 +1216,57 @@ function asanoBloom(x,y,r,col,a){
   const g=ctx.createRadialGradient(x,y,0,x,y,r);
   g.addColorStop(0, rgbaOf(col,a)); g.addColorStop(0.5, rgbaOf(col,a*0.35)); g.addColorStop(1, rgbaOf(col,0));
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); ctx.restore();
+}
+
+/* ---- SPRITE ENGINE — hand-authored pixel-art, baked once + blitted nearest-neighbour.
+   HYBRID PLAN: pixel sprites live here as data (single-file). Later, a Makko-painted image
+   dropped into ASANO_ART[key] overrides the pixel-art in the SAME slot — no other change. */
+const ASANO_ART = {};                 // key -> HTMLImageElement (Makko art overrides pixel-art when present)
+const SPRITE_DEFS = {
+  // the sticky hand: a soft googly blob. '.'=clear o=outline s=shadow m=mid h=highlight.
+  // eyes are NOT in the sprite — the code-drawn googly eyes (which track velocity) go on top.
+  hand: { map:{o:0,s:1,m:2,h:3}, rows:[
+    '......oooo......',
+    '....oohhmmoo....',
+    '...ohhhmmmmoo...',
+    '..ohhhmmmmmmso..',
+    '.ohhhmmmmmmmsso.',
+    '.ohhmmmmmmmmsso.',
+    'ohhmmmmmmmmmssso',
+    'ohmmmmmmmmmmssso',
+    'ohmmmmmmmmmmssso',
+    'ohmmmmmmmmmsssso',
+    '.ommmmmmmmsssso.',
+    '.ommmmmmmssssso.',
+    '..ommmmmssssso..',
+    '...ommmssssoo...',
+    '....oosssooo....',
+    '......oooo......',
+  ]},
+};
+const _spriteCache={};
+function bakeSprite(key, cols){
+  const ck=key+'|'+cols.join(','); if(_spriteCache[ck]) return _spriteCache[ck];
+  const def=SPRITE_DEFS[key]; const w=def.rows[0].length, h=def.rows.length;
+  const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d');
+  for(let y=0;y<h;y++){ const row=def.rows[y];
+    for(let x=0;x<w;x++){ const ch=row[x]; if(ch==='.') continue; const col=cols[def.map[ch]]; if(!col) continue;
+      g.fillStyle=col; g.fillRect(x,y,1,1); } }
+  _spriteCache[ck]=c; return c;
+}
+// blit a sprite centred at (X,Y), sized to `size` screen px, crisp pixels. Makko art wins if loaded.
+function blitSprite(g, key, X, Y, size, cols){
+  const art=ASANO_ART[key];
+  const img = (art && art.complete && art.naturalWidth) ? art : bakeSprite(key, cols);
+  const sm=g.imageSmoothingEnabled; g.imageSmoothingEnabled = !!art;   // pixel-art hard, painted art smooth
+  g.drawImage(img, X-size/2, Y-size/2, size, size);
+  g.imageSmoothingEnabled=sm;
+}
+// finish -> the 4 pixel bands [outline, shadow, mid, highlight]. rgba bodies (ghost) fall back to primitive.
+function handBands(fin){
+  const b=fin.body; if(!b || b[0]!=='#') return null;
+  const dark=fin.body2||hexLerp(b,'#000000',0.35);
+  return [ hexLerp(dark,'#000000',0.35), dark, b, hexLerp(b,'#ffffff', fin.metal?0.6:0.42) ];
 }
 // cinematic post: colour-grade wash, then a soft vignette, then fine film grain
 let _grain=null;
@@ -2205,6 +2256,10 @@ window.__thwap = {
   dailyEnd:()=>{ if(dailyActive) endDaily(); return dailyShareText(); },
   setDay:(n)=>{ dayOverride=n; return dayNum(); },
   dailySet:(o)=>{ Object.assign(dailyData,o); return JSON.parse(JSON.stringify(dailyData)); },
+  spriteInfo:(id)=>{ const f=FINISHES[id||'factory']; const c=bakeSprite('hand', handBands(f)); const g=c.getContext('2d');
+    const d=g.getImageData(0,0,c.width,c.height).data; let n=0; const bands={};
+    for(let i=0;i<d.length;i+=4){ if(d[i+3]>0){ n++; const k=d[i]+','+d[i+1]+','+d[i+2]; bands[k]=(bands[k]||0)+1; } }
+    return {w:c.width,h:c.height,nonTransparent:n, distinctColors:Object.keys(bands).length, url:c.toDataURL('image/png')}; },
   audit:(loY,hiY)=>{ const g=STUDS.filter(s=>grippable(s)&&s.y>=loY&&s.y<=hiY).sort((a,b)=>a.y-b.y);
     let worst=0, walls=0, at=null;
     for(const s of g){ let best=1e9;
