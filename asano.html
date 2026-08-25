@@ -935,17 +935,19 @@ function drawStud(s){
     ctx.strokeStyle='rgba(255,190,210,.35)'; ctx.lineWidth=2.4*S; ctx.setLineDash([1.6*S,2.2*S]); ctx.beginPath(); ctx.arc(X,Y,r+1,0,7); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle='rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(X-r*0.32,Y-r*0.34,r*0.24,0,7); ctx.fill();
   } else {
-    // PLASTIC — solid, dependable, warmly lit lantern-peg. faceted, opaque, grippable.
-    const r=8.5*S+2, chute=!!s.chute;
-    const base=chute?'#ffd968':'#9aa0b4', hi=chute?'#fff2c0':'#d6dbe8', lo=chute?'#9a6a12':'#4a4f60';
-    asanoBloom(X,Y,r*(chute?2.6:1.7), chute?'#ffd968':glow, (chute?0.5:0.22)*depth);
+    // PLASTIC — a glossy candy gem, bright and grippable. per-zone colour so it pops on the backdrop.
+    const r=9*S+2, chute=!!s.chute;
+    const cc = chute ? '#ffd23a' : (asanoPal?asanoPal.stud:'#39e6d6');
+    const base=cc, hi=hexLerp(cc,'#ffffff',0.55), lo=hexLerp(cc,'#000000',0.42);
+    asanoBloom(X,Y,r*(chute?2.8:2.1), cc, (chute?0.55:0.4)*depth);
     studPath(X,Y,r,'gem');
     const g=ctx.createLinearGradient(X,Y-r,X,Y+r);
-    g.addColorStop(0,hi); g.addColorStop(0.5,base); g.addColorStop(1,lo);
+    g.addColorStop(0,hi); g.addColorStop(0.45,base); g.addColorStop(1,lo);
     ctx.fillStyle=g; ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1.2*S; ctx.stroke();
-    // top facet specular
-    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(X,Y-r*0.9); ctx.lineTo(X+r*0.4,Y-r*0.2); ctx.lineTo(X-r*0.4,Y-r*0.2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=hexA(hexLerp(cc,'#000000',0.5),0.7); ctx.lineWidth=1.3*S; ctx.stroke();
+    // bright facet gloss + hard glint (candy plastic tell)
+    ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(X,Y-r*0.85); ctx.lineTo(X+r*0.42,Y-r*0.15); ctx.lineTo(X-r*0.42,Y-r*0.15); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(X-r*0.22,Y-r*0.32,r*0.16,0,7); ctx.fill();
   }
   ctx.restore();
 }
@@ -990,22 +992,17 @@ function paintHand(g, X, Y, r, fin, vx, vy){
   // ambient bloom — the hand is a little light source in a dark machine
   const gl = fin.glow || (asanoPal?asanoPal.glow:null);
   if(gl) asanoBloom(X, Y, r*2.6, gl, fin.glow?0.4:0.22);
-  // soft contact shadow beneath
-  g.save(); g.globalAlpha=0.28; g.fillStyle='#000'; g.beginPath(); g.ellipse(X,Y+r*0.9,r*0.85,r*0.32,0,0,7); g.fill(); g.restore();
-  // BODY: pixel-art sprite (palette-swapped per finish), else primitive for rgba finishes (ghost)
-  const bands=handBands(fin);
-  if(bands){
-    blitSprite(g, 'hand', X, Y, r*2.5, bands);
+  // BODY: high-fidelity glossy hero. a Makko-painted PNG in ASANO_ART.hand overrides it (same slot);
+  // rgba finishes (ghost) still fall back to the simple translucent primitive.
+  const art=ASANO_ART.hand;
+  if(art && art.complete && art.naturalWidth){
+    g.drawImage(art, X-r*1.3, Y-r*1.3, r*2.6, r*2.6);
+  } else if(fin.body && fin.body[0]==='#'){
+    const spr=bakeHandHiFi(fin); g.drawImage(spr, X-r*1.35, Y-r*1.35, r*2.7, r*2.7);
   } else {
-    if(fin.body2){ const grd=g.createRadialGradient(X-r*0.4,Y-r*0.48,r*0.1, X,Y,r*1.1);
-      grd.addColorStop(0, hexLerp('#cfd6e2','#ffffff',0.2)); grd.addColorStop(1,fin.body); g.fillStyle=grd; }
-    else g.fillStyle=fin.body;
-    g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
+    g.save(); g.globalAlpha=0.28; g.fillStyle='#000'; g.beginPath(); g.ellipse(X,Y+r*0.9,r*0.85,r*0.32,0,0,7); g.fill(); g.restore();
+    g.fillStyle=fin.body; g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
   }
-  // warm rim light on the lit edge — sits over the sprite silhouette
-  g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.45;
-  g.strokeStyle= rgbaOf(asanoPal?asanoPal.key:'#ffd27a',0.9); g.lineWidth=Math.max(1,r*0.10);
-  g.beginPath(); g.arc(X,Y,r*1.02,Math.PI*1.05,Math.PI*1.72); g.stroke(); g.restore();
   if(fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=Math.max(1,r*0.09); g.beginPath(); g.arc(X,Y,r,0,7); g.stroke(); }
   paintEyes(g, X, Y, r, fin.eye, vx||0, vy||0, fin);
 }
@@ -1118,14 +1115,16 @@ function hexLerp(a,b,t){ const A=_hx(a),B=_hx(b); return `rgb(${Math.round(A[0]+
 function _rgbLerp(a,b,t){ const A=_hx(a),B=_hx(b); return [Math.round(A[0]+(B[0]-A[0])*t),Math.round(A[1]+(B[1]-A[1])*t),Math.round(A[2]+(B[2]-A[2])*t)]; }
 function rgbaOf(c,a){ const A=_hx(c); return `rgba(${A[0]},${A[1]},${A[2]},${a})`; }
 // the colour script — keyframes by height %; the live palette lerps between the two around the camera.
+// BRIGHT FUN ARCADE colour script — glowing candy plastic + neon, lit-up coin-op cheer.
+// tops are bright & saturated; bottoms stay coloured (never muddy-black); keys are neon marquee light.
 const ASANO_KEYS = [
-  { pct:0,   name:'the pit',      top:'#432a1b', mid:'#2e1810', bot:'#150a06', fog:'#seed', key:'#ffb457', kx:0.26, ky:0.12, dust:'#ffcf92', glow:'#ffcf7a', silh:'#170c07', grade:'#3a1d0b', gA:0.10 },
-  { pct:20,  name:'the spill',    top:'#1d3327', mid:'#152820', bot:'#0a150f', fog:'#2c5a42', key:'#8fe6c0', kx:0.70, ky:0.13, dust:'#c6ffe6', glow:'#8fe0b8', silh:'#0c1a13', grade:'#123025', gA:0.09 },
-  { pct:42,  name:'the reef',     top:'#2d1032', mid:'#231028', bot:'#110716', fog:'#5a1c52', key:'#ff77b4', kx:0.30, ky:0.10, dust:'#ffb0dc', glow:'#ff8fc4', silh:'#180820', grade:'#2a0e2c', gA:0.11 },
-  { pct:65,  name:'the gallery',  top:'#102541', mid:'#0b1a30', bot:'#05101e', fog:'#2a4a7a', key:'#c8e0ff', kx:0.76, ky:0.07, dust:'#dcecff', glow:'#bcd8ff', silh:'#08121f', grade:'#0c1a30', gA:0.12 },
-  { pct:85,  name:'claw country', top:'#1b1738', mid:'#141026', bot:'#0a0816', fog:'#3a2c66', key:'#b0a4ff', kx:0.50, ky:0.06, dust:'#c8bfff', glow:'#a99cff', silh:'#0e0a1c', grade:'#161030', gA:0.11 },
-  { pct:100, name:'the cornice',  top:'#514a2b', mid:'#2a2512', bot:'#14110a', fog:'#8a7a44', key:'#fff0c4', kx:0.50, ky:0.05, dust:'#fff0c0', glow:'#ffe6a0', silh:'#14110a', grade:'#2a2410', gA:0.09 },
-  { pct:125, name:'the beyond',   top:'#0b0e24', mid:'#07081a', bot:'#03040e', fog:'#1a2050', key:'#9fb8ff', kx:0.50, ky:0.04, dust:'#bcccff', glow:'#9fb8ff', silh:'#070a18', grade:'#0a0c22', gA:0.12 },
+  { pct:0,   name:'the pit',      top:'#ff9a5b', mid:'#f2545b', bot:'#8e2a63', fog:'#ff7a6a', key:'#ffd95e', kx:0.26, ky:0.12, dust:'#fff0a8', glow:'#ffd95e', silh:'#5a1840', grade:'#ff8a4a', gA:0.05, stud:'#39e6d6' },
+  { pct:20,  name:'the spill',    top:'#5fe8c8', mid:'#22b6b0', bot:'#12688a', fog:'#5fffe0', key:'#a8fff0', kx:0.70, ky:0.13, dust:'#d6fff2', glow:'#7fffe0', silh:'#0d4a5a', grade:'#3fd8c0', gA:0.05, stud:'#ff6f9c' },
+  { pct:42,  name:'the reef',     top:'#ff86d2', mid:'#f24aa0', bot:'#8e1f78', fog:'#ff9ee0', key:'#ffc0ee', kx:0.30, ky:0.10, dust:'#ffd0f0', glow:'#ff9ae0', silh:'#5a1050', grade:'#ff6ac4', gA:0.05, stud:'#ffe24a' },
+  { pct:65,  name:'the gallery',  top:'#6cc0ff', mid:'#3a7cf0', bot:'#1f3aa8', fog:'#a8e0ff', key:'#d0ecff', kx:0.76, ky:0.07, dust:'#e6f4ff', glow:'#8fd0ff', silh:'#12206a', grade:'#4aa0ff', gA:0.05, stud:'#ffd24a' },
+  { pct:85,  name:'claw country', top:'#b98cff', mid:'#8a4fe6', bot:'#4a2596', fog:'#d0b0ff', key:'#e0c8ff', kx:0.50, ky:0.06, dust:'#e6d8ff', glow:'#c0a0ff', silh:'#2e1670', grade:'#a06aff', gA:0.05, stud:'#5affd0' },
+  { pct:100, name:'the cornice',  top:'#ffe08a', mid:'#ffa85c', bot:'#e0663e', fog:'#fff0b0', key:'#fff6d0', kx:0.50, ky:0.05, dust:'#fff4c0', glow:'#ffdc80', silh:'#8a3a2e', grade:'#ffb85c', gA:0.05, stud:'#39e6d6' },
+  { pct:125, name:'the beyond',   top:'#5f8cff', mid:'#3a52d0', bot:'#161a6e', fog:'#8fb0ff', key:'#bfe0ff', kx:0.50, ky:0.04, dust:'#d0e0ff', glow:'#9fc0ff', silh:'#101452', grade:'#5a70ff', gA:0.06, stud:'#ffd24a' },
 ];
 function asanoPalette(){
   const pct = clamp((camY-PIT_Y)/TOWER_H*100, 0, 125);
@@ -1135,7 +1134,7 @@ function asanoPalette(){
   return { top:hexLerp(a.top,b.top,t), mid:hexLerp(a.mid,b.mid,t), bot:hexLerp(a.bot,b.bot,t),
     key:hexLerp(a.key==='#seed'?a.top:a.key, b.key,t), kx:a.kx+(b.kx-a.kx)*t, ky:a.ky+(b.ky-a.ky)*t,
     dust:hexLerp(a.dust,b.dust,t), glow:hexLerp(a.glow,b.glow,t), silh:hexLerp(a.silh,b.silh,t),
-    grade:hexLerp(a.grade,b.grade,t), gA:a.gA+(b.gA-a.gA)*t };
+    grade:hexLerp(a.grade,b.grade,t), gA:a.gA+(b.gA-a.gA)*t, stud:hexLerp(a.stud,b.stud,t) };
 }
 // drifting light-motes — the signature Octopath atmosphere
 let DUST=[]; let _asanoNow=0, _asanoLast=0; let asanoPal=null;
@@ -1158,7 +1157,7 @@ function asanoDust(pal){
   }
   ctx.restore();
 }
-// parallax silhouette architecture — vertical struts + arches receding into the machine
+// parallax silhouette architecture — the machine's inner cabinet + glowing marquee bulbs
 function asanoSilhouettes(pal){
   ctx.save();
   for(let layer=0; layer<2; layer++){
@@ -1169,16 +1168,26 @@ function asanoSilhouettes(pal){
     for(let wy=y0; wy<camY + 1100/par; wy+=band){
       const Y=span(wy); if(Y<-400||Y>Hc+400) continue;
       const seed=Math.abs((wy*2654435761)%1000)/1000;
-      const pw=(26+seed*20)*S*wob;
-      // side pillars
+      const pw=(24+seed*16)*S*wob;
       ctx.fillRect(-4, Y-band*S*par*0.5, pw, band*S*par+2);
       ctx.fillRect(Wc-pw+4, Y-band*S*par*0.5, pw, band*S*par+2);
-      // a crossbeam / arch every other band
-      if((Math.floor(wy/band))%2===0){
-        const bh=(10+seed*10)*S*wob;
-        ctx.fillRect(pw-6, Y-bh/2, Wc-2*(pw-6), bh);
-      }
+      if((Math.floor(wy/band))%2===0){ const bh=(10+seed*10)*S*wob;
+        ctx.fillRect(pw-6, Y-bh/2, Wc-2*(pw-6), bh); }
     }
+  }
+  ctx.restore();
+  // marquee bulbs — warm/neon chase lights running up the near pillars (pure arcade)
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const par=0.56, gap=46, pw=(24+16)*S*0.7;
+  const y0=Math.floor((camY-900/par)/gap)*gap;
+  for(let wy=y0; wy<camY+1100/par; wy+=gap){
+    const Y=Hc*0.62-(wy-camY)*S*par; if(Y<-10||Y>Hc+10) continue;
+    const chase=(Math.sin(_asanoNow*3 + wy*0.03)*0.5+0.5);   // running chase
+    const on=0.4+0.6*chase, br=(2.4+chase*0.8)*S;
+    [pw*0.6, Wc-pw*0.6].forEach(bx=>{
+      asanoBloom(bx,Y, br*4, pal.key, 0.5*on);
+      ctx.fillStyle=rgbaOf('#ffffff',0.5+0.5*on); ctx.beginPath(); ctx.arc(bx,Y,br,0,7); ctx.fill();
+    });
   }
   ctx.restore();
 }
@@ -1268,6 +1277,40 @@ function handBands(fin){
   const dark=fin.body2||hexLerp(b,'#000000',0.35);
   return [ hexLerp(dark,'#000000',0.35), dark, b, hexLerp(b,'#ffffff', fin.metal?0.6:0.42) ];
 }
+// HIGH-FIDELITY hero: a glossy arcade-toy blob baked at 96px (crisp when displayed small).
+// same slot idea — ASANO_ART.hand (a Makko PNG) still overrides this in paintHand.
+function bakeHandHiFi(fin){
+  const b=(fin.body&&fin.body[0]==='#')?fin.body:'#e85c3c';
+  const key='hifi|'+fin.name+'|'+b; if(_spriteCache[key]) return _spriteCache[key];
+  const N=96, c=document.createElement('canvas'); c.width=c.height=N; const g=c.getContext('2d');
+  const cx=N/2, cy=N*0.52, r=N*0.40;
+  const dark=fin.body2||hexLerp(b,'#000000',0.4);
+  const lit=hexLerp(b,'#ffffff', fin.metal?0.7:0.5);
+  // drop shadow contact
+  g.save(); g.globalAlpha=0.22; g.fillStyle='#000'; g.beginPath(); g.ellipse(cx,cy+r*0.92,r*0.8,r*0.26,0,0,7); g.fill(); g.restore();
+  // crisp dark outline
+  g.fillStyle=hexLerp(dark,'#000000',0.35); g.beginPath(); g.arc(cx,cy,r+2,0,7); g.fill();
+  // body: bright radial, light from upper-left
+  const bg=g.createRadialGradient(cx-r*0.38,cy-r*0.42,r*0.08, cx,cy,r*1.05);
+  bg.addColorStop(0, lit); bg.addColorStop(0.5, b); bg.addColorStop(1, dark);
+  g.fillStyle=bg; g.beginPath(); g.arc(cx,cy,r,0,7); g.fill();
+  // warm bottom bounce (arcade underglow)
+  g.save(); g.globalCompositeOperation='lighter';
+  const bl=g.createRadialGradient(cx,cy+r*0.55,0, cx,cy+r*0.55,r*0.9);
+  bl.addColorStop(0, rgbaOf(hexLerp(b,'#ffffff',0.25),0.32)); bl.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=bl; g.beginPath(); g.arc(cx,cy,r,0,7); g.clip(); g.fillRect(0,0,N,N); g.restore();
+  // GLOSS: a big soft specular sweep, top-left
+  g.save(); g.globalCompositeOperation='lighter';
+  const sp=g.createRadialGradient(cx-r*0.3,cy-r*0.44,0, cx-r*0.3,cy-r*0.44,r*0.72);
+  sp.addColorStop(0,'rgba(255,255,255,0.9)'); sp.addColorStop(0.6,'rgba(255,255,255,0.15)'); sp.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=sp; g.beginPath(); g.ellipse(cx-r*0.26,cy-r*0.4,r*0.5,r*0.34,-0.5,0,7); g.fill(); g.restore();
+  // a hard little glint dot — the plastic tell
+  g.fillStyle='rgba(255,255,255,0.98)'; g.beginPath(); g.arc(cx-r*0.44,cy-r*0.52,r*0.1,0,7); g.fill();
+  // cool rim on the shadow side
+  g.save(); g.globalCompositeOperation='lighter'; g.globalAlpha=0.5; g.strokeStyle=rgbaOf(lit,0.8); g.lineWidth=r*0.10;
+  g.beginPath(); g.arc(cx,cy,r*0.94, Math.PI*0.05, Math.PI*0.8); g.stroke(); g.restore();
+  _spriteCache[key]=c; return c;
+}
 // cinematic post: colour-grade wash, then a soft vignette, then fine film grain
 let _grain=null;
 function asanoGrain(){
@@ -1278,15 +1321,15 @@ function asanoGrain(){
   g.putImageData(im,0,0); _grain=c; return c;
 }
 function asanoPost(pal){
-  // colour grade
+  // a gentle bright bloom-wash + soft vignette. arcade = luminous, not film-noir.
   ctx.save(); ctx.globalCompositeOperation='soft-light'; ctx.globalAlpha=1; ctx.fillStyle=rgbaOf(pal.grade, pal.gA);
   ctx.fillRect(0,0,Wc,Hc); ctx.restore();
-  // vignette
-  const vg=ctx.createRadialGradient(Wc/2,Hc*0.52,Hc*0.2, Wc/2,Hc*0.52,Hc*0.85);
-  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(0.7,'rgba(0,0,0,0.12)'); vg.addColorStop(1,'rgba(0,0,0,0.5)');
+  // soft vignette — light touch so the candy colours stay bright to the edges
+  const vg=ctx.createRadialGradient(Wc/2,Hc*0.5,Hc*0.28, Wc/2,Hc*0.5,Hc*0.92);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(0.75,'rgba(20,10,30,0.06)'); vg.addColorStop(1,'rgba(20,10,30,0.28)');
   ctx.fillStyle=vg; ctx.fillRect(0,0,Wc,Hc);
-  // film grain (one tile, stretched + jittered, very low alpha)
-  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=0.045;
+  // whisper of grain for texture, not mood
+  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=0.02;
   const gt=asanoGrain(), jx=(_asanoNow*130%40)-20, jy=(_asanoNow*90%40)-20;
   ctx.drawImage(gt, jx, jy, Wc+40, Hc+40); ctx.restore();
 }
