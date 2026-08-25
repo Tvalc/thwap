@@ -912,6 +912,9 @@ function drawStud(s){
   // depth haze: far-from-hero studs read slightly cooler + softer (tilt-shift feel)
   const depth = clamp(1 - Math.abs(s.y-HAND.y)/2600, 0.55, 1);
   const glow = asanoPal?asanoPal.glow:'#ffd27a';
+  // contact shadow — grounds the stud so it sits in the world instead of floating (offset from key light)
+  ctx.save(); ctx.globalAlpha=0.24*depth; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(X+4*S, Y+6*S, 9*S, 3.6*S, 0,0,7); ctx.fill(); ctx.restore();
   ctx.save();
   ctx.globalAlpha = depth;
   if(s.type==='glass'){
@@ -1118,8 +1121,9 @@ function rgbaOf(c,a){ const A=_hx(c); return `rgba(${A[0]},${A[1]},${A[2]},${a})
 // BRIGHT FUN ARCADE colour script — glowing candy plastic + neon, lit-up coin-op cheer.
 // tops are bright & saturated; bottoms stay coloured (never muddy-black); keys are neon marquee light.
 const ASANO_KEYS = [
-  { pct:0,   name:'the pit',      top:'#ff9a5b', mid:'#f2545b', bot:'#8e2a63', fog:'#ff7a6a', key:'#ffd95e', kx:0.26, ky:0.12, dust:'#fff0a8', glow:'#ffd95e', silh:'#5a1840', grade:'#ff8a4a', gA:0.05, stud:'#39e6d6' },
-  { pct:20,  name:'the spill',    top:'#5fe8c8', mid:'#22b6b0', bot:'#12688a', fog:'#5fffe0', key:'#a8fff0', kx:0.70, ky:0.13, dust:'#d6fff2', glow:'#7fffe0', silh:'#0d4a5a', grade:'#3fd8c0', gA:0.05, stud:'#ff6f9c' },
+  { pct:0,   name:'the pit',      top:'#ff7a92', mid:'#f5405f', bot:'#9e2a5e', fog:'#ff8a9e', key:'#ffe06a', kx:0.26, ky:0.12, dust:'#ffe0b0', glow:'#ffcf5e', silh:'#5a1840', grade:'#ff6a8a', gA:0.05, stud:'#3ff0dc' },
+  { pct:11,  name:'the pit',      top:'#ff7a92', mid:'#f5405f', bot:'#9e2a5e', fog:'#ff8a9e', key:'#ffe06a', kx:0.26, ky:0.12, dust:'#ffe0b0', glow:'#ffcf5e', silh:'#5a1840', grade:'#ff6a8a', gA:0.05, stud:'#3ff0dc' },
+  { pct:26,  name:'the spill',    top:'#5fe8c8', mid:'#22b6b0', bot:'#12688a', fog:'#5fffe0', key:'#a8fff0', kx:0.70, ky:0.13, dust:'#d6fff2', glow:'#7fffe0', silh:'#0d4a5a', grade:'#3fd8c0', gA:0.05, stud:'#ff6f9c' },
   { pct:42,  name:'the reef',     top:'#ff86d2', mid:'#f24aa0', bot:'#8e1f78', fog:'#ff9ee0', key:'#ffc0ee', kx:0.30, ky:0.10, dust:'#ffd0f0', glow:'#ff9ae0', silh:'#5a1050', grade:'#ff6ac4', gA:0.05, stud:'#ffe24a' },
   { pct:65,  name:'the gallery',  top:'#6cc0ff', mid:'#3a7cf0', bot:'#1f3aa8', fog:'#a8e0ff', key:'#d0ecff', kx:0.76, ky:0.07, dust:'#e6f4ff', glow:'#8fd0ff', silh:'#12206a', grade:'#4aa0ff', gA:0.05, stud:'#ffd24a' },
   { pct:85,  name:'claw country', top:'#b98cff', mid:'#8a4fe6', bot:'#4a2596', fog:'#d0b0ff', key:'#e0c8ff', kx:0.50, ky:0.06, dust:'#e6d8ff', glow:'#c0a0ff', silh:'#2e1670', grade:'#a06aff', gA:0.05, stud:'#5affd0' },
@@ -1157,39 +1161,64 @@ function asanoDust(pal){
   }
   ctx.restore();
 }
-// parallax silhouette architecture — the machine's inner cabinet + glowing marquee bulbs
-function asanoSilhouettes(pal){
+// ---- LAYERED DEPTH: parallaxed claw-machine architecture, graded by distance (atmospheric perspective)
+function _pY(wy,par){ return Hc*0.62 - (wy-camY)*S*par; }
+function _bandBounds(par,band){ const top=camY+(Hc*0.62+60)/(S*par), bot=camY-(Hc*0.38+60)/(S*par);
+  return {from:Math.floor(bot/band)*band, to:top}; }
+// FAR: hazed back wall + shelves of piled prizes — depth + "you're inside a machine full of stuff"
+function asanoFar(pal){
+  const par=0.20, band=196, prize=['#ff8a8a','#8affc8','#8ab8ff','#ffd98a','#e08aff','#8affe0'];
+  const {from,to}=_bandBounds(par,band); ctx.save();
+  for(let wy=from; wy<=to; wy+=band){
+    const Y=_pY(wy,par); const seed=Math.abs((wy*2654435761)%1000)/1000;
+    ctx.globalAlpha=0.10; ctx.fillStyle=hexLerp(pal.silh,pal.top,0.5); ctx.fillRect(0,Y,Wc,3*S);   // faint shelf
+    const n=4+Math.floor(seed*3);                                                                   // a few piled distant prizes
+    for(let i=0;i<n;i++){ const t=(seed*3.7+i*0.53)%1, px=t*Wc, pr=(8+((seed*17+i*5)%7))*S;
+      // hazed toward ambient (atmospheric perspective) but still candy-coloured
+      ctx.globalAlpha=0.2; ctx.fillStyle=hexLerp(prize[(i+Math.floor(seed*6))%prize.length], pal.top, 0.4);
+      ctx.beginPath(); ctx.arc(px, Y-pr*0.75, pr, 0, 7); ctx.fill();
+      ctx.globalAlpha=0.28; ctx.fillStyle=rgbaOf('#ffffff',0.5);                                     // tiny prize glint
+      ctx.beginPath(); ctx.arc(px-pr*0.3, Y-pr*1.05, pr*0.22, 0, 7); ctx.fill(); }
+  }
+  ctx.globalAlpha=0.07; ctx.fillStyle=pal.top; ctx.fillRect(0,0,Wc,Hc);   // light atmospheric haze
+  ctx.restore();
+}
+// MID: the machine's structural cage — support columns + scrolling cross-beams + rivets
+function asanoGirders(pal){
+  const par=0.46, band=360, beam=hexLerp(pal.silh,pal.top,0.20), cols=[Wc*0.12, Wc*0.88];
   ctx.save();
-  for(let layer=0; layer<2; layer++){
-    const par = layer===0?0.30:0.56, alpha = layer===0?0.55:0.82, wob = layer===0?1:0.7;
-    ctx.globalAlpha=alpha; ctx.fillStyle=pal.silh;
-    const band=560, span=(wy)=> Hc*0.62 - (wy-camY)*S*par;
-    const y0=Math.floor((camY - 900/par)/band)*band;
-    for(let wy=y0; wy<camY + 1100/par; wy+=band){
-      const Y=span(wy); if(Y<-400||Y>Hc+400) continue;
-      const seed=Math.abs((wy*2654435761)%1000)/1000;
-      const pw=(24+seed*16)*S*wob;
-      ctx.fillRect(-4, Y-band*S*par*0.5, pw, band*S*par+2);
-      ctx.fillRect(Wc-pw+4, Y-band*S*par*0.5, pw, band*S*par+2);
-      if((Math.floor(wy/band))%2===0){ const bh=(10+seed*10)*S*wob;
-        ctx.fillRect(pw-6, Y-bh/2, Wc-2*(pw-6), bh); }
-    }
-  }
+  ctx.globalAlpha=0.7; ctx.fillStyle=beam; cols.forEach(cxp=>ctx.fillRect(cxp-5*S,0,10*S,Hc));
+  ctx.globalAlpha=0.4; ctx.fillStyle=rgbaOf(pal.glow,0.6);                                          // lit column edge
+  cols.forEach(cxp=>ctx.fillRect(cxp+(cxp<Wc/2?5:-7)*S,0,2*S,Hc));
+  const {from,to}=_bandBounds(par,band);
+  for(let wy=from; wy<=to; wy+=band){ const Y=_pY(wy,par);
+    ctx.globalAlpha=0.7; ctx.fillStyle=beam; ctx.fillRect(0,Y-5*S,Wc,10*S);
+    ctx.globalAlpha=0.5; ctx.fillStyle=hexLerp(pal.silh,pal.glow,0.4); ctx.fillRect(0,Y-5*S,Wc,2*S);
+    ctx.globalAlpha=0.85; ctx.fillStyle=hexLerp(pal.silh,'#000000',0.2);
+    cols.forEach(cxp=>{ ctx.beginPath(); ctx.arc(cxp,Y,3.2*S,0,7); ctx.fill(); }); }
   ctx.restore();
-  // marquee bulbs — warm/neon chase lights running up the near pillars (pure arcade)
+}
+// NEAR: close side struts (highest bg contrast) + marquee chase bulbs
+function asanoNear(pal){
+  const par=0.72, pw=20*S, gap=44;
+  ctx.save();
+  ctx.globalAlpha=0.92; ctx.fillStyle=hexLerp(pal.silh,'#000000',0.12);
+  ctx.fillRect(-4,0,pw,Hc); ctx.fillRect(Wc-pw+4,0,pw,Hc);
+  ctx.globalAlpha=0.6; ctx.fillStyle=rgbaOf(pal.glow,0.7); ctx.fillRect(pw-2*S,0,2*S,Hc); ctx.fillRect(Wc-pw,0,2*S,Hc);
+  ctx.restore();
   ctx.save(); ctx.globalCompositeOperation='lighter';
-  const par=0.56, gap=46, pw=(24+16)*S*0.7;
-  const y0=Math.floor((camY-900/par)/gap)*gap;
-  for(let wy=y0; wy<camY+1100/par; wy+=gap){
-    const Y=Hc*0.62-(wy-camY)*S*par; if(Y<-10||Y>Hc+10) continue;
-    const chase=(Math.sin(_asanoNow*3 + wy*0.03)*0.5+0.5);   // running chase
-    const on=0.4+0.6*chase, br=(2.4+chase*0.8)*S;
-    [pw*0.6, Wc-pw*0.6].forEach(bx=>{
-      asanoBloom(bx,Y, br*4, pal.key, 0.5*on);
-      ctx.fillStyle=rgbaOf('#ffffff',0.5+0.5*on); ctx.beginPath(); ctx.arc(bx,Y,br,0,7); ctx.fill();
-    });
-  }
+  const {from,to}=_bandBounds(par,gap);
+  for(let wy=from; wy<=to; wy+=gap){ const Y=_pY(wy,par);
+    const chase=(Math.sin(_asanoNow*3 + wy*0.03)*0.5+0.5), on=0.35+0.65*chase, br=(2.6+chase)*S;
+    [pw*0.52, Wc-pw*0.52].forEach(bx=>{ asanoBloom(bx,Y,br*4.5,pal.key,0.5*on);
+      ctx.fillStyle=rgbaOf('#ffffff',0.55+0.45*on); ctx.beginPath(); ctx.arc(bx,Y,br,0,7); ctx.fill(); }); }
   ctx.restore();
+}
+// FOREGROUND: one sparse translucent occluder cable, faster than the hero, to frame (never hides gameplay)
+function asanoForeground(pal){
+  const par=1.14, seg=820; ctx.save(); ctx.globalAlpha=0.09; ctx.fillStyle=hexLerp(pal.silh,'#000000',0.4);
+  const wy=Math.floor((camY+400)/seg)*seg, Y=_pY(wy,par);
+  ctx.translate(Wc*0.16,Y); ctx.rotate(0.42); ctx.fillRect(-3*S,-Hc*1.6,6*S,Hc*3.2); ctx.restore();
 }
 function asanoGodRays(pal){
   const kx=pal.kx*Wc, ky=pal.ky*Hc;
@@ -1211,13 +1240,25 @@ function asanoGodRays(pal){
   ctx.restore();
 }
 function asanoBackdrop(pal){
-  // rich vertical gradient (lit toward the key light near the top, deep shadow at the floor)
-  const g=ctx.createLinearGradient(0,0,0,Hc);
-  g.addColorStop(0, pal.top); g.addColorStop(0.5, pal.mid); g.addColorStop(1, pal.bot);
-  ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
+  // VALUE STRUCTURE (notan) while staying BRIGHT: a luminous candy base, a hot key-light POOL,
+  // and shadow as RELATIVE dimming away from the light — structure via contrast, not blackness.
+  const base=ctx.createLinearGradient(0,0,0,Hc);
+  base.addColorStop(0, pal.top); base.addColorStop(0.55, pal.mid); base.addColorStop(1, hexLerp(pal.bot,pal.mid,0.18));
+  ctx.fillStyle=base; ctx.fillRect(0,0,Wc,Hc);
+  const kx=pal.kx*Wc, ky=pal.ky*Hc;
+  const lp=ctx.createRadialGradient(kx,ky,0, kx,ky,Hc*0.82);        // bright hot pool at the key light
+  lp.addColorStop(0, rgbaOf(hexLerp(pal.top,'#ffffff',0.55),0.5)); lp.addColorStop(0.5, rgbaOf(pal.top,0.12)); lp.addColorStop(1, rgbaOf(pal.top,0));
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle=lp; ctx.fillRect(0,0,Wc,Hc); ctx.restore();
+  const sp=ctx.createRadialGradient(kx,ky,Hc*0.32, kx,ky,Hc*1.08);  // shadow pools in the far corner from the light
+  sp.addColorStop(0,'rgba(0,0,0,0)'); sp.addColorStop(1, rgbaOf(hexLerp(pal.bot,'#000000',0.45),0.5));
+  ctx.fillStyle=sp; ctx.fillRect(0,0,Wc,Hc);
+  // depth planes, far -> near, atmospherically graded (far = hazed/low-contrast, near = crisp/contrasty)
+  asanoFar(pal);
+  asanoGirders(pal);
   asanoGodRays(pal);
-  asanoSilhouettes(pal);
+  asanoNear(pal);
   asanoDust(pal);
+  asanoForeground(pal);
 }
 // additive bloom halo — the whole look leans on this for every light source
 function asanoBloom(x,y,r,col,a){
@@ -1370,6 +1411,8 @@ function render(){
     const X=sx(t.x), Y=sy(t.y);
     if(Y<-20||Y>Hc+20) continue;
     const bob=Math.sin(_asanoNow*1.6 + t.x*0.05)*1.4;                 // coins breathe
+    ctx.save(); ctx.globalAlpha=0.2; ctx.fillStyle='#000';            // contact shadow grounds the coin
+    ctx.beginPath(); ctx.ellipse(X+3*S, Y+bob+5*S, 6*S, 2.4*S,0,0,7); ctx.fill(); ctx.restore();
     asanoBloom(X, Y+bob, 15*S, '#ffe08a', 0.5);                       // warm coin bloom
     const cg=ctx.createRadialGradient(X-2,Y-2+bob,1,X,Y+bob,6.5*S);
     cg.addColorStop(0,'#fff2c0'); cg.addColorStop(0.6,'#e7c04b'); cg.addColorStop(1,'#a9781f');
