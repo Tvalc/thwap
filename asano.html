@@ -1118,20 +1118,29 @@ function hexLerp(a,b,t){ const A=_hx(a),B=_hx(b); return `rgb(${Math.round(A[0]+
 function _rgbLerp(a,b,t){ const A=_hx(a),B=_hx(b); return [Math.round(A[0]+(B[0]-A[0])*t),Math.round(A[1]+(B[1]-A[1])*t),Math.round(A[2]+(B[2]-A[2])*t)]; }
 function rgbaOf(c,a){ const A=_hx(c); return `rgba(${A[0]},${A[1]},${A[2]},${a})`; }
 // the colour script — keyframes by height %; the live palette lerps between the two around the camera.
-// BRIGHT FUN ARCADE colour script — glowing candy plastic + neon, lit-up coin-op cheer.
-// tops are bright & saturated; bottoms stay coloured (never muddy-black); keys are neon marquee light.
+// BRIGHT FUN ARCADE colour script — glowing candy plastic + neon, one distinct palette per zone.
+// each zone is held PURE across its own height band (hold-pairs), so a zone never muddies into the
+// next inside its own band; transitions happen only in a short strip at the boundary.
+const ZP = {
+  pit:     {top:'#ff7a92',mid:'#f5405f',bot:'#9e2a5e',fog:'#ff8a9e',key:'#ffe06a',kx:0.26,ky:0.12,dust:'#ffe0b0',glow:'#ffcf5e',silh:'#5a1840',grade:'#ff6a8a',gA:0.05,stud:'#3ff0dc'},
+  spill:   {top:'#5fe8c8',mid:'#1fb8b0',bot:'#0f6a86',fog:'#5fffe0',key:'#b8fff2',kx:0.70,ky:0.13,dust:'#d6fff2',glow:'#7fffe0',silh:'#0d4a5a',grade:'#3fd8c0',gA:0.05,stud:'#ff6f9c'},
+  reef:    {top:'#ff86d2',mid:'#f24aa0',bot:'#8e1f78',fog:'#ff9ee0',key:'#ffc0ee',kx:0.30,ky:0.10,dust:'#ffd0f0',glow:'#ff9ae0',silh:'#5a1050',grade:'#ff6ac4',gA:0.05,stud:'#ffe24a'},
+  gallery: {top:'#6cc0ff',mid:'#3a7cf0',bot:'#1f3aa8',fog:'#a8e0ff',key:'#d0ecff',kx:0.76,ky:0.07,dust:'#e6f4ff',glow:'#8fd0ff',silh:'#12206a',grade:'#4aa0ff',gA:0.05,stud:'#ffd24a'},
+  claw:    {top:'#b98cff',mid:'#8a4fe6',bot:'#4a2596',fog:'#d0b0ff',key:'#e0c8ff',kx:0.50,ky:0.06,dust:'#e6d8ff',glow:'#c0a0ff',silh:'#2e1670',grade:'#a06aff',gA:0.05,stud:'#5affd0'},
+  cornice: {top:'#ffe08a',mid:'#ffa85c',bot:'#c85a44',fog:'#fff0b0',key:'#fff6d0',kx:0.50,ky:0.05,dust:'#fff4c0',glow:'#ffdc80',silh:'#8a3a2e',grade:'#ffb85c',gA:0.05,stud:'#39e6d6'},
+  beyond:  {top:'#5f8cff',mid:'#3a52d0',bot:'#161a6e',fog:'#8fb0ff',key:'#bfe0ff',kx:0.50,ky:0.04,dust:'#d0e0ff',glow:'#9fc0ff',silh:'#101452',grade:'#5a70ff',gA:0.06,stud:'#ffd24a'},
+};
 const ASANO_KEYS = [
-  { pct:0,   name:'the pit',      top:'#ff7a92', mid:'#f5405f', bot:'#9e2a5e', fog:'#ff8a9e', key:'#ffe06a', kx:0.26, ky:0.12, dust:'#ffe0b0', glow:'#ffcf5e', silh:'#5a1840', grade:'#ff6a8a', gA:0.05, stud:'#3ff0dc' },
-  { pct:11,  name:'the pit',      top:'#ff7a92', mid:'#f5405f', bot:'#9e2a5e', fog:'#ff8a9e', key:'#ffe06a', kx:0.26, ky:0.12, dust:'#ffe0b0', glow:'#ffcf5e', silh:'#5a1840', grade:'#ff6a8a', gA:0.05, stud:'#3ff0dc' },
-  { pct:26,  name:'the spill',    top:'#5fe8c8', mid:'#22b6b0', bot:'#12688a', fog:'#5fffe0', key:'#a8fff0', kx:0.70, ky:0.13, dust:'#d6fff2', glow:'#7fffe0', silh:'#0d4a5a', grade:'#3fd8c0', gA:0.05, stud:'#ff6f9c' },
-  { pct:42,  name:'the reef',     top:'#ff86d2', mid:'#f24aa0', bot:'#8e1f78', fog:'#ff9ee0', key:'#ffc0ee', kx:0.30, ky:0.10, dust:'#ffd0f0', glow:'#ff9ae0', silh:'#5a1050', grade:'#ff6ac4', gA:0.05, stud:'#ffe24a' },
-  { pct:65,  name:'the gallery',  top:'#6cc0ff', mid:'#3a7cf0', bot:'#1f3aa8', fog:'#a8e0ff', key:'#d0ecff', kx:0.76, ky:0.07, dust:'#e6f4ff', glow:'#8fd0ff', silh:'#12206a', grade:'#4aa0ff', gA:0.05, stud:'#ffd24a' },
-  { pct:85,  name:'claw country', top:'#b98cff', mid:'#8a4fe6', bot:'#4a2596', fog:'#d0b0ff', key:'#e0c8ff', kx:0.50, ky:0.06, dust:'#e6d8ff', glow:'#c0a0ff', silh:'#2e1670', grade:'#a06aff', gA:0.05, stud:'#5affd0' },
-  { pct:100, name:'the cornice',  top:'#ffe08a', mid:'#ffa85c', bot:'#e0663e', fog:'#fff0b0', key:'#fff6d0', kx:0.50, ky:0.05, dust:'#fff4c0', glow:'#ffdc80', silh:'#8a3a2e', grade:'#ffb85c', gA:0.05, stud:'#39e6d6' },
-  { pct:125, name:'the beyond',   top:'#5f8cff', mid:'#3a52d0', bot:'#161a6e', fog:'#8fb0ff', key:'#bfe0ff', kx:0.50, ky:0.04, dust:'#d0e0ff', glow:'#9fc0ff', silh:'#101452', grade:'#5a70ff', gA:0.06, stud:'#ffd24a' },
+  {pct:0,...ZP.pit},     {pct:7,...ZP.pit},        // pit zone 0-8
+  {pct:12,...ZP.spill},  {pct:28,...ZP.spill},     // spill 8-30
+  {pct:33,...ZP.reef},   {pct:52,...ZP.reef},      // reef 30-55
+  {pct:58,...ZP.gallery},{pct:72,...ZP.gallery},   // gallery 55-75
+  {pct:78,...ZP.claw},   {pct:90,...ZP.claw},      // claw country 75-92
+  {pct:94,...ZP.cornice},{pct:100,...ZP.cornice},  // cornice 92-101
+  {pct:107,...ZP.beyond},{pct:135,...ZP.beyond},   // the endless beyond
 ];
 function asanoPalette(){
-  const pct = clamp((camY-PIT_Y)/TOWER_H*100, 0, 125);
+  const pct = clamp((camY-PIT_Y)/TOWER_H*100, 0, 140);
   let a=ASANO_KEYS[0], b=ASANO_KEYS[0];
   for(let i=0;i<ASANO_KEYS.length-1;i++){ if(pct>=ASANO_KEYS[i].pct && pct<=ASANO_KEYS[i+1].pct){ a=ASANO_KEYS[i]; b=ASANO_KEYS[i+1]; break; } if(pct>ASANO_KEYS[ASANO_KEYS.length-1].pct){ a=b=ASANO_KEYS[ASANO_KEYS.length-1]; } }
   const t = a===b?0: (pct-a.pct)/(b.pct-a.pct);
