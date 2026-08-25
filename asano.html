@@ -1223,6 +1223,88 @@ function asanoNear(pal){
       ctx.fillStyle=rgbaOf('#ffffff',0.55+0.45*on); ctx.beginPath(); ctx.arc(bx,Y,br,0,7); ctx.fill(); }); }
   ctx.restore();
 }
+// ---- SIGNATURE SET-PIECES: each zone gets a distinct place, keyed to its world band ----
+function _wY(pct){ return PIT_Y + TOWER_H*pct/100; }
+function _bandVis(loPct,hiPct,par){ const lo=_wY(loPct),hi=_wY(hiPct);
+  return hi>camY-(Hc*0.4+160)/(S*par) && lo<camY+(Hc*0.66+160)/(S*par); }
+const _PRIZE=['#ff5a7a','#4fe0c0','#5aa0ff','#ffcf4a','#c07aff','#ff8a4a','#ff6ad0','#6affb0'];
+// clip drawing to a zone's on-screen slice (gameplay parallax) so its set-pieces never bleed into neighbours
+function _zoneClip(loPct,hiPct){ const yTop=_pY(_wY(hiPct),1.0)-34*S, yBot=_pY(_wY(loPct),1.0)+34*S;
+  ctx.save(); ctx.beginPath(); ctx.rect(0,yTop,Wc,yBot-yTop); ctx.clip(); }
+function asanoSetpieces(pal){
+  // THE PIT FLOOR — the crowded prize heap you climb out of (home). Sits at/below the play area.
+  if(_bandVis(-4,9,0.92)){
+    _zoneClip(-30,10);
+    const Y=_pY(_wY(0),0.92);
+    for(let i=0;i<30;i++){ const px=((i*0.6180339)%1)*Wc, rr=(15+((i*37)%20))*S, py=Y+16*S-((i*53)%46)*S;
+      ctx.globalAlpha=0.28; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(px,py+rr*0.7,rr*0.9,rr*0.4,0,0,7); ctx.fill();
+      const g=ctx.createRadialGradient(px-rr*0.3,py-rr*0.35,rr*0.1,px,py,rr); const c=_PRIZE[i%_PRIZE.length];
+      g.addColorStop(0,hexLerp(c,'#ffffff',0.5)); g.addColorStop(0.6,c); g.addColorStop(1,hexLerp(c,'#000000',0.35));
+      ctx.globalAlpha=0.92; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(px,py,rr,0,7); ctx.fill();
+      ctx.globalAlpha=0.85; ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(px-rr*0.34,py-rr*0.38,rr*0.16,0,7); ctx.fill();
+    }
+    ctx.globalAlpha=1; ctx.restore();
+  }
+  // THE REEF — fused plush clumps growing from the walls (old toys piled into coral)
+  if(_bandVis(30,55,0.55)){
+    _zoneClip(30,55);
+    const par=0.55, band=210, lo=_wY(28), hi=_wY(57);
+    for(let wy=Math.floor(lo/band)*band; wy<=hi; wy+=band){
+      const Y=_pY(wy,par); const seed=Math.abs((wy*40503)%1000)/1000, side=(Math.floor(wy/band)%2), baseX=side?Wc:0;
+      const n=5+Math.floor(seed*4);
+      for(let i=0;i<n;i++){ const rr=(20+((seed*31+i*7)%24))*S, px=baseX+(side?-1:1)*(4+((seed*13+i*11)%46))*S, py=Y+(((i*0.6+seed*3)%2)-1)*46*S;
+        // fused OLD PLUSH — soft candy-coloured toy lumps piled into the walls (desaturated w/ distance)
+        const c=hexLerp(_PRIZE[(Math.floor(seed*6)+i)%_PRIZE.length], pal.mid, 0.3);
+        const g=ctx.createRadialGradient(px-rr*0.32,py-rr*0.36,rr*0.1,px,py,rr);
+        g.addColorStop(0,hexLerp(c,'#ffffff',0.35)); g.addColorStop(0.7,c); g.addColorStop(1,hexLerp(c,'#000000',0.28));
+        ctx.globalAlpha=0.5; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(px,py,rr,0,7); ctx.fill();
+        ctx.globalAlpha=0.32; ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(px-rr*0.3,py-rr*0.34,rr*0.2,0,7); ctx.fill();
+        // a couple of stitched button-eyes so it reads as a toy, not a blob
+        if(i%2===0){ ctx.globalAlpha=0.4; ctx.fillStyle='rgba(20,10,20,0.7)';
+          ctx.beginPath(); ctx.arc(px-rr*0.18,py-rr*0.05,rr*0.09,0,7); ctx.arc(px+rr*0.18,py-rr*0.05,rr*0.09,0,7); ctx.fill(); } }
+    }
+    ctx.globalAlpha=1; ctx.restore();
+  }
+  // THE GALLERY — the glass wall, and the DEAD ARCADE visible through it (the "seeing out" beat)
+  if(_bandVis(55,75,0.6)){
+    _zoneClip(55,75);
+    const parF=0.26, gap=118, lo=_wY(53), hi=_wY(77);
+    for(let wy=Math.floor(lo/gap)*gap; wy<=hi; wy+=gap){
+      const Y=_pY(wy,parF);
+      const seed=Math.abs((wy*22571)%1000)/1000, mw=(38+seed*30)*S, mh=(80+seed*40)*S, mx=(0.1+seed*0.8)*Wc;
+      ctx.globalAlpha=0.5; ctx.fillStyle=hexLerp('#0a1024', pal.bot, 0.25);
+      ctx.beginPath(); ctx.moveTo(mx-mw/2,Y+mh); ctx.lineTo(mx-mw/2,Y-mh*0.3);
+      ctx.quadraticCurveTo(mx,Y-mh*0.55, mx+mw/2,Y-mh*0.3); ctx.lineTo(mx+mw/2,Y+mh); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=0.4; ctx.fillStyle=rgbaOf(_PRIZE[Math.floor(seed*_PRIZE.length)],0.5);
+      ctx.fillRect(mx-mw*0.32, Y-mh*0.1, mw*0.64, mh*0.5);
+      ctx.globalAlpha=0.6; asanoBloom(mx, Y-mh*0.28, mw*0.5, '#bfe0ff', 0.2);
+    }
+    // the glass pane — bright diagonal glare streaks (sells the window)
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    for(let k=0;k<2;k++){ const off=k*Wc*0.5 - ((camY*0.15)%Wc);
+      const g=ctx.createLinearGradient(off,0, off+Wc*0.5,Hc);
+      g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(0.5, rgbaOf('#dff0ff',0.09)); g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(off,0); ctx.lineTo(off+70*S,0); ctx.lineTo(off+Wc*0.5+70*S,Hc); ctx.lineTo(off+Wc*0.5,Hc); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    ctx.globalAlpha=1; ctx.restore();
+  }
+  // CLAW COUNTRY — Gerald's domain: hanging cables, an overhead track, hazard stripes
+  if(_bandVis(75,92,0.6)){
+    _zoneClip(75,92);
+    const par=0.6, lo=_wY(73), hi=_wY(94);
+    ctx.strokeStyle=rgbaOf(hexLerp(pal.silh,'#000000',0.2),0.55); ctx.lineWidth=2*S;
+    for(let c=0;c<5;c++){ const cx=(0.14+c*0.18)*Wc, sway=Math.sin(_asanoNow*0.6+c)*8*S;
+      ctx.beginPath(); ctx.moveTo(cx,-20); ctx.quadraticCurveTo(cx+sway, Hc*0.5, cx+sway*0.5, Hc+20); ctx.stroke(); }
+    const band=300;
+    for(let wy=Math.floor(lo/band)*band; wy<=hi; wy+=band){
+      const Y=_pY(wy,par);
+      ctx.globalAlpha=0.72; ctx.fillStyle=hexLerp(pal.silh,pal.top,0.15); ctx.fillRect(0,Y-7*S,Wc,14*S);
+      ctx.globalAlpha=0.55; for(let x=-20; x<Wc+20; x+=26*S){ ctx.fillStyle=(Math.floor(x/(26*S))%2)?'#ffd23a':'#1a1024';
+        ctx.beginPath(); ctx.moveTo(x,Y-6*S); ctx.lineTo(x+13*S,Y-6*S); ctx.lineTo(x+13*S+8*S,Y+6*S); ctx.lineTo(x+8*S,Y+6*S); ctx.closePath(); ctx.fill(); }
+    }
+    ctx.globalAlpha=1; ctx.restore();
+  }
+}
 // FOREGROUND: one sparse translucent occluder cable, faster than the hero, to frame (never hides gameplay)
 function asanoForeground(pal){
   const par=1.14, seg=820; ctx.save(); ctx.globalAlpha=0.09; ctx.fillStyle=hexLerp(pal.silh,'#000000',0.4);
@@ -1264,6 +1346,7 @@ function asanoBackdrop(pal){
   // depth planes, far -> near, atmospherically graded (far = hazed/low-contrast, near = crisp/contrasty)
   asanoFar(pal);
   asanoGirders(pal);
+  asanoSetpieces(pal);    // signature per-zone places (mid-depth, behind the gameplay plane)
   asanoGodRays(pal);
   asanoNear(pal);
   asanoDust(pal);
