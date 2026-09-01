@@ -1319,6 +1319,7 @@ function _floorArcade(pal){
   ctx.globalAlpha=1; ctx.restore();
 }
 function asanoSetpieces(pal){
+  if(_bgCover>0.85) return;   // a painted floor covers this band — skip all procedural set-pieces
   if(_bgCover<0.5) _floorArcade(pal);   // procedural 8-bit floor — skipped where the painted 8-bit bg covers it
   // THE PIT FLOOR — the crowded prize heap you climb out of (home). Sits at/below the play area.
   if(_bandVis(-4,9,0.92) && _bgCover<0.5){   // painted pit bg has its own toy pile; skip the procedural heap when it covers
@@ -1455,12 +1456,17 @@ const ASANO_ART = {};                 // key -> HTMLImageElement (painted art ov
   for(const k in A){ const im=new Image(); im.src=A[k]; ASANO_ART[k]=im; } })();
 // painted per-zone FLOOR backgrounds (opaque scenes); each covers its zone band, cross-fading at edges.
 const ASANO_BG = {};
-(function(){ const B={ pit:'assets/bg_pit.png', spill:'assets/bg_spill.png' };
+(function(){ const B={ pit:'assets/bg_pit.png', spill:'assets/bg_spill.png', reef:'assets/bg_reef.png',
+    gallery:'assets/bg_gallery.png', claw:'assets/bg_claw.png', cornice:'assets/bg_cornice.png' };
   for(const k in B){ const im=new Image(); im.src=B[k]; ASANO_BG[k]=im; } })();
 // per-zone painted-bg config: floor = one anchored scene (bottom-locked); tile = repeats vertically to fill the band.
 const _BGZONES=[
-  { key:'pit',   lo:-6, hi:13, mode:'floor' },
-  { key:'spill', lo:8,  hi:32, mode:'tile'  },
+  { key:'pit',     lo:-6, hi:13,  mode:'floor' },   // crane / prize
+  { key:'spill',   lo:8,  hi:32,  mode:'tile'  },   // retro 8-bit
+  { key:'reef',    lo:30, hi:56,  mode:'tile'  },   // underwater shooter
+  { key:'gallery', lo:55, hi:76,  mode:'tile'  },   // shooting gallery
+  { key:'claw',    lo:75, hi:93,  mode:'tile'  },   // fighting arena
+  { key:'cornice', lo:92, hi:104, mode:'tile'  },   // space shooter
 ];
 const SPRITE_DEFS = {
   // the sticky hand: a soft googly blob. '.'=clear o=outline s=shadow m=mid h=highlight.
