@@ -997,17 +997,19 @@ function paintHand(g, X, Y, r, fin, vx, vy){
   if(gl) asanoBloom(X, Y, r*2.6, gl, fin.glow?0.4:0.22);
   // BODY: high-fidelity glossy hero. a Makko-painted PNG in ASANO_ART.hand overrides it (same slot);
   // rgba finishes (ghost) still fall back to the simple translucent primitive.
-  const art=ASANO_ART.hand;
-  if(art && art.complete && art.naturalWidth){
-    g.drawImage(art, X-r*1.3, Y-r*1.3, r*2.6, r*2.6);
+  const art=ASANO_ART.hand, usingArt = art && art.complete && art.naturalWidth;
+  if(usingArt){
+    const Sz=r*4.6; g.drawImage(art, X-Sz/2, Y-Sz*0.52, Sz, Sz);   // painted hero (has its own eyes; sized so the body seats ~2r)
   } else if(fin.body && fin.body[0]==='#'){
     const spr=bakeHandHiFi(fin); g.drawImage(spr, X-r*1.35, Y-r*1.35, r*2.7, r*2.7);
   } else {
     g.save(); g.globalAlpha=0.28; g.fillStyle='#000'; g.beginPath(); g.ellipse(X,Y+r*0.9,r*0.85,r*0.32,0,0,7); g.fill(); g.restore();
     g.fillStyle=fin.body; g.beginPath(); g.arc(X,Y,r,0,7); g.fill();
   }
-  if(fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=Math.max(1,r*0.09); g.beginPath(); g.arc(X,Y,r,0,7); g.stroke(); }
-  paintEyes(g, X, Y, r, fin.eye, vx||0, vy||0, fin);
+  if(!usingArt){   // procedural rim + googly eyes only when NOT using the painted hero
+    if(fin.rim){ g.strokeStyle=fin.rim; g.lineWidth=Math.max(1,r*0.09); g.beginPath(); g.arc(X,Y,r,0,7); g.stroke(); }
+    paintEyes(g, X, Y, r, fin.eye, vx||0, vy||0, fin);
+  }
 }
 function drawHand(){
   const X=sx(HAND.x), Y=sy(HAND.y);
@@ -1414,7 +1416,10 @@ function asanoBloom(x,y,r,col,a){
 /* ---- SPRITE ENGINE — hand-authored pixel-art, baked once + blitted nearest-neighbour.
    HYBRID PLAN: pixel sprites live here as data (single-file). Later, a Makko-painted image
    dropped into ASANO_ART[key] overrides the pixel-art in the SAME slot — no other change. */
-const ASANO_ART = {};                 // key -> HTMLImageElement (Makko art overrides pixel-art when present)
+const ASANO_ART = {};                 // key -> HTMLImageElement (painted art overrides procedural art when present)
+// load authored art assets (OpenArt / Makko). each drops into its slot when ready; game runs before they load.
+(function(){ const A={ hand:'assets/hero.png' };
+  for(const k in A){ const im=new Image(); im.src=A[k]; ASANO_ART[k]=im; } })();
 const SPRITE_DEFS = {
   // the sticky hand: a soft googly blob. '.'=clear o=outline s=shadow m=mid h=highlight.
   // eyes are NOT in the sprite — the code-drawn googly eyes (which track velocity) go on top.
