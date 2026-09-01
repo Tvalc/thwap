@@ -1163,20 +1163,26 @@ function asanoPalette(){
 }
 // drifting light-motes — the signature Octopath atmosphere
 let DUST=[]; let _asanoNow=0, _asanoLast=0; let asanoPal=null; let _bgCover=0;
-// draw the painted background for the current zone band (world-locked, cross-faded at edges). sets _bgCover.
+// alpha ramp for a painted bg across its band [lo,hi]: fade in near lo, hold, fade out near hi.
+function _bgAlpha(cp,lo,hi){ const i0=lo-2,i1=lo+5,o0=hi-6,o1=hi+3;
+  if(cp<=i0||cp>=o1) return 0; if(cp<i1) return Math.min(1,(cp-i0)/(i1-i0)); if(cp>o0) return Math.max(0,(o1-cp)/(o1-o0)); return 1; }
+// draw painted per-zone backgrounds (floor-anchored or vertically tiled), cross-faded, clipped to each band. sets _bgCover.
 function asanoPaintedBG(){
-  _bgCover=0;
-  const img=ASANO_BG.pit; if(!img||!img.complete||!img.naturalWidth) return;
-  const camPct=Math.max(0,(camY-PIT_Y)/TOWER_H*100);
-  const a = camPct<=6 ? 1 : (camPct<14 ? (14-camPct)/8 : 0);   // full in the pit, fade out 6-14%
-  if(a<=0) return;
-  const dh=Wc*img.naturalHeight/img.naturalWidth, wb=PIT_Y-30, sb=Hc*0.62-(wb-camY)*S;   // toy-pile bottom world-locked to the pit floor
-  ctx.save();
-  ctx.globalAlpha=a; ctx.fillStyle='#3a1826'; ctx.fillRect(0, sb-6, Wc, Hc-(sb-6));   // fill below the toy pile (no seam)
-  ctx.drawImage(img, 0, sb-dh, Wc, dh);
-  ctx.globalAlpha=a*0.13; ctx.fillStyle='#0a0512'; ctx.fillRect(0, sb-dh, Wc, dh+ (Hc-sb));   // recede slightly for focal hierarchy
-  ctx.restore();
-  _bgCover=a;
+  _bgCover=0; const cp=Math.max(0,(camY-PIT_Y)/TOWER_H*100);
+  for(const z of _BGZONES){ const img=ASANO_BG[z.key]; if(!img||!img.complete||!img.naturalWidth) continue;
+    const a=_bgAlpha(cp,z.lo,z.hi); if(a<=0) continue;
+    const dh=Wc*img.naturalHeight/img.naturalWidth;
+    const yTop=Hc*0.62-(_wY(z.hi)-camY)*S, yBot=Hc*0.62-(_wY(z.lo)-camY)*S;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, yTop-4, Wc, (yBot-yTop)+8); ctx.clip();   // confine to this band's on-screen slice
+    ctx.globalAlpha=a;
+    if(z.mode==='floor'){ const wb=PIT_Y-30, sb=Hc*0.62-(wb-camY)*S;
+      ctx.fillStyle='#3a1826'; ctx.fillRect(0,sb-6,Wc,Hc-(sb-6)); ctx.drawImage(img,0,sb-dh,Wc,dh); }
+    else { const tW=dh/S, worldTop=camY+(Hc*0.62+80)/S, worldBot=camY-(Hc*0.38+80)/S;   // tile vertically to fill
+      for(let i=Math.floor(worldBot/tW)-1; i<=Math.ceil(worldTop/tW)+1; i++){ const sb=Hc*0.62-(i*tW-camY)*S; ctx.drawImage(img,0,sb-dh,Wc,dh); } }
+    ctx.globalAlpha=a*0.11; ctx.fillStyle='#05030f'; ctx.fillRect(0,0,Wc,Hc);   // recede for focal hierarchy
+    ctx.restore();
+    if(a>_bgCover) _bgCover=a;
+  }
 }
 function initDust(){ DUST=[]; for(let i=0;i<74;i++) DUST.push({ x:Math.random()*VW, y:camY+(Math.random()-0.5)*1400, r:0.6+Math.random()*2.2, par:0.45+Math.random()*0.6, ph:Math.random()*7, sway:6+Math.random()*16, rise:8+Math.random()*22 }); }
 function asanoDust(pal){
@@ -1313,7 +1319,7 @@ function _floorArcade(pal){
   ctx.globalAlpha=1; ctx.restore();
 }
 function asanoSetpieces(pal){
-  _floorArcade(pal);   // FLOOR 2: retro 8-bit (self-gates + clips to the spill band)
+  if(_bgCover<0.5) _floorArcade(pal);   // procedural 8-bit floor — skipped where the painted 8-bit bg covers it
   // THE PIT FLOOR — the crowded prize heap you climb out of (home). Sits at/below the play area.
   if(_bandVis(-4,9,0.92) && _bgCover<0.5){   // painted pit bg has its own toy pile; skip the procedural heap when it covers
     _zoneClip(-30,10);
@@ -1449,8 +1455,13 @@ const ASANO_ART = {};                 // key -> HTMLImageElement (painted art ov
   for(const k in A){ const im=new Image(); im.src=A[k]; ASANO_ART[k]=im; } })();
 // painted per-zone FLOOR backgrounds (opaque scenes); each covers its zone band, cross-fading at edges.
 const ASANO_BG = {};
-(function(){ const B={ pit:'assets/bg_pit.png' };
+(function(){ const B={ pit:'assets/bg_pit.png', spill:'assets/bg_spill.png' };
   for(const k in B){ const im=new Image(); im.src=B[k]; ASANO_BG[k]=im; } })();
+// per-zone painted-bg config: floor = one anchored scene (bottom-locked); tile = repeats vertically to fill the band.
+const _BGZONES=[
+  { key:'pit',   lo:-6, hi:13, mode:'floor' },
+  { key:'spill', lo:8,  hi:32, mode:'tile'  },
+];
 const SPRITE_DEFS = {
   // the sticky hand: a soft googly blob. '.'=clear o=outline s=shadow m=mid h=highlight.
   // eyes are NOT in the sprite — the code-drawn googly eyes (which track velocity) go on top.
