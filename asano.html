@@ -1083,6 +1083,16 @@ function drawClaw(){
   const open = clawT > (CLAW_PERIOD-CLAW_OPEN);
   const X=sx(CLAW.x), Y=sy(CLAW.y), w=CLAW.w*S;
   if(Y<-140||Y>Hc+40) return;
+  // painted GERALD (OpenArt) if loaded — cable + housing + claws baked in; subtle grab-squash on close
+  const gart=ASANO_ART.claw;
+  if(gart && gart.complete && gart.naturalWidth){
+    asanoBloom(X,Y,w*1.1,'#9fd0ff',0.16);
+    const gw=w*2.0, gh=gw*(gart.naturalHeight/gart.naturalWidth), sq=open?1:0.94;
+    ctx.save(); ctx.translate(X,Y); ctx.scale(sq,1/sq);
+    // anchor so the claw's business-end sits at Y, housing + cable rise above
+    ctx.drawImage(gart, -gw/2, -gh*0.58, gw, gh);
+    ctx.restore(); return;
+  }
   const steel1='#e6ebf5', steel2='#7a8194', steel3='#3a3f4e';
   ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   // the cold cathedral bloom this thing lives inside
@@ -1418,7 +1428,7 @@ function asanoBloom(x,y,r,col,a){
    dropped into ASANO_ART[key] overrides the pixel-art in the SAME slot — no other change. */
 const ASANO_ART = {};                 // key -> HTMLImageElement (painted art overrides procedural art when present)
 // load authored art assets (OpenArt / Makko). each drops into its slot when ready; game runs before they load.
-(function(){ const A={ hand:'assets/hero.png' };
+(function(){ const A={ hand:'assets/hero.png', claw:'assets/gerald.png', moose:'assets/moose.png' };
   for(const k in A){ const im=new Image(); im.src=A[k]; ASANO_ART[k]=im; } })();
 const SPRITE_DEFS = {
   // the sticky hand: a soft googly blob. '.'=clear o=outline s=shadow m=mid h=highlight.
