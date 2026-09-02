@@ -29,6 +29,28 @@
   .doc .dmg { color:#a3231f; font-weight:700; }
   .doc .ok { color:#166a3d; font-weight:700; }
   .ledger { font-size:11px; color:#5b584c; display:flex; justify-content:space-between; gap:6px; }
+  /* THE RECORD — feats collection (Phase 1) */
+  .rec-sum { display:flex; gap:22px; margin:12px 0 2px; }
+  .rec-sum span { font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:#8a8796; line-height:1.2; }
+  .rec-sum b { display:block; font-size:21px; color:#8a6510; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:2px; }
+  .feat { margin-top:9px; padding:11px 12px 10px; background:#efe9d8; border:1px solid #d8cfb8; border-left:3px solid #b6851b; border-radius:8px; }
+  .feat.sealed { border-left-color:#c2b9a0; background:#eae4d2; }
+  .feat.done { border-left-color:#2f6a3d; }
+  .feat .fh { display:flex; align-items:baseline; gap:8px; }
+  .feat .fname { flex:1; font-weight:700; font-size:12.5px; letter-spacing:.02em; color:#14140f; }
+  .feat.sealed .fname { color:#6b6455; }
+  .feat .ftier { font-size:9px; letter-spacing:.12em; font-weight:700; color:#8a6510; white-space:nowrap; }
+  .feat.sealed .ftier { color:#a49a82; }
+  .feat.done .ftier { color:#2f6a3d; }
+  .feat .friddle { font-size:11px; color:#6b6455; margin-top:4px; line-height:1.45; font-style:italic; }
+  .feat .fmeter { height:8px; margin:8px 0 5px; border:1px solid #c7bda1; border-radius:2px; background:#e2dcc8; overflow:hidden; position:relative; }
+  .feat .ffill { position:absolute; inset:0; background:#b6851b; -webkit-mask:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 6px); mask:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 6px); }
+  .feat.done .ffill { background:#2f6a3d; }
+  .feat .fstat { display:flex; justify-content:space-between; gap:8px; font-size:10px; color:#6b6455; }
+  .feat .fstat b { color:#14140f; font-variant-numeric:tabular-nums; }
+  .feat .freward { margin-top:7px; padding-top:7px; border-top:1px dashed #cdc4ad; font-size:10.5px; color:#6b6455; line-height:1.4; }
+  .feat .freward b { color:#8a6510; font-weight:700; }
+  .feat.done .freward b { color:#2f6a3d; }
   .btns { display:flex; gap:10px; margin-top:16px; width:100%; max-width:340px; }
   .btn { flex:1; pointer-events:auto; cursor:pointer; border:none; border-radius:6px; padding:13px 10px;
     font-family:inherit; font-size:13px; font-weight:700; letter-spacing:.02em; }
@@ -235,10 +257,13 @@ const FINISHES = {
   banana:  { name:'BANANA', cost:25, body:'#ecc24a', body2:'#b98a1f', eye:'cyclops', trail:null, glow:null,
     line:'one eye, entirely committed. the machine will mistake you for stock. briefly.' },
   ghost:   { name:'GHOST', cost:40, body:'rgba(208,214,230,0.42)', body2:null, eye:'hollow', trail:'after', trailCol:'rgba(208,214,230,0.5)', glow:null,
+    forgive:0.07, perk:'GRAB FORGIVENESS — a longer window to make the catch.',
     line:'translucent, and leaves itself behind. the glass approves. the glass has never approved of anything.' },
   ember:   { name:'EMBER', cost:45, body:'#ff6a2a', body2:'#b8300f', eye:'googly', trail:'fire', trailCol:'#ff7a33', glow:'#ff5a1e',
+    momentum:0.08, perk:'MOMENTUM — every launch runs 8% hotter.',
     line:'burns a trace all the way down. the record approves of nothing, and it approves of this.' },
   gilded:  { name:'GILDED', cost:80, body:'#f0cf62', body2:'#a6791d', eye:'rimmed', rim:'#8a6510', trail:'sparkle', trailCol:'#ffe9a0', glow:'#e7c04b',
+    pay2x:true, greedy:1.35, perk:'GREED — 2× quarters, but the grip winds up faster.',
     line:'the claw has excellent taste. climb accordingly.' },
   chrome:  { name:"THE OPERATOR'S OWN", cost:120, body:'#e2e8ef', body2:'#5b6470', metal:true, eye:'rimmed', rim:'#7d8894', trail:'after', trailCol:'rgba(226,232,239,0.55)', glow:'#f0f5fb',
     line:"the operator's own hand, borrowed. it still remembers the last commandment. so, now, do you." },
@@ -263,6 +288,27 @@ const GUIDE_DEFS = {
   skip:   {name:'THE SKIP', better:'higher', unit:'u',
     riddle:'concerns: a rung that was, on review, found unnecessary.',
     stamp:'two rungs, one fling. the stud in between has been notified.'},
+};
+// Phase 1 — THE RECORD: each documented technique fills toward a sealed reward.
+// (the rewards themselves get wired in later builds; here the record just makes the skill legible.)
+const FEATS = [
+  { k:'dead',    target:10, reward:'THE LAUNCH',   kind:'move',  gives:'a dead-vertical release becomes a boosted fling' },
+  { k:'snipe',   target:6,  reward:'AIR RE-GRAB',  kind:'move',  gives:'one mid-flight grab correction' },
+  { k:'skip',    target:8,  reward:'WALL-KICK',    kind:'move',  gives:'kick off a missed stud to save a fall' },
+  { k:'wrap',    target:5,  reward:'STEADY GRIP',  kind:'charm', gives:'the repossession cap trembles later' },
+  { k:'cushion', target:5,  reward:'SOFT LANDING', kind:'charm', gives:'the first fall each climb is trimmed' },
+];
+// SKILL PAYS (Phase 2): base quarters minted when a technique is filed (× the live chain multiplier).
+const TECH_PAY = { dead:3, snipe:4, skip:3, wrap:2, cushion:2 };
+// THE MOVES (Phase 3): each maps to the feat that unlocks it (mastered = guide[feat].n >= FEATS target).
+const KICK_R = 190;   // wall-kick reach — wider than a grab, for kicking off a stud you can't quite grab
+const MOVES = {
+  launch:  { name:'THE LAUNCH',  feat:'dead',  line:'a dead-vertical release launches you noticeably higher.' },
+  regrab:  { name:'AIR RE-GRAB', feat:'snipe', line:'one extra grab attempt per flight — a second reach after a whiff.' },
+  wallkick:{ name:'WALL-KICK',   feat:'skip',  line:"falling past a stud you can't grab? tap to kick off it and save the fall." },
+  // charms (Phase 4) — feat-gated passives that share the 2-slot loadout with the moves
+  steady:  { name:'STEADY GRIP', feat:'wrap',    line:'the grip winds up slower — more time to line up the release before the cap.' },
+  soft:    { name:'SOFT LANDING',feat:'cushion', line:'your first fall each climb keeps your chain alive.' },
 };
 const CASES = [
   { id:'elder', title:'RECONSTRUCTION №1 — THE ELDER', from:'THE ELDER',
@@ -430,6 +476,12 @@ let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=fa
 let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
 let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
 let quarters = 0, finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
+// SKILL PAYS (Phase 2): the grab mints quarters; a clean unbroken chain multiplies the payout.
+let combo = 0, comboMax = 0, pops = [], audioCtx = null, muted = false;
+// THE MOVES (Phase 3): feat-unlocked verbs, equipped into a 2-slot loadout (free respec).
+let loadout = [];                                   // equipped move ids (max 2)
+let airRegrabUsed = false, wallKickUsed = false;    // per-flight move charges
+let softUsed = false;                               // SOFT LANDING charm: per-climb free chain-save
 let TOKENS = [];
 let zonesReached = [], audienceN = 0, chaptersRead = [];
 // the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
@@ -614,6 +666,7 @@ function load(){
     studOwned = d.stOwn||[]; studWorn = d.stWorn||'stock';
     if(!BACKDROPS[bgWorn]) bgWorn='stock';
     if(!STUDSETS[studWorn]) studWorn='stock';
+    loadout = Array.isArray(d.mv) ? d.mv.slice(0,2) : [];
     audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1; seenIntro = !!d.seen;
     if(d.dg) dailyData = Object.assign(dailyData, d.dg);
     // story v3: gating on lifetime best height dumped the whole story in one good climb.
@@ -631,7 +684,7 @@ function save(){
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
     q:quarters, fin:finishes, skin:skin, zr:zonesReached,
     bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
-    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, dg:dailyData, sv:3, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, dg:dailyData, sv:3, mv:loadout, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -659,6 +712,8 @@ function attachTo(s, incomingVx, incomingVy){
   hitstop = HITSTOP; flash = 1;
   // establish a new "high water mark" for fall accounting when we grab higher
   if(s.y > HAND.peakY - 4) HAND.peakY = Math.max(HAND.peakY, s.y);
+  // brief THWAP squash flourish on a real mid-air catch (not gentle spawns / pit landings, which come in at ~0 speed)
+  if(Math.hypot(incomingVx||0, incomingVy||0) > 220){ _thwapT = 0.15; _heroAnimT = 0; }
 }
 function recordMotion(key, margin){
   const def = GUIDE_DEFS[key], g = guide[key];
@@ -670,9 +725,38 @@ function recordMotion(key, margin){
   if(isFirst){ pendingStamp = def.name+' — '+def.stamp.replace('{m}', val); }
   else if(isPB){ pendingStamp = def.name+' — new margin: '+val+def.unit+'.'; }
   save();
+  if(TECH_PAY[key]) mintPay(TECH_PAY[key], def.name, HAND.x, HAND.y);   // SKILL PAYS: the machine files it and pays out
 }
+function payMult(){ return 1 + Math.min(Math.floor(combo/4), 5); }      // ×1..×6 — every 4 chained grabs adds a tier
+function initAudio(){ try{ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){} }
+function chime(step){ if(muted || !audioCtx) return; try{ const t=audioCtx.currentTime;      // a short coin blip, pitch rising with the chain
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='triangle'; o.frequency.setValueAtTime(523.25*Math.pow(2,(step||0)/12), t);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.11,t+0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.15);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.16); }catch(e){} }
+// mint quarters + a rising pop-text + a coin chime; play-mode only, never during the daily
+function mintPay(base, label, x, y){
+  if(mode!=='play' || dailyActive) return;
+  const m = payMult(), amt = base*m*payFactor();
+  quarters += amt; save();
+  pops.push({ x, y, v:amt, label:label||null, m, f:simFrame });
+  chime(Math.min(combo,14));
+}
+// THE MOVES (Phase 3): a move is owned once its feat is mastered; hasMove = owned AND equipped
+function moveUnlocked(id){ const mv=MOVES[id]; if(!mv) return false; const f=FEATS.find(x=>x.k===mv.feat); return !!f && guide[mv.feat].n>=f.target; }
+function hasMove(id){ return loadout.indexOf(id)>=0 && moveUnlocked(id); }
+function movePop(label, x, y, step){ pops.push({ x, y, v:null, label, m:1, f:simFrame }); chime(step); }   // label-only pop for a move firing
+// THE HANDS + CHARMS (Phase 4): passives read off the worn finish and the equipped charms
+function _fin(){ return FINISHES[skin] || FINISHES.factory; }
+function grabWindow(){ return 0.15 + (_fin().forgive||0); }                     // GHOST widens the catch window
+function launchMul(){ return 1 + (_fin().momentum||0); }                        // EMBER runs every launch hotter
+function payFactor(){ return _fin().pay2x ? 2 : 1; }                            // GILDED doubles quarter payouts
+function wrapRate(){ return (_fin().greedy||1) * (hasMove('steady')?0.7:1); }   // GILDED winds faster · STEADY GRIP winds slower
 function fling(reason){
   HAND.lastCause = reason||'manual'; hasFlung = true;
+  airRegrabUsed = false; wallKickUsed = false;   // THE MOVES: a fresh flight resets the per-flight charges
   // field-guide release motions (detection only, play mode, manual releases)
   if(mode==='play' && reason==='manual' && HAND.anchor){
     const side = Math.abs(Math.cos(HAND.ang));
@@ -681,7 +765,10 @@ function fling(reason){
     if(HAND.plush>=1.25 && HAND.plush<1.5 && HAND.charge>=0.9) recordMotion('snipe', (1.5-HAND.plush)*1000);
   }
   const c = HAND.charge;
-  let spd = LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c;
+  let spd = (LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*c) * launchMul();   // EMBER: momentum runs every launch hotter
+  // THE LAUNCH (equipped): a dead-vertical release at near-full charge boosts the fling
+  const _launch = hasMove('launch') && reason==='manual' && Math.abs(Math.cos(HAND.ang))<=0.12 && c>=0.92;
+  if(_launch){ spd *= 1.28; }
   // launch is ALWAYS up (climbing is about power, not phase-timing a tangent);
   // the side the hand is on when you let go steers left/right on a wide, readable window.
   const side = Math.cos(HAND.ang);           // -1..1: release phase — this IS the aim
@@ -693,6 +780,7 @@ function fling(reason){
   }
   const inv = 1/Math.hypot(dx,dy);
   HAND.vx = dx*inv*spd; HAND.vy = dy*inv*spd;
+  if(_launch && mode==='play'){ movePop('THE LAUNCH', HAND.x, HAND.y, 10); bursts.push({x:HAND.x,y:HAND.y,f:simFrame,col:'#e7c04b'}); }
   HAND.lastAnchor = HAND.anchor; HAND.lastWraps = HAND.wraps; HAND.lastSide = side;
   HAND.anchor=null; HAND.mode='fly'; grabLock = 0.16;   // clear the launch stud before re-grabbing
 }
@@ -751,7 +839,7 @@ function step(dt){
       HAND.w = W0 + (WMAX-W0)*HAND.charge;
       HAND.r = R0 - (R0-RMIN)*HAND.charge;
       const dAng = HAND.w*dt*HAND.spin;
-      HAND.ang += dAng; HAND.wraps += Math.abs(dAng)/(Math.PI*2);
+      HAND.ang += dAng; HAND.wraps += Math.abs(dAng)/(Math.PI*2) * wrapRate();   // GILDED winds faster · STEADY GRIP slower
       if(HAND.wraps >= WRAP_CAP){ fling('greed'); return; }
     }
     HAND.x = s.x + Math.cos(HAND.ang)*HAND.r;
@@ -782,16 +870,30 @@ function step(dt){
     if(grabWin>0){
       grabWin -= dt;
       const s = nearestStud(HAND.x, HAND.y, REACH);
+      // WALL-KICK (equipped): nothing to grab, but a stud is close enough to kick off while falling → save the fall
+      if(!s && hasMove('wallkick') && !wallKickUsed && HAND.vy<-200){
+        const w = nearestStud(HAND.x, HAND.y, KICK_R);
+        if(w){
+          wallKickUsed=true; grabWin=0; whiffLock=0;
+          HAND.vx = (HAND.x>=w.x?1:-1)*360; HAND.vy = 1000; HAND.mode='fly';
+          hitstop = HITSTOP; flash = 1;
+          bursts.push({x:w.x, y:w.y, f:simFrame, col:'#9fd0ff'});
+          movePop('WALL-KICK', w.x, w.y, 9);
+          return;
+        }
+      }
       if(!s && grabWin<=0){ whiffLock = 0.24; }
       if(s){
         const wasFalling = HAND.vy < -650 && fallTrack;
         const dropSoFar = fallTrack ? (pctOf(HAND.peakY)-pctOf(HAND.y)) : 0;
+        const newHigh = s.y > HAND.peakY + 4;     // a grab that gains real altitude — only progress builds the chain
         attachTo(s, HAND.vx, HAND.vy);
         grabWin=0; whiffLock=0;
         bursts.push({x:s.x, y:s.y, f:simFrame, col:(FINISHES[skin]&&(FINISHES[skin].glow||FINISHES[skin].body))||'#fff'});
         if(wasFalling && dropSoFar>6){ slowmo=0.4; bossFlash(BARKS[simFrame%BARKS.length], true);     // clutch save: the host loses it
           if(dailyActive && dropSoFar>dailyBestSave) dailyBestSave=Math.round(dropSoFar); }
         if(mode==='play'){
+          if(!dailyActive && newHigh){ combo++; if(combo>comboMax) comboMax=combo; mintPay(1, null, s.x, s.y); }  // SKILL PAYS: the climb itself pays, chained
           if(fallTrack && dropSoFar>=8 && dropSoFar<11) recordMotion('cushion', 11-dropSoFar);
           if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
           if(pendingStamp){ bossFlash(pendingStamp); bossLineT=2.2; pendingStamp=null; }
@@ -814,6 +916,8 @@ function step(dt){
         HAND.peakY = landY;
         if(mode==='play'){
           resetTokens(); pitLands++; zonesThisRun=[]; foundThisRun=false;
+          if(hasMove('soft') && combo>0 && !softUsed){ softUsed=true; movePop('SOFT LANDING', HAND.x, HAND.y, 5); }  // first fall each climb keeps the chain
+          else { combo=0; softUsed=false; }
           // (no mercy unlocks — falling is not how you earn the story. only altitude is.)
         }
       }
@@ -866,6 +970,7 @@ function bossFlash(t, big){ bossLine=t; bossLineT=1.1; bossBig=!!big; }
 
 /* ---------- input ---------- */
 function down(){
+  initAudio();   // first tap unlocks the coin chime (audio needs a user gesture)
   if(mode==='intro'){ introAdvance(); return; }
   if(mode!=='play' && mode!=='appeal_play') return;
   held=true;
@@ -874,7 +979,12 @@ function down(){
     return;
   }
   // the climb: a tap is ONE timed grab attempt; taps while recoiling or mid-launch are ignored
-  if(HAND.mode==='fly' && whiffLock<=0 && grabLock<=0 && grabWin<=0){ grabWin = 0.15; }
+  if(HAND.mode==='fly'){
+    if(whiffLock<=0 && grabLock<=0 && grabWin<=0){ grabWin = grabWindow(); }
+    else if(grabWin<=0 && whiffLock>0 && hasMove('regrab') && !airRegrabUsed){   // AIR RE-GRAB: one second reach per flight, after a whiff
+      whiffLock=0; grabWin=grabWindow(); airRegrabUsed=true; movePop('RE-GRAB', HAND.x, HAND.y, 7);
+    }
+  }
 }
 function up(){
   held=false;
@@ -883,6 +993,9 @@ function up(){
 cv.addEventListener('pointerdown', e=>{ e.preventDefault(); down(); }, {passive:false});
 addEventListener('pointerup', e=>{ up(); });
 addEventListener('pointercancel', e=>{ up(); });
+// a press must never pop the browser context menu (right-click / trackpad / long-press) — it interrupts the wind
+cv.addEventListener('contextmenu', e=>e.preventDefault());
+document.addEventListener('contextmenu', e=>e.preventDefault());
 addEventListener('keydown', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); if(!e.repeat) down(); }});
 addEventListener('keyup', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); up(); }});
 
@@ -905,6 +1018,42 @@ function studPath(X, Y, r, shape){
   else if(shape==='square'){ ctx.rect(X-r*0.85, Y-r*0.85, r*1.7, r*1.7); }
   else if(shape==='bolt'){ ctx.moveTo(X,Y-r); ctx.lineTo(X+r*0.9,Y+r*0.5); ctx.lineTo(X-r*0.9,Y+r*0.5); ctx.closePath(); }
   else { ctx.arc(X,Y,r,0,7); }
+}
+// per-section grab-stud silhouette — only the grippable PLASTIC stud changes shape by floor genre
+// (glass stays a translucent diamond, plush stays a soft pom, per the material-legibility law).
+function studShapeFor(pct){
+  if(pct < 8)  return 'gem';      // PIT — prize gem
+  if(pct < 30) return 'button';   // SPILL — 8-bit arcade button
+  if(pct < 55) return 'coral';    // REEF — round coral knob
+  if(pct < 75) return 'target';   // GALLERY — shooting-gallery bullseye
+  if(pct < 92) return 'bolt';     // CLAW COUNTRY — turnbuckle bolt
+  return 'star';                  // CORNICE — space star
+}
+function _studShapePath(X,Y,r,shape){
+  ctx.beginPath();
+  if(shape==='button'){ const q=r*0.44; ctx.moveTo(X-r+q,Y-r); ctx.arcTo(X+r,Y-r,X+r,Y+r,q); ctx.arcTo(X+r,Y+r,X-r,Y+r,q); ctx.arcTo(X-r,Y+r,X-r,Y-r,q); ctx.arcTo(X-r,Y-r,X+r,Y-r,q); ctx.closePath(); }
+  else if(shape==='coral'||shape==='target'){ ctx.arc(X,Y,r,0,7); }
+  else if(shape==='bolt'){ for(let i=0;i<6;i++){ const a=Math.PI/6 + i*Math.PI/3, px=X+Math.cos(a)*r, py=Y+Math.sin(a)*r; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); }
+  else if(shape==='star'){ for(let i=0;i<10;i++){ const rr=i%2?r*0.46:r, a=-Math.PI/2 + i*Math.PI/5, px=X+Math.cos(a)*rr, py=Y+Math.sin(a)*rr; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); }
+  else { ctx.moveTo(X,Y-r); ctx.lineTo(X+r,Y); ctx.lineTo(X,Y+r); ctx.lineTo(X-r,Y); ctx.closePath(); } // gem
+}
+function drawPlasticStud(X,Y,r,shape,cc,hi,base,lo){
+  _studShapePath(X,Y,r,shape);
+  const g=ctx.createLinearGradient(X,Y-r,X,Y+r);
+  g.addColorStop(0,hi); g.addColorStop(0.45,base); g.addColorStop(1,lo);
+  ctx.fillStyle=g; ctx.fill();
+  ctx.strokeStyle=hexA(hexLerp(cc,'#000000',0.5),0.7); ctx.lineWidth=1.3*S; ctx.stroke();
+  if(shape==='target'){   // bullseye rings
+    ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.5*S; ctx.beginPath(); ctx.arc(X,Y,r*0.58,0,7); ctx.stroke();
+    ctx.fillStyle=hexLerp(cc,'#ffffff',0.25); ctx.beginPath(); ctx.arc(X,Y,r*0.24,0,7); ctx.fill(); return;
+  }
+  if(shape==='bolt'){     // turnbuckle nut: inner ring + a corner glint
+    ctx.strokeStyle=hexA(lo,0.85); ctx.lineWidth=1.2*S; ctx.beginPath(); ctx.arc(X,Y,r*0.44,0,7); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(X-r*0.16,Y-r*0.22,r*0.14,0,7); ctx.fill(); return;
+  }
+  // candy gloss: bright facet wedge + hard glint (used by gem / button / coral / star)
+  ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(X,Y-r*0.85); ctx.lineTo(X+r*0.42,Y-r*0.15); ctx.lineTo(X-r*0.42,Y-r*0.15); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(X-r*0.22,Y-r*0.32,r*0.16,0,7); ctx.fill();
 }
 function drawStud(s){
   const X=sx(s.x), Y=sy(s.y);
@@ -943,14 +1092,8 @@ function drawStud(s){
     const cc = chute ? '#ffd23a' : (asanoPal?asanoPal.stud:'#39e6d6');
     const base=cc, hi=hexLerp(cc,'#ffffff',0.55), lo=hexLerp(cc,'#000000',0.42);
     asanoBloom(X,Y,r*(chute?2.8:2.1), cc, (chute?0.55:0.4)*depth);
-    studPath(X,Y,r,'gem');
-    const g=ctx.createLinearGradient(X,Y-r,X,Y+r);
-    g.addColorStop(0,hi); g.addColorStop(0.45,base); g.addColorStop(1,lo);
-    ctx.fillStyle=g; ctx.fill();
-    ctx.strokeStyle=hexA(hexLerp(cc,'#000000',0.5),0.7); ctx.lineWidth=1.3*S; ctx.stroke();
-    // bright facet gloss + hard glint (candy plastic tell)
-    ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(X,Y-r*0.85); ctx.lineTo(X+r*0.42,Y-r*0.15); ctx.lineTo(X-r*0.42,Y-r*0.15); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(X-r*0.22,Y-r*0.32,r*0.16,0,7); ctx.fill();
+    const shape = chute ? 'gem' : studShapeFor(pctOf(s.y));   // per-section grab-stud silhouette
+    drawPlasticStud(X,Y,r,shape,cc,hi,base,lo);
   }
   ctx.restore();
 }
@@ -995,6 +1138,8 @@ function paintHand(g, X, Y, r, fin, vx, vy){
   // ambient bloom — the hand is a little light source in a dark machine
   const gl = fin.glow || (asanoPal?asanoPal.glow:null);
   if(gl) asanoBloom(X, Y, r*2.6, gl, fin.glow?0.4:0.22);
+  // ANIMATED HERO: the live hero (main ctx) plays a Makko sprite state; it carries its own eyes/rim.
+  if(g===ctx && drawHeroAnim(g, X, Y, r)) return;
   // BODY: high-fidelity glossy hero. a Makko-painted PNG in ASANO_ART.hand overrides it (same slot);
   // rgba finishes (ghost) still fall back to the simple translucent primitive.
   const art=ASANO_ART.hand, usingArt = art && art.complete && art.naturalWidth;
@@ -1014,11 +1159,13 @@ function paintHand(g, X, Y, r, fin, vx, vy){
 function drawHand(){
   const X=sx(HAND.x), Y=sy(HAND.y);
   ctx.save();
-  // reach ring (always visible)
+  // reach ring — a small ring tucked BELOW the hero (its top pinned at his coil-foot), tightening when you press to grab
   if(HAND.mode==='fly'){
+    const ringR = REACH*S*(held?0.30:0.42);   // small; shrinks further when held
+    const ringY = Y + 44*S + ringR;            // top edge stays just under his feet
     ctx.strokeStyle = whiffLock>0 ? 'rgba(226,75,74,.55)' : (grabWin>0 ? 'rgba(232,232,238,.45)' : 'rgba(232,232,238,.10)');
     ctx.lineWidth = grabWin>0 ? 2.5 : 1.5;
-    ctx.beginPath(); ctx.arc(X,Y,REACH*S,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X,ringY,ringR,0,7); ctx.stroke();
     const t = nearestStud(HAND.x,HAND.y,REACH);
     if(t){ const TX=sx(t.x),TY=sy(t.y);
       ctx.strokeStyle='rgba(231,192,75,.9)'; ctx.lineWidth=2;
@@ -1454,6 +1601,50 @@ const ASANO_ART = {};                 // key -> HTMLImageElement (painted art ov
 // load authored art assets (OpenArt / Makko). each drops into its slot when ready; game runs before they load.
 (function(){ const A={ hand:'assets/hero.png', claw:'assets/gerald.png', moose:'assets/moose.png' };
   for(const k in A){ const im=new Image(); im.src=A[k]; ASANO_ART[k]=im; } })();
+// ===== ANIMATED HERO — Makko sprite states (transparent frame sequences under assets/hero_anim/<state>/fNN.png).
+//   heroAnimKey() picks the state from the live game state; the frame is chosen off a real-time clock.
+//   A missing/half-loaded set falls back to idle, so the hero always animates once idle is cached.  =====
+const ASANO_ANIM = { painterly:{}, pixel:{} };   // skin -> state -> frame array (per-floor art medium)
+let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size vs r, vertical anchor of the grab-hand at (X,Y))
+let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
+(function(){
+  const SETS = { idle:{n:12,fps:14}, fling:{n:12,fps:20}, wind:{n:12,fps:20}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
+  const SKINS = { painterly:{dir:'assets/hero_anim/'}, pixel:{dir:'assets/hero_anim_pixel/', n:1, fps:1} };  // pixel = 1 crisp frame per state
+  for(const sk in SKINS){ const skin=SKINS[sk]; for(const k in SETS){ const s=SETS[k], n=skin.n||s.n, arr=[]; arr.fps=skin.fps||s.fps;
+    for(let i=0;i<n;i++){ const im=new Image(); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png'; arr.push(im); }
+    ASANO_ANIM[sk][k]=arr; } }
+})();
+function _animReady(arr){ return arr && arr.length && arr.every(im=>im.complete && im.naturalWidth); }
+let _heroAnimT = 0, _heroAnimLast = 0, _thwapT = 0;   // _thwapT: brief grab-impact override timer
+function heroAnimKey(){
+  if(_thwapT > 0) return 'thwap';                                   // brief squash flourish on a fresh grab
+  if(HAND.mode==='fly') return (HAND.vy < 0) ? 'fall' : 'fling';    // engine: up is +vy, so vy<0 = falling
+  if(HAND.mode==='attach') return (held && HAND.charge>0.05) ? 'wind' : 'idle';
+  return 'idle';
+}
+// which art-medium the hero wears, by the floor it's in — SPILL (8-30%) is the 8-bit PIXEL floor.
+function heroSkin(){ const p=pctOf(HAND.y); return (p>=8 && p<30 && _animReady(ASANO_ANIM.pixel.idle)) ? 'pixel' : 'painterly'; }
+function _heroAnimAdvance(){ const now=(typeof performance!=='undefined'?performance.now():0)/1000;
+  const d = _heroAnimLast ? Math.min(0.05, now-_heroAnimLast) : 0; _heroAnimLast=now;
+  _heroAnimT += d; if(_thwapT>0) _thwapT -= d; }
+// blit the current hero animation frame for the LIVE hero; returns true if it drew.
+function drawHeroAnim(g, X, Y, r){
+  _heroAnimAdvance();
+  const skin = heroSkin(), key = heroAnimKey(), px = (skin==='pixel');
+  let set = ASANO_ANIM[skin][key];
+  if(!_animReady(set)) set = ASANO_ANIM[skin].idle;                 // this skin's idle
+  if(!_animReady(set)) set = ASANO_ANIM.painterly[key];             // painterly of this state
+  if(!_animReady(set)) set = ASANO_ANIM.painterly.idle;
+  if(!_animReady(set)) return false;                               // nothing loaded yet -> caller uses static hero
+  const f = set[Math.floor(_heroAnimT*set.fps) % set.length];
+  const bob = (px && key==='idle') ? Math.sin(_heroAnimT*4.5)*0.03 : 0;   // tiny life for the 1-frame pixel idle
+  const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE);
+  const yoff = (px?ANIM_YOFF_PX:ANIM_YOFF) + bob;
+  const sm = g.imageSmoothingEnabled; if(px) g.imageSmoothingEnabled = false;   // crisp nearest-neighbour pixels
+  g.drawImage(f, X-Sz/2, Y-Sz*yoff, Sz, Sz);
+  g.imageSmoothingEnabled = sm;
+  return true;
+}
 // painted per-zone FLOOR backgrounds (opaque scenes); each covers its zone band, cross-fading at edges.
 const ASANO_BG = {};
 (function(){ const B={ pit:'assets/bg_pit.png', spill:'assets/bg_spill.png', reef:'assets/bg_reef.png',
@@ -1622,6 +1813,24 @@ function render(){
     ctx.globalAlpha=Math.max(0,a); ctx.fillStyle='#e7c04b'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='center';
     ctx.fillText('+'+pk.v+'¢', sx(pk.x), sy(pk.y)-(1-a)*26); ctx.globalAlpha=1;
   }
+  // SKILL PAYS: rising "+N¢ · TECHNIQUE ×M" pops at the hand (green when the chain is hot). juice = motion, never shake.
+  pops = pops.filter(p=>simFrame-p.f<58);
+  for(const p of pops){
+    const a=Math.max(0,1-(simFrame-p.f)/58), rise=(1-a)*34, X=sx(p.x), Y=sy(p.y)-24-rise;
+    ctx.globalAlpha=a; ctx.textAlign='center';
+    if(p.v!=null){                       // a quarters payout: amount (green when the chain is hot) + technique label
+      ctx.fillStyle = p.m>=4?'#7fe0a0':(p.m>1?'#ffd24a':'#e7c04b');
+      ctx.font='800 16px ui-monospace,monospace';
+      ctx.fillText('+'+p.v+'¢'+(p.m>1?'  ×'+p.m:''), X, Y);
+      if(p.label){ ctx.font='700 9px ui-monospace,monospace'; ctx.fillStyle='rgba(231,206,120,'+a.toFixed(2)+')';
+        ctx.fillText(p.label, X, Y+13); }
+    } else if(p.label){                   // a move firing: label only, in machine gold
+      ctx.fillStyle='#e7c04b'; ctx.font='800 13px ui-monospace,monospace';
+      ctx.fillText(p.label, X, Y);
+    }
+    ctx.globalAlpha=1;
+  }
+  ctx.textAlign='right';
   // grab-impact ring, tinted to the worn finish
   bursts = bursts.filter(b=>simFrame-b.f<16);
   for(const b of bursts){
@@ -1692,6 +1901,11 @@ function render(){
   if(quarters>0 || finishes.length || bgOwned.length || studOwned.length){
     ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='left';
     ctx.fillText('¢ '+quarters, 12, 76); ctx.textAlign='right';
+  }
+  // SKILL PAYS: the live chain multiplier
+  if(combo>0 && payMult()>1){
+    ctx.fillStyle='#ffd24a'; ctx.font='800 12px ui-monospace,monospace'; ctx.textAlign='left';
+    ctx.fillText('×'+payMult()+' CHAIN', 12, 94); ctx.textAlign='right';
   }
 
   // charge pip
@@ -1812,13 +2026,43 @@ function openShare(){
 }
 el('b_back').onclick=()=>{ el('p_share').classList.remove('on'); currentFall=null; mode='play'; };
 
+// one card in THE RECORD's feats collection — the skill layer, made legible (Phase 1)
+function featRow(f){
+  const def=GUIDE_DEFS[f.k], g=guide[f.k];
+  const n=g.n, filed=n>0, done=n>=f.target;
+  const pct = done?100:Math.round(n/f.target*100);
+  const cls = done?'feat filed done':(filed?'feat filed':'feat sealed');
+  const tier = done?'MASTERED':(filed?'DOCUMENTED':'SEALED');
+  const betterTxt = def.better==='lower'?'lower is better':'higher is better';
+  const body = filed
+    ? `<div class="fmeter"><div class="ffill" style="width:${pct}%;"></div></div>`+
+      `<div class="fstat"><span>filed <b>${n}</b> / ${f.target}</span>`+
+      `<span>record <b>${g.pb}${def.unit}</b> · ${betterTxt}</span></div>`
+    : `<div class="friddle">${esc(def.riddle)}</div>`;
+  const reward = ((f.kind==='move'||f.kind==='charm') && done)
+    ? `<b>${esc(f.reward)}</b> — <span class="ok">unlocked. equip it in THE MACHINE.</span>`
+    : `files toward <b>${esc(f.reward)}</b> — ${esc(f.gives)}`+
+      (done?` <span class="ok" style="font-size:10px;">· ready</span>`:'');
+  return `<div class="${cls}">`+
+    `<div class="fh"><span class="fname">${esc(def.name)}</span><span class="ftier">${tier}</span></div>`+
+    body+
+    `<div class="freward">${reward}</div>`+
+    `</div>`;
+}
 function openRecord(){
   if(mode!=='play' || dailyActive) return;
   mode='record';
-  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE ARCHIVE · ${SEASON.name}</div>`+
-    `<h1>standing footage</h1>`+
-    `<div class="sub">every entry is enterable. one grab each.</div>`+
-    `<div class="rule"></div>`;
+  const documented = FEATS.filter(f=>guide[f.k].n>0).length;
+  const mastered   = FEATS.filter(f=>guide[f.k].n>=f.target).length;
+  const filings    = FEATS.reduce((s,f)=>s+guide[f.k].n,0);
+  let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE RECORD · ${SEASON.name}</div>`+
+    `<h1>your file</h1>`+
+    `<div class="sub">the machine keeps a line on every hard thing you pull off. this is what it has on you so far.</div>`+
+    `<div class="rec-sum"><span><b>${documented}/5</b>documented</span><span><b>${mastered}/5</b>mastered</span><span><b>${filings}</b>on record</span></div>`+
+    FEATS.map(featRow).join('')+
+    `<div class="sub" style="font-size:10.5px;color:#8a8796;margin-top:9px;font-style:italic;">master a technique and its move or charm unlocks — equip it in THE MACHINE.</div>`+
+    `<div class="rule"></div>`+
+    `<div class="big" style="font-size:13px;">STANDING FOOTAGE <span style="color:#8a8796;font-weight:400;">— reconstructions, one grab each</span></div>`;
   CASES.forEach(c=>{
     const st = archStatus[c.id];
     h += `<div style="margin-top:8px;"><div class="big" style="font-size:13px;">${esc(c.title)}</div>`+
@@ -1835,9 +2079,7 @@ function openRecord(){
         `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__reenter(${f.no})">RE-ENTER YOUR FALL</button></div>`;
     });
   }
-  const sealed = Object.keys(GUIDE_DEFS).filter(k=>guide[k].n===0);
-  h += `<div class="rule"></div><div class="sub" style="font-size:11px;">field guide: ${5-sealed.length} of 5 behaviors documented.`+
-    (sealed.length? `<br>next sealed case ${esc(GUIDE_DEFS[sealed[0]].riddle)}`:' the guide is complete.')+`</div>`;
+  // (the field-guide summary now lives in THE RECORD collection at the top)
   el('record_doc').innerHTML = h;
   el('p_record').classList.add('on');
 }
@@ -1854,6 +2096,7 @@ function finishRow(id){
   return `<div class="sub" style="margin-top:9px;display:flex;gap:10px;align-items:flex-start;">`+
     `<canvas class="finprev" data-fin="${id}" width="48" height="48" style="width:40px;height:40px;flex:none;background:#0c0d12;border-radius:9px;"></canvas>`+
     `<div style="flex:1;min-width:0;"><b>${esc(f.name)}</b> — ${esc(f.line)}`+
+    (f.perk ? `<div style="margin-top:4px;font-size:10.5px;color:#8a6510;font-weight:700;letter-spacing:.02em;">◆ ${esc(f.perk)}</div>` : '')+
     (worn ? `<div class="ok" style="margin-top:4px;">worn.</div>`
       : own ? `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;" onclick="__wear('${id}')">WEAR</button>`
       : f.cost<0 ? `<div style="margin-top:5px;color:#8a8796;font-size:11px;">🔒 daily punch card prize — day ${f.punch}</div>`
@@ -1873,12 +2116,48 @@ function wrapLines(g, text, maxW){
 }
 function unreadChapters(){ return CHAPTER_ORDER.slice(0, storyIdx).filter(z=>STORY.chapters[z] && !chaptersRead.includes(z)).length; }
 function updateFoyerBadge(){ const b=el('b_foyer'); if(b) b.textContent = 'THE MACHINE'+(unreadChapters()>0?' ●':''); }
+// THE MOVES loadout (Phase 3) — lives in the foyer; unlocked by mastering techniques, swapped freely
+function moveSection(){
+  let h = `<div class="rule"></div><div class="big" style="font-size:13px;">THE MOVES <span style="color:#8a8796;font-weight:400;">— what your hand can do · ${loadout.length}/2 slots</span></div>`+
+    `<div class="sub" style="font-size:10.5px;color:#8a8796;">earned by mastering techniques in THE RECORD. swap them freely, any time.</div>`;
+  for(const id in MOVES) h += moveRow(id);
+  return h;
+}
+function moveRow(id){
+  const mv=MOVES[id], f=FEATS.find(x=>x.k===mv.feat), g=guide[mv.feat];
+  const unlocked = g.n>=f.target, on = loadout.indexOf(id)>=0, full = loadout.length>=2 && !on;
+  const cls = unlocked ? (on?'feat filed done':'feat filed') : 'feat sealed';
+  const tier = unlocked ? (on?'EQUIPPED':'READY') : 'LOCKED';
+  let action;
+  if(!unlocked){
+    const pct=Math.min(100,Math.round(g.n/f.target*100));
+    action = `<div class="fmeter"><div class="ffill" style="width:${pct}%;"></div></div>`+
+      `<div class="fstat"><span>🔒 master <b>${esc(GUIDE_DEFS[mv.feat].name)}</b></span><span>${g.n} / ${f.target}</span></div>`;
+  } else if(on){
+    action = `<button class="btn hot" style="width:100%;margin-top:8px;padding:8px;font-size:11px;background:#2f6a3d;color:#fff;" onclick="__equipMove('${id}')">EQUIPPED — tap to remove</button>`;
+  } else if(full){
+    action = `<div class="fstat" style="margin-top:8px;"><span style="color:#a49a82;">both slots full — remove one to equip this</span></div>`;
+  } else {
+    action = `<button class="btn hot" style="width:100%;margin-top:8px;padding:8px;font-size:11px;" onclick="__equipMove('${id}')">EQUIP</button>`;
+  }
+  return `<div class="${cls}"><div class="fh"><span class="fname">${esc(mv.name)}</span><span class="ftier">${tier}</span></div>`+
+    `<div class="friddle" style="font-style:normal;">${esc(mv.line)}</div>`+action+`</div>`;
+}
+window.__equipMove = (id)=>{
+  if(mode!=='foyer' || !moveUnlocked(id)) return;
+  const i=loadout.indexOf(id);
+  if(i>=0) loadout.splice(i,1);
+  else if(loadout.length<2) loadout.push(id);
+  else return;
+  save(); mode='play'; openFoyer();
+};
 function openFoyer(){
   if(mode!=='play' || dailyActive) return;
   mode='foyer';
   let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE MACHINE</div>`+
     `<h1>¢ ${quarters}</h1>`+
     `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
+  h += moveSection();
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
     `<div class="sub" style="font-size:11px;color:#8a8796;">notes found · ${storyIdx} of ${CHAPTER_ORDER.length} — one per climb</div>`+
     `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;" onclick="__playIntro()">↻ the beginning</button>`;
@@ -2037,9 +2316,15 @@ function openWinScreen(){
     tLine = `<div class="rule"></div><div class="sub">THE RETURN MIGRATION: ${fmtT(t)}${rec?' — the literature has been updated.':' · best: '+fmtT(bestTime)}</div>`;
   }
   beaten = true; bestPct = Math.max(bestPct, pctOf(HAND.y)); save();
+  // the reunion gets his face — the painted plush if it loaded, else the text stands on its own (as before)
+  const _m = ASANO_ART.moose;
+  const mooseImg = (_m && _m.complete && _m.naturalWidth)
+    ? `<img src="assets/moose.png" alt="Moose" style="display:block;width:150px;max-width:56%;margin:0 auto 4px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.20));">`
+    : '';
   el('win_doc').innerHTML =
     `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ONE HUNDRED PERCENT · THE TOP</div>`+
-    `<h1>MOOSE.</h1>`+
+    mooseImg+
+    `<h1 style="text-align:center">MOOSE.</h1>`+
     `<div class="sub">He turns. "Figured you forgot," he says — then he sees his own eye, in your hand, carried up an entire machine. "...you kept it?"<br><br>The Claw comes down one last time. You don't run. You catch it, and send it to deliver the one thing it's allowed to: itself. Down the chute.<br><br>Two eyes again. You go home the other way — down, together. HANDS UP, kid.</div>`+
     (firstTime?`<div class="rule"></div><div class="sub"><b>Somewhere above, another motor just kicked on.</b> Another toy at another ceiling its pit has turned into a monster. You know better now. The machine doesn't end here — it never did. Keep climbing, and see how high you can get. Be the hand that comes.</div>`:'')+
     tLine+
@@ -2281,7 +2566,7 @@ function showReceivedVerdict(pl){
 
 /* ---------- reset ---------- */
 function resetToPit(){
-  zonesThisRun=[]; foundThisRun=false;
+  zonesThisRun=[]; foundThisRun=false; combo=0; softUsed=false;
   const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
@@ -2412,6 +2697,17 @@ function iMoose(g,x,y,s){
   g.fillStyle='#111'; g.beginPath(); g.arc(x,y-s*0.07,s*0.18,0,7); g.fill();
   g.strokeStyle='rgba(0,0,0,.28)'; g.lineWidth=2; g.beginPath(); g.arc(x,y+s*0.28,s*0.34,0.15*Math.PI,0.85*Math.PI); g.stroke();
 }
+// painted MOOSE (Makko plush) overrides the procedural iMoose in the SAME slot — same registration as
+// paintHand/drawClaw. Kept in sync with iMoose so companion hands/claw/arcs stay aligned: the square PNG's
+// head-center (fracY ~0.34) seats at (x,y) and its antler span (~0.79 of the frame) ≈ iMoose's 2.26·s.
+function paintMoose(g,x,y,s){
+  const art=ASANO_ART.moose;
+  if(art && art.complete && art.naturalWidth){
+    const Sz=s*2.85; g.drawImage(art, x-Sz/2, y-Sz*0.34, Sz, Sz);
+  } else {
+    iMoose(g,x,y,s);   // fall back to the vector moose until the plush finishes loading
+  }
+}
 function iClaw(g,x,y){ g.strokeStyle='#c6cad8'; g.lineWidth=3; g.lineCap='round';
   g.beginPath(); g.moveTo(x,y-34); g.lineTo(x,y); g.moveTo(x,y); g.lineTo(x-15,y+20); g.moveTo(x,y); g.lineTo(x+15,y+20); g.moveTo(x,y); g.lineTo(x,y+22); g.stroke(); }
 function renderIntro(){
@@ -2419,12 +2715,12 @@ function renderIntro(){
   const g=ctx.createLinearGradient(0,0,0,Hc); g.addColorStop(0,'#0e0f16'); g.addColorStop(1,'#07080d'); ctx.fillStyle=g; ctx.fillRect(0,0,Wc,Hc);
   const b=INTRO[introBeat]||INTRO[0]; const cx=Wc/2, midY=Hc*0.38, t=Math.min(1,introT/1.5);
   if(b.key==='pit'){ for(let i=0;i<6;i++){ ctx.fillStyle='#8b4a5c'; ctx.beginPath(); ctx.arc(34+i*(Wc-68)/5,Hc*0.6,16,0,7); ctx.fill(); } iHand(ctx,cx,Hc*0.6-15,12); }
-  else if(b.key==='moose'){ iMoose(ctx,cx-24,midY,58); iHand(ctx,cx+74,midY+30,13); }
-  else if(b.key==='count'){ iMoose(ctx,cx-24,midY,56); iHand(ctx,cx+74,midY+28,13);
+  else if(b.key==='moose'){ paintMoose(ctx,cx-24,midY,58); iHand(ctx,cx+74,midY+30,13); }
+  else if(b.key==='count'){ paintMoose(ctx,cx-24,midY,56); iHand(ctx,cx+74,midY+28,13);
     ctx.fillStyle='rgba(198,200,214,.55)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillText('one · two · hands up', cx, Hc*0.18); }
-  else if(b.key==='taught'){ iMoose(ctx,cx-6,midY+46,50); iHand(ctx,cx+44,midY-36,13);
+  else if(b.key==='taught'){ paintMoose(ctx,cx-6,midY+46,50); iHand(ctx,cx+44,midY-36,13);
     ctx.strokeStyle='rgba(231,192,75,.4)'; ctx.setLineDash([4,5]); ctx.beginPath(); ctx.moveTo(cx-6,midY+16); ctx.quadraticCurveTo(cx+14,midY-64,cx+44,midY-36); ctx.stroke(); ctx.setLineDash([]); }
-  else if(b.key==='sacrifice'){ const cy=-20+t*(midY+14); iHand(ctx,cx,midY+18,11); iMoose(ctx,cx,midY-6,42*(0.75+t*0.35)); iClaw(ctx,cx,cy);
+  else if(b.key==='sacrifice'){ const cy=-20+t*(midY+14); iHand(ctx,cx,midY+18,11); paintMoose(ctx,cx,midY-6,42*(0.75+t*0.35)); iClaw(ctx,cx,cy);
     if(t>0.86){ ctx.fillStyle='rgba(255,255,255,'+((t-0.86)/0.14*0.6).toFixed(2)+')'; ctx.fillRect(0,0,Wc,Hc); } }
   else if(b.key==='eye'){ ctx.strokeStyle='rgba(150,150,160,.2)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,midY-30); ctx.lineTo(cx,-4); ctx.stroke();
     const ex=cx-t*(cx-42), ey=midY+t*(Hc*0.6-midY); ctx.fillStyle='#f2efe6'; ctx.beginPath(); ctx.arc(ex,ey,8,0,7); ctx.fill(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(ex,ey,3.4,0,7); ctx.fill();
