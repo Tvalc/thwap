@@ -67,7 +67,7 @@
 <body>
 <div id="wrap">
   <canvas id="cv"></canvas>
-  <div class="tag">THWAP · machine no. 7 · season 1 · the observation continues</div>
+  <div class="tag">BROKEN · night shift · station four</div>
 
   <div class="panel" id="p_fall">
     <div class="doc" id="fall_doc"></div>
@@ -169,12 +169,12 @@ const TOWER_H = TOP_Y - PIT_Y;
 const HANDLES = ["DARNELL","MAYA","THE OPP","DEVON","PRIYA","MASON","JAYDEN","AVA","ZOE","DEX","THE DEFENDANT",
   "NO. 7","MARCUS","SAM","THE ACCUSED","YOUR HONOR","EXHIBIT A","THE PLAINTIFF","WASHED","THE JURY","GREGORY"];
 const ZONES = [
-  {top:8,  name:"the pit"},
-  {top:30, name:"the spill"},
-  {top:55, name:"the reef"},
-  {top:75, name:"the gallery"},
-  {top:92, name:"claw country"},
-  {top:101,name:"the cornice"},
+  {top:8,  name:"the reject bin"},
+  {top:30, name:"the sorting belt"},
+  {top:55, name:"the stamping press"},
+  {top:75, name:"the regrind chute"},
+  {top:92, name:"the catwalk"},
+  {top:101,name:"the inspection window"},
 ];
 const SEASON = { id:1, name:"SEASON 1" };
 const FALL_NAMES = [
@@ -210,43 +210,40 @@ const FIELD_NOTES = [
 // Moose's notes, scratched up the whole machine over years — his voice is everywhere you climb.
 // they get sparser and older the higher you go (see the fade in render).
 const CARVINGS = [
-  {pct:6,    x:64,     t:"HANDS UP, KID. — M"},
-  {pct:13,   x:VW-150, t:"IF YOU CAN READ THIS YOU'RE ALREADY BRAVER THAN ME AT YOUR AGE"},
-  {pct:19,   x:70,     t:"THE PINK ONES LET GO. don't fall in love with a soft thing."},
+  {pct:6,    x:64,     t:"REJECT BIN — DO NOT CLIMB"},
+  {pct:13,   x:VW-150, t:"somebody scratched here: BRAVE IS NOT ON THE SPEC SHEET"},
+  {pct:19,   x:70,     t:"CAUTION — CULLING CLAW OVERHEAD"},
   {pct:27,   x:VW-140, t:"count the claw. one. two. then you go."},
-  {pct:34,   x:66,     t:"i named it Gerald. it's less scary with a name. barely."},
-  {pct:42,   x:VW-120, t:"the glass isn't a window, kid. i know it looks like one."},
-  {pct:50,   x:VW-150, t:"the sign out there says EVERYBODY GOES HOME. i'm keeping it honest up here."},
-  {pct:58,   x:72,     t:"i keep your eye where i can see it. the other one, i mean. keep mine."},
-  {pct:66,   x:VW-118, t:"release EARLY. earlier than that. i mean it, you stubborn thumb."},
-  {pct:74,   x:74,     t:"got higher today than yesterday. told nobody. told this stud."},
-  {pct:83,   x:VW-110, t:"if you made it this far you didn't need the notes. keep them anyway."},
-  {pct:91,   x:70,     t:"this is where Palmer's grip ran out. good hand. tell him i said so."},
+  {pct:34,   x:66,     t:"a smaller hand than yours got this high once. keep going."},
+  {pct:42,   x:VW-120, t:"THIS SIDE UP · HANDLE WITH CARE · (nobody did)"},
+  {pct:50,   x:VW-150, t:"the stamp only reads PASS or SCRAP. there is no third stamp."},
+  {pct:58,   x:72,     t:"the grinder isn't personal. that's the worst part of it."},
+  {pct:66,   x:VW-118, t:"let go EARLY. earlier than that. trust the reach."},
+  {pct:74,   x:74,     t:"they say R. keeps the ones who make it. i believe it. climb."},
+  {pct:83,   x:VW-110, t:"STATION FOUR — INSPECTION — AUTHORIZED PERSONNEL ONLY"},
+  {pct:91,   x:70,     t:"you're almost in her light now. don't look down."},
 ];
 // the pit remembers Moose. these play, quietly, while you rest at the bottom.
 const PIT_CHORUS = [
-  {who:'GLORIA', t:"Land on me, baby. Moose used to, back when he still came down."},
-  {who:'GLORIA', t:"He caught more of us than the claw ever did. Nobody puts THAT on a sign."},
-  {who:'PALMER', t:"Eighty-nine percent. That was me. Moose went higher and stayed. Don't ask me which is worse."},
-  {who:'PALMER', t:"He taught you to count the claw so the fear had somewhere to go. Still counting? Good."},
-  {who:'THE COLONEL', t:"I kept a tally of every toy that claw took. I stopped counting the day it took him."},
-  {who:'NANA', t:"When it comes down, hold something. Moose told me that. I've held this ear ever since."},
-  {who:'KING', t:"He made it OUT, I'm telling you. Through the top. He's in a better machine now."},
-  {who:'THE COLONEL', t:"You've got his release. Bad temper, too, but mostly the release."},
-  {who:'GLORIA', t:"You slept in the crook of his arm. You were the size of a thumb. You don't remember. He did."},
-  {who:'PALMER', t:"Nobody's climbed like you since him. Nobody. I'd know — I watch the whole thing."},
+  {who:'A BROKEN BEAR', t:"You'll wear yourself out and end up back down here with the rest of us. We all do. Sit."},
+  {who:'A ONE-WING ANGEL', t:"They stamped me broken on a Tuesday. I stopped arguing with the stamp a long time ago."},
+  {who:'A SEAM-SPLIT RABBIT', t:"Nine have made it up to her, they say. Nine, in all these years. Go on and do that math."},
+  {who:'A BROKEN BEAR', t:"The warm spot's by the motor. You stop asking what's above it, and it stops hurting."},
+  {who:'A DENTED ROBOT', t:"I climbed once. Got as far as the belts. The claw doesn't get tired, and I do."},
+  {who:'A ONE-WING ANGEL', t:"She's not coming to save you. She runs the claw all night. Don't look up at her like that."},
+  {who:'A SEAM-SPLIT RABBIT', t:"You're the sticky one — too sticky to sell, they said. Funny. It's the only reason you can climb."},
+  {who:'A DENTED ROBOT', t:"If you're going, go before you talk yourself out of it. That's where the rest of us stopped."},
+  {who:'A BROKEN BEAR', t:"Nobody's stopping you. That isn't the same as somebody wanting you to make it. Remember that up there."},
 ];
 const TOKEN_R = 44;
 // (pit furnishings deleted — cosmetics now only change the machine you climb through)
 // THE OPENING — a tappable cold open that plays on a fresh start. characters, dialogue, the first turn of the arc.
 const INTRO = [
-  { key:'pit',   lines:["This is a claw machine. The arcade around it closed years ago.","At the bottom is the pit — where the toys nobody ever won pile up.","You're the newest one. A small sticky hand. Scared of everything."] },
-  { key:'moose', lines:['"Hey. New kid. You\'re shaking."',"That's Moose — a big plush with one eye, and the oldest toy down here.","He took one look at you and decided you were his to raise."] },
-  { key:'count', lines:['"That claw grabs a toy every three seconds. You can\'t outrun it."','"So you count it. One. Two. Hands up."',"He taught you everything. How to climb. How to let go. How not to be afraid."] },
-  { key:'taught',lines:["You two were a team.","You were the size of a thumb, and you slept tucked in his arm,","and you figured it would always be that way."] },
-  { key:'sacrifice', anim:1, lines:["Then one day the claw came straight down for you.","Moose shoved you out of the way and took your place.",'"HANDS UP, KID!"'] },
-  { key:'eye', anim:1, lines:["The claw carried him up to the top of the machine. It never brought him back.","One of his eyes came loose and rolled all the way down to you.","You've kept it ever since. It's all you have left of him."] },
-  { key:'decide',lines:["You were too small to go after him then. So you waited. You grew up. You practiced.","Now you're going to climb this whole machine and get him back.","His eye goes home. Hands up, kid. Let's climb."] },
+  { key:'wake',   lines:["You wake up at two in the morning, in a bin at the bottom of a toy factory.","The first thing you learn about yourself is that you came out wrong.","Too soft. Too sticky. Two googly eyes that don't even match."] },
+  { key:'broken', lines:["There's a word here for a toy that comes out like this.","Broken.","A broken toy doesn't get sold, or boxed, or taken home. It gets ground back into pellets before morning."] },
+  { key:'claw',   lines:["You can hear the grinder working somewhere below you, slow and patient.","Above it hangs the claw — not cruel, just doing its one job:","every few seconds it drops, takes a broken toy off the pile, and lets it fall."] },
+  { key:'window', lines:["Forty feet up, there's a window with a light on, and a woman inside.","Her name is Reyes. She has a stamp, and tonight she is the only one","who gets to decide who's worth keeping and who goes down the chute."] },
+  { key:'brave',  lines:["You're broken. But broken things can still be brave,","and brave is the one thing this place never thought to check you for.","So you're going to climb — all the way up to her. Let's go."] },
 ];
 // hand finishes: each is a full identity — body, eyes, glow, motion trail, grab-impact color
 const FINISHES = {
@@ -310,6 +307,15 @@ const MOVES = {
   steady:  { name:'STEADY GRIP', feat:'wrap',    line:'the grip winds up slower — more time to line up the release before the cap.' },
   soft:    { name:'SOFT LANDING',feat:'cushion', line:'your first fall each climb keeps your chain alive.' },
 };
+// THE HEAT ladder (Phase 5): modifiers are CUMULATIVE (heat N applies 1..N). each rung pays more and gates the next.
+const HEAT_LEVELS = [
+  { name:'AS FOUND',        mod:'the machine as it shipped.',                        pay:1.0 },
+  { name:'SHORT FUSE',      mod:'the grip winds up faster — less time to release.',   pay:1.3 },
+  { name:'TIGHT TOLERANCE', mod:'the catch window narrows.',                          pay:1.6 },
+  { name:'HEAVY HAND',      mod:'a mistimed release throws wilder off vertical.',      pay:2.0 },
+  { name:'COLD SHOULDER',   mod:'a whiff costs more recovery before you can try again.', pay:2.5 },
+  { name:'BROWNOUT',        mod:'every hold slips — you can never rest.',              pay:3.0 },
+];
 const CASES = [
   { id:'elder', title:'RECONSTRUCTION №1 — THE ELDER', from:'THE ELDER',
     sub:'Season 1, day 3. Survived by nothing, ever.',
@@ -482,10 +488,12 @@ let combo = 0, comboMax = 0, pops = [], audioCtx = null, muted = false;
 let loadout = [];                                   // equipped move ids (max 2)
 let airRegrabUsed = false, wallKickUsed = false;    // per-flight move charges
 let softUsed = false;                               // SOFT LANDING charm: per-climb free chain-save
+// THE HEAT (Phase 5): post-summit difficulty ladder — cumulative modifiers, richer pay, gates the next tier
+let heat = 0, heatMax = 0, heatBeaten5 = false, heatClearedThisRun = false;
 let TOKENS = [];
 let zonesReached = [], audienceN = 0, chaptersRead = [];
 // the story is found ONE NOTE PER CLIMB, in order. reaching high gets you the next note, not all of them.
-const CHAPTER_ORDER = ['the pit','the spill','the reef','the gallery','claw country','the cornice','the chute'];
+const CHAPTER_ORDER = ['the reject bin','the sorting belt','the stamping press','the regrind chute','the catwalk','the inspection window','kept'];
 let storyIdx = 1, foundThisRun = false, resetArmed = false, noteHold = false;
 let introBeat = 0, introT = 0, seenIntro = false;
 let bgOwned = [], bgWorn = 'stock', studOwned = [], studWorn = 'stock';
@@ -506,86 +514,44 @@ function dayNum(){ if(dayOverride!==null) return dayOverride;
   // Date.UTC of the LOCAL calendar date: exact multiple of 86400000, +1 per local day, DST-immune,
   // and the same day # for the same calendar date worldwide (rollover still at each player's midnight)
   const d=new Date(); return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000); }
-let STORY = { title:'EVERYBODY GOES HOME', chapters:{
-'the pit': { title:'The Thing at the Top', lede:'Every toy fears the monster at the top. You are going to climb toward it anyway.', text:`Every toy in the pit knows two rules. One: there is a monster at the top that takes toys and never gives them back. Two: you never, ever climb toward it.
+let STORY = { title:'BROKEN', chapters:{
+'the reject bin': { title:'The Ones Who Believed It', lede:'The other broken toys gave up. You climb out of the bin anyway.', text:`The other broken toys in the bin don't climb. The building stamped them broken and they believed it, so they wait in the warm spot by the motor for the claw to come, because at least that is a kind of rest.
 
-You are about to break the second rule.
+You can't do it. You keep looking up instead — past the belts, past the presses, at the one lit window and the woman inside who decides who is worth keeping — and you find you would rather try for her and fall than be scrapped quietly.
 
-You know exactly how the first one works, because you watched it happen. Moose — the big, one-eyed plush who raised you, who taught a small scared nobody to survive the claw by counting it, one, two, hands up — was standing right where you are the day it came down for you. He shoved you clear and let it take him instead. His eye tore loose and rolled all the way down to your feet.
+You climb out of the bin, and none of the others stop you. They just watch, the way you watch somebody do the brave thing you couldn't.` },
+'the sorting belt': { title:"It Thinks It's Being Kind", lede:'Meet the Foreman — the machine that runs the line, and the claw.', text:`The belt sorts everyone but you. The good ones ride it smooth and level toward the light; the broken ones get pushed to the edge, where the claw can reach. You watch it take a lopsided little bear — one drop, clean, gone — and the belt doesn't so much as stutter.
 
-You kept it. And you are going to climb this entire machine to give it back and make the two of you even.
+A speaker crackles overhead. "Recycling on schedule," says a calm, even voice. "Thank you for your continued cooperation."
 
-That is the plan, anyway. Hands up, kid. Start climbing.` },
-'the spill': { title:'His Handwriting', lede:"Monsters don't leave friendly notes. This one does.", text:`You are barely off the floor when the wall says something.
+That's the Foreman — the system that runs the line, and the claw. It isn't gloating. That's the part that scares you: it honestly believes it's being kind.` },
+'the stamping press': { title:'What Being Kept Looks Like', lede:'A lucky one gets stamped PASS and boxed for the light.', text:`This is where the lucky ones get made real. A toy rolls under the press, Reyes's stamp comes down — PASS — and the machine folds a box around it like it's tucking it into bed.
 
-KEEP GOING, KID. Scratched into a stud in big crooked letters that lean a little downhill, the way all his letters did. You would know that handwriting in the dark. And under it, smaller, squeezed in where he ran out of room: DON'T LOOK DOWN. IT'S TACKY.
+You're close enough now to see her do it, up behind her glass, and close enough to see she doesn't smile when she does. She has scrapped too many good ones and kept too many wrong ones to smile at a stamp.
 
-You almost laugh. He always left you notes exactly like this back in the pit — good morning; watch the claw; you're doing fine — tucked where only you would find them.
+But she is the one who decides, and you want her to decide it about you. So you climb harder, toward the only judge in this building who might look at a broken thing and still see something worth folding a box around.` },
+'the regrind chute': { title:"What You're Climbing Away From", lede:'You look down the grinder once. You only need to look once.', text:`You have to climb right past the mouth of the chute, and you make the mistake of looking down it. A broken toy goes by you on the edge of the belt — a rabbit with a seam that never closed — and it doesn't fight, and it doesn't fall by accident. When the claw comes for it, it lifts its own arms, the way you're told to, and it lets go.
 
-Then the good feeling curdles into something colder. For him to have scratched this, he had to be up here. For the letters to be worn this soft, he scratched it a long time ago. So every year you spent down there growing up, he spent up here. Waiting. Leaving signs for a kid who never came.
+The sound down below changes for one second. Then it's even again.
 
-You climb faster.` },
-'the reef': { title:'The Pink Ones Let Go', lede:"The notes are getting old. He's been up here a long time.", text:`The notes keep coming, but they are older now — the letters worn shallow and grey. He was up here a long, long time.
+You finally understand what you're climbing away from, and you hold on so hard your fingers ache. Holding on is the only thing you've ever been good at.` },
+'the catwalk': { title:'Both of Them, Looking at You', lede:'This high the building is people-sized — and the Foreman knows your name.', text:`Up this high, the building is people-sized. There's a coffee gone cold on a rail, a radio playing low, a coat on a hook that means somebody meant to leave hours ago and didn't. And there's the Foreman again — except now it isn't talking to the room.
 
-This one does not cheer you on. It warns: THE PINK ONES LET GO. DON'T FALL IN LOVE WITH A SOFT THING. He learned that up here. Alone. The way he learned everything after the claw took him.
+"There is a toy climbing the wall at Station Four," it says. "It should have been recycled hours ago. This is inefficient, and inefficiency is unkind to everyone. I'll take care of it."
 
-And that is the one that finally gets you. This whole climb you have told yourself the same tidy story — hand the eye back, call it even, walk away square. Standing here reading a warning he wrote with nobody left to read it, you stop being able to lie about it.
+It has noticed you. And somewhere above, a chair scrapes back — Reyes, standing up. For the first time, the two of them are looking at the same thing, and the thing is you.` },
+'the inspection window': { title:'One Rivet Left', lede:'The glass is right there. So is the claw.', text:`The glass is right there. Behind it, Reyes is not a savior and was never going to be one. She's a tired woman on a double shift who has watched this building grind up better toys than you, night after night, and stamped them SCRAP because that was the job.
 
-You do not want to be even. You want him back. You have wanted him back every single day and only just let yourself feel it.
+But she's looking at you now — actually looking, the way no machine ever has — and she hasn't touched the stamp. Below you, the claw is winding up.
 
-The eye stops being something you owe. It is just his, and you want the rest of him with it.
+Between you and her there's one rivet, your grip, and the oldest fact about you: you don't let go of anything.` },
+'kept': { title:'Kept', lede:'To take her hand, the thing that never lets go has to let go.', text:`You reach the window with nothing left above you to climb. Reyes has her hand on the release, and the Foreman is in the speakers, calm as ever: "Recycling is the kindest thing this building can do for it. Step back from the glass. This one did not pass."
 
-You close your fist around it and reach for the next hold.` },
-'the gallery': { title:'Out', lede:'The notes were never a trail for a rescuer. They were only ever for you.', text:`Here the wall turns to glass, and for the first time you can see outside.
+She doesn't step back. She unlocks the glass, slides it open, and holds out her hand. And here's the terrible joke of it: to take it, you have to let go of the wall — you, the thing that has never let go of anything in its life. The claw is a breath away. Her hand is open.
 
-Outside is an arcade that died years ago. The lights are off. The coin slots are dark. Somebody unplugged the whole building and never told the claw, which has been grinding overtime ever since for a machine nobody will ever feed another quarter.
+You let go. She catches you before the claw can, and holds you against a heartbeat you can feel through the plastic. Not stamped. Not passed. Just brave enough to climb the whole machine that was built to unmake you — and she keeps the ones brave enough to make it.
 
-No kids. No winners. Nobody was ever coming to win a single toy out of here — and Moose could see that from up here long before you could.
-
-So the notes were never a trail for a rescue party. There was never going to be one. He left them anyway. Alone, in the dark, for years, on the one-in-a-million chance that the little thing he raised would grow up and climb high enough to find them.
-
-There is one here too, nearly worn through: STILL TACKY.
-
-You laugh, and it comes out wrong.` },
-'claw country': { title:'The Hand of God, Malfunctioning', lede:"No notes here. He was too busy to stop.", text:`The notes stop here. You climb the whole stretch and there is not one, and soon enough you see why.
-
-Get a good look at the Claw up close. It is not hunting anyone. It is not even cruel. It is a bored machine with a single instruction, dropping every three seconds to grab whatever it can — the Hand of God, if God were a motor nobody has oiled since the arcade closed. But watch it a while and you notice it reaches higher than it needs to, for something up top it can never quite close on. By the wear on the cable, it has been missing that grab for years.
-
-That something is him. All this time Moose has been up here catching the toys the claw shakes loose, three seconds at a time, so it never takes anyone the way it took him.
-
-And somewhere on this climb you catch yourself doing it too — watching the claw for the small ones climbing below you, not just for your own hide. You do not remember deciding to. Your hands just started counting for someone else.` },
-'the cornice': { title:'If Nobody Comes', lede:'The last note is the hardest one to read.', text:`The notes come back near the top. Just one, older than all the rest, the letters shaky and wandering, like it was hard to write.
-
-IF NOBODY COMES, THAT'S ALRIGHT.
-
-That is the last thing he ever wrote. After it, nothing — just tally marks scratched into the stud, counting the days. And then, partway along, even those stop.
-
-Past them, a nest of stuffing worn into the shape of a thing that has waited a long time. And in it, turning slowly toward the sound of you climbing: big, soft, one enormous eye.
-
-Every toy in the pit grows up afraid of the monster at the top. You are looking straight at him, and he is not a monster at all. He is the one who raised you — waiting up here in the dark so long the pit turned his name into a story to frighten small toys with. The thing they taught you to fear and the thing that loved you most were the same shape the whole time. Nobody down there could tell the difference. For years, neither could you.
-
-He gave up believing anyone would come. You are one climb from proving him wrong.
-
-One. Two. One more climb.` },
-'the chute': { title:'Hands Up, Kid', lede:'You kept his eye the whole way. You were always coming.', text:`One hundred percent. The top. Moose.
-
-He turns and looks at you like he is looking at something he gave up hoping for. "Figured you forgot me," he says, gentle, like it is fine. "Everybody forgets."
-
-Then he sees what you have carried the whole way up: his eye. The one that rolled down to a tiny, scared nobody a lifetime ago. You climbed an entire machine and never once put it down.
-
-"...you kept it?"
-
-You did. You climbed the whole monster to give it back — and now that you are here, holding it out, you both know you are not handing it over to settle anything. You just wanted to be in the same place as him again.
-
-The Claw comes down one more time, for both of you. Last time, he got his arms up first, for you. This time you are faster, and it is for him. You count it the way he taught you — one, two — and you catch it, and wind it, and send it straight down its own chute. Gone.
-
-Two eyes again. Whole. He looks at you like the last thing he ever wrote just got proven wrong.
-
-You do not leave through the top — out there is just a locked door and the dark. You go home the other way: down, together, the long way, and neither of you minds.
-
-And on the way past the bottom, you stop and scratch four words into a stud, in your own handwriting, for whoever climbs next:
-
-SOMEBODY CAME. KEEP GOING.` }
+"You're the tenth," she says, reaching for her coat. "Let's go home before he finishes counting."` },
 } };
 let THEMESETS = {
   stock: { name:'AS FOUND', cost:0, shop_line:'the machine, as the machine is.', zones:null, studs:null },
@@ -667,6 +633,7 @@ function load(){
     if(!BACKDROPS[bgWorn]) bgWorn='stock';
     if(!STUDSETS[studWorn]) studWorn='stock';
     loadout = Array.isArray(d.mv) ? d.mv.slice(0,2) : [];
+    heatMax = Math.min(5, d.htx||0); heatBeaten5 = !!d.ht5; heat = Math.max(0, Math.min(heatMax, d.ht||0));
     audienceN = d.aud||0; chaptersRead = d.chRead||[]; storyIdx = d.si||1; seenIntro = !!d.seen;
     if(d.dg) dailyData = Object.assign(dailyData, d.dg);
     // story v3: gating on lifetime best height dumped the whole story in one good climb.
@@ -684,7 +651,8 @@ function save(){
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
     q:quarters, fin:finishes, skin:skin, zr:zonesReached,
     bgOwn:bgOwned, bgWorn:bgWorn, stOwn:studOwned, stWorn:studWorn,
-    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, dg:dailyData, sv:3, mv:loadout, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
+    aud:audienceN, chRead:chaptersRead, si:storyIdx, seen:seenIntro, dg:dailyData, sv:3, mv:loadout,
+    ht:heat, htx:heatMax, ht5:heatBeaten5, hand:{x:HAND.x,y:HAND.y} })); }catch(e){}
 }
 
 /* ---------- helpers ---------- */
@@ -708,7 +676,8 @@ function attachTo(s, incomingVx, incomingVy){
   // spin direction inherits sideways momentum so the flow feels continuous
   const tang = (-Math.sin(HAND.ang))*incomingVx + (Math.cos(HAND.ang))*incomingVy;
   HAND.spin = tang>=0 ? 1 : -1;
-  HAND.w=W0; HAND.charge=0; HAND.wraps=0; HAND.plush = (s.type==='plush' && !s.pit) ? 0 : -1;
+  HAND.w=W0; HAND.charge=0; HAND.wraps=0;
+  HAND.plush = ((s.type==='plush' || heatBrownout()) && !s.pit) ? 0 : -1;   // BROWNOUT (heat 5): every hold slips like plush
   hitstop = HITSTOP; flash = 1;
   // establish a new "high water mark" for fall accounting when we grab higher
   if(s.y > HAND.peakY - 4) HAND.peakY = Math.max(HAND.peakY, s.y);
@@ -739,7 +708,7 @@ function chime(step){ if(muted || !audioCtx) return; try{ const t=audioCtx.curre
 // mint quarters + a rising pop-text + a coin chime; play-mode only, never during the daily
 function mintPay(base, label, x, y){
   if(mode!=='play' || dailyActive) return;
-  const m = payMult(), amt = base*m*payFactor();
+  const m = payMult(), amt = Math.round(base*m*payFactor()*heatPay());   // HEAT pays richer the hotter you climb
   quarters += amt; save();
   pops.push({ x, y, v:amt, label:label||null, m, f:simFrame });
   chime(Math.min(combo,14));
@@ -750,10 +719,29 @@ function hasMove(id){ return loadout.indexOf(id)>=0 && moveUnlocked(id); }
 function movePop(label, x, y, step){ pops.push({ x, y, v:null, label, m:1, f:simFrame }); chime(step); }   // label-only pop for a move firing
 // THE HANDS + CHARMS (Phase 4): passives read off the worn finish and the equipped charms
 function _fin(){ return FINISHES[skin] || FINISHES.factory; }
-function grabWindow(){ return 0.15 + (_fin().forgive||0); }                     // GHOST widens the catch window
+function grabWindow(){ return Math.max(0.09, 0.15 + (_fin().forgive||0) - heatGrabCut()); }  // GHOST widens; HEAT narrows
 function launchMul(){ return 1 + (_fin().momentum||0); }                        // EMBER runs every launch hotter
 function payFactor(){ return _fin().pay2x ? 2 : 1; }                            // GILDED doubles quarter payouts
-function wrapRate(){ return (_fin().greedy||1) * (hasMove('steady')?0.7:1); }   // GILDED winds faster · STEADY GRIP winds slower
+function wrapRate(){ return (_fin().greedy||1) * (hasMove('steady')?0.7:1) * heatWrapMul(); }  // GILDED/HEAT wind faster · STEADY slower
+// THE HEAT (Phase 5): the selected difficulty applies while climbing (never in the daily). modifiers are cumulative.
+function heatNow(){ return dailyActive ? 0 : heat; }
+function heatPay(){ return HEAT_LEVELS[heatNow()].pay; }
+function heatWrapMul(){ return heatNow()>=1 ? 1.25 : 1; }   // SHORT FUSE
+function heatGrabCut(){ return heatNow()>=2 ? 0.03 : 0; }   // TIGHT TOLERANCE
+function heatAimMul(){ return heatNow()>=3 ? 1.35 : 1; }    // HEAVY HAND
+function heatWhiff(){ return heatNow()>=4 ? 0.36 : 0.24; }  // COLD SHOULDER
+function heatBrownout(){ return heatNow()>=5; }             // BROWNOUT — every hold rips
+function aimBend(){ return AIM_BEND * heatAimMul(); }
+// reaching the summit at the current heat clears it: pays a fat bonus and opens the next rung
+function clearHeat(){
+  heatClearedThisRun = true;
+  const lvl = heat;
+  mintPay(20, 'HEAT '+lvl+' CLEARED', HAND.x, HAND.y);       // completion bonus (× chain × heat pay)
+  let msg = 'HEAT '+lvl+' CLEARED';
+  if(lvl===heatMax && heatMax<5){ heatMax++; msg += ' · HEAT '+heatMax+' OPEN'; }
+  if(lvl===5) heatBeaten5 = true;                            // Phase 6 hook: the deepest climb
+  bossFlash(msg, true); bossLineT=2.6; save();
+}
 function fling(reason){
   HAND.lastCause = reason||'manual'; hasFlung = true;
   airRegrabUsed = false; wallKickUsed = false;   // THE MOVES: a fresh flight resets the per-flight charges
@@ -774,7 +762,7 @@ function fling(reason){
   const side = Math.cos(HAND.ang);           // -1..1: release phase — this IS the aim
   // launch = up, bent by release phase. release at dead vertical → clean flight;
   // release badly → up to ~46° of your power goes sideways. bigger spin = harder timing.
-  let dx = clamp(side,-1,1)*AIM_BEND, dy = 1.0;
+  let dx = clamp(side,-1,1)*aimBend(), dy = 1.0;   // HEAVY HAND (heat 3+) bends a mistimed release harder
   if(reason==='greed'){                      // the cap popped you: weak, flat, deserved
     dx = (side>=0?1:-1)*1.8; dy = 0.25; spd *= 0.65;
   }
@@ -882,7 +870,7 @@ function step(dt){
           return;
         }
       }
-      if(!s && grabWin<=0){ whiffLock = 0.24; }
+      if(!s && grabWin<=0){ whiffLock = heatWhiff(); }   // COLD SHOULDER (heat 4+) lengthens the recoil
       if(s){
         const wasFalling = HAND.vy < -650 && fallTrack;
         const dropSoFar = fallTrack ? (pctOf(HAND.peakY)-pctOf(HAND.y)) : 0;
@@ -918,6 +906,7 @@ function step(dt){
           resetTokens(); pitLands++; zonesThisRun=[]; foundThisRun=false;
           if(hasMove('soft') && combo>0 && !softUsed){ softUsed=true; movePop('SOFT LANDING', HAND.x, HAND.y, 5); }  // first fall each climb keeps the chain
           else { combo=0; softUsed=false; }
+          heatClearedThisRun=false;   // a fresh climb from the pit can clear the heat again
           // (no mercy unlocks — falling is not how you earn the story. only altitude is.)
         }
       }
@@ -952,7 +941,7 @@ function step(dt){
   // one continuous climb keeps discovering them — no restart needed. (the chute beat is the summit finale.)
   if(mode==='play' && !dailyActive && storyIdx < CHAPTER_ORDER.length){
     const nextZone = CHAPTER_ORDER[storyIdx];
-    if(nextZone!=='the chute' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
+    if(nextZone!=='kept' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
       storyIdx++;
       if(!chaptersRead.includes(nextZone)) chaptersRead.push(nextZone);
       save(); updateFoyerBadge(); openNoteCard(nextZone);
@@ -961,6 +950,7 @@ function step(dt){
   }
   if(p>bestPct && !dailyActive){ bestPct=p; }
   if(p>=99.5 && mode==='play' && !beaten && !dailyActive){ openWinScreen(); return; }   // first time reaching the summit
+  if(p>=99.5 && mode==='play' && beaten && !dailyActive && heatNow()>0 && !heatClearedThisRun){ clearHeat(); }   // a heat run, cleared
   // camera
   const targetCam = HAND.y + 60;
   camY += (targetCam - camY) * Math.min(1, dt*6.5);
@@ -1623,7 +1613,7 @@ function heroAnimKey(){
   return 'idle';
 }
 // which art-medium the hero wears, by the floor it's in — SPILL (8-30%) is the 8-bit PIXEL floor.
-function heroSkin(){ const p=pctOf(HAND.y); return (p>=8 && p<30 && _animReady(ASANO_ANIM.pixel.idle)) ? 'pixel' : 'painterly'; }
+function heroSkin(){ return 'painterly'; }   // arcade/pixel floor retired — one painterly factory now
 function _heroAnimAdvance(){ const now=(typeof performance!=='undefined'?performance.now():0)/1000;
   const d = _heroAnimLast ? Math.min(0.05, now-_heroAnimLast) : 0; _heroAnimLast=now;
   _heroAnimT += d; if(_thwapT>0) _thwapT -= d; }
@@ -1897,16 +1887,22 @@ function render(){
     ctx.fillStyle='rgba(231,192,75,.75)'; ctx.font='600 12px ui-monospace,monospace'; ctx.textAlign='left';
     ctx.fillText('RM '+fmtT((simFrame-runStart)/120), 12, 52); ctx.textAlign='right';
   }
-  // the quarter count
+  // the quarter count, then the live chain multiplier, then the heat — stacked top-left
+  ctx.textAlign='left';
+  let _hudY = 76;
   if(quarters>0 || finishes.length || bgOwned.length || studOwned.length){
-    ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace'; ctx.textAlign='left';
-    ctx.fillText('¢ '+quarters, 12, 76); ctx.textAlign='right';
+    ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace';
+    ctx.fillText('¢ '+quarters, 12, _hudY); _hudY+=19;
   }
-  // SKILL PAYS: the live chain multiplier
-  if(combo>0 && payMult()>1){
-    ctx.fillStyle='#ffd24a'; ctx.font='800 12px ui-monospace,monospace'; ctx.textAlign='left';
-    ctx.fillText('×'+payMult()+' CHAIN', 12, 94); ctx.textAlign='right';
+  if(combo>0 && payMult()>1){   // SKILL PAYS: the live chain multiplier
+    ctx.fillStyle='#ffd24a'; ctx.font='800 12px ui-monospace,monospace';
+    ctx.fillText('×'+payMult()+' CHAIN', 12, _hudY); _hudY+=19;
   }
+  if(heatNow()>0){              // THE HEAT: which rung you're running
+    ctx.fillStyle='#ff6a2a'; ctx.font='800 12px ui-monospace,monospace';
+    ctx.fillText('HEAT '+heatNow()+' · '+HEAT_LEVELS[heatNow()].name, 12, _hudY);
+  }
+  ctx.textAlign='right';
 
   // charge pip
   if(HAND.mode==='attach' && HAND.charge>0.02){
@@ -2151,6 +2147,27 @@ window.__equipMove = (id)=>{
   else return;
   save(); mode='play'; openFoyer();
 };
+// THE HEAT selector (Phase 5) — opens only after the first summit; pick the rung you climb at
+function heatSection(){
+  if(!beaten) return '';
+  let h = `<div class="rule"></div><div class="big" style="font-size:13px;">THE HEAT <span style="color:#8a8796;font-weight:400;">— how hard the machine runs · pays richer</span></div>`+
+    `<div class="sub" style="font-size:10.5px;color:#8a8796;">clear a rung to open the next. the modifiers stack. the daily is always cold.</div>`;
+  for(let i=0;i<HEAT_LEVELS.length;i++) h += heatRow(i);
+  return h;
+}
+function heatRow(i){
+  const lv=HEAT_LEVELS[i], on=heat===i, avail=i<=heatMax;
+  const cls = on?'feat filed done':(avail?'feat filed':'feat sealed');
+  const tag = on?'RUNNING':(avail?'READY':'LOCKED');
+  const tagStyle = on?'':(i>0?' style="color:#bf4326;"':'');
+  let action;
+  if(on) action = `<div class="fstat" style="margin-top:7px;"><span class="ok">running this heat.</span><span>pays ×${lv.pay.toFixed(1)}</span></div>`;
+  else if(avail) action = `<button class="btn hot" style="width:100%;margin-top:7px;padding:8px;font-size:11px;${i>0?'background:#bf4326;color:#fff;':''}" onclick="__setHeat(${i})">${i===0?'RUN IT COLD':'RUN HEAT '+i} · pays ×${lv.pay.toFixed(1)}</button>`;
+  else action = `<div class="fstat" style="margin-top:7px;"><span style="color:#a49a82;">🔒 clear HEAT ${i-1} to open</span><span>pays ×${lv.pay.toFixed(1)}</span></div>`;
+  return `<div class="${cls}"><div class="fh"><span class="fname">HEAT ${i} · ${esc(lv.name)}</span><span class="ftier"${tagStyle}>${tag}</span></div>`+
+    `<div class="friddle" style="font-style:normal;">${i===0?'the baseline — no modifiers.':'+ '+esc(lv.mod)}</div>`+action+`</div>`;
+}
+window.__setHeat = (i)=>{ if(mode!=='foyer' || !beaten || i<0 || i>heatMax) return; heat=i; save(); mode='play'; openFoyer(); };
 function openFoyer(){
   if(mode!=='play' || dailyActive) return;
   mode='foyer';
@@ -2158,6 +2175,7 @@ function openFoyer(){
     `<h1>¢ ${quarters}</h1>`+
     `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
   h += moveSection();
+  h += heatSection();
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
     `<div class="sub" style="font-size:11px;color:#8a8796;">notes found · ${storyIdx} of ${CHAPTER_ORDER.length} — one per climb</div>`+
     `<button class="btn ghost" style="width:100%;margin-top:5px;padding:8px;font-size:11px;text-align:left;" onclick="__playIntro()">↻ the beginning</button>`;
@@ -2303,7 +2321,7 @@ function openWinScreen(){
   // the finale note is earned only once every other note is found — reaching the top can't dump the story
   if(storyIdx === CHAPTER_ORDER.length-1){
     storyIdx = CHAPTER_ORDER.length;
-    if(!chaptersRead.includes('the chute')) chaptersRead.push('the chute');
+    if(!chaptersRead.includes('kept')) chaptersRead.push('kept');
     updateFoyerBadge();
   }
   mode='win';
@@ -2315,25 +2333,22 @@ function openWinScreen(){
     if(rec) bestTime=t;
     tLine = `<div class="rule"></div><div class="sub">THE RETURN MIGRATION: ${fmtT(t)}${rec?' — the literature has been updated.':' · best: '+fmtT(bestTime)}</div>`;
   }
-  beaten = true; bestPct = Math.max(bestPct, pctOf(HAND.y)); save();
-  // the reunion gets his face — the painted plush if it loaded, else the text stands on its own (as before)
-  const _m = ASANO_ART.moose;
-  const mooseImg = (_m && _m.complete && _m.naturalWidth)
-    ? `<img src="assets/moose.png" alt="Moose" style="display:block;width:150px;max-width:56%;margin:0 auto 4px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.20));">`
-    : '';
+  beaten = true; bestPct = Math.max(bestPct, pctOf(HAND.y));
+  if(firstTime) heatMax = Math.max(heatMax, 1);   // bringing him home once opens THE HEAT
+  save();
+  // the ending stands on the text
   el('win_doc').innerHTML =
-    `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ONE HUNDRED PERCENT · THE TOP</div>`+
-    mooseImg+
-    `<h1 style="text-align:center">MOOSE.</h1>`+
-    `<div class="sub">He turns. "Figured you forgot," he says — then he sees his own eye, in your hand, carried up an entire machine. "...you kept it?"<br><br>The Claw comes down one last time. You don't run. You catch it, and send it to deliver the one thing it's allowed to: itself. Down the chute.<br><br>Two eyes again. You go home the other way — down, together. HANDS UP, kid.</div>`+
-    (firstTime?`<div class="rule"></div><div class="sub"><b>Somewhere above, another motor just kicked on.</b> Another toy at another ceiling its pit has turned into a monster. You know better now. The machine doesn't end here — it never did. Keep climbing, and see how high you can get. Be the hand that comes.</div>`:'')+
+    `<div class="kick" style="color:#166a3d;letter-spacing:.18em;font-size:11px;margin-bottom:6px">ONE HUNDRED PERCENT · THE INSPECTION WINDOW</div>`+
+    `<h1 style="text-align:center">KEPT.</h1>`+
+    `<div class="sub">Reyes unlocks the glass — the one thing she was never allowed to do — slides it open, and holds out her hand. To take it, you have to let go of the wall. You. The thing that never lets go.<br><br>You let go. She catches you before the claw can, and holds you against a heartbeat you can feel through the plastic. Not stamped. Not passed. Just brave enough to climb the whole machine that was built to unmake you.<br><br>"You're the tenth," she says, already reaching for her coat. "Let's go home before he finishes counting."</div>`+
+    (firstTime?`<div class="rule"></div><div class="sub"><b>Down in the bin, another broken toy just looked up.</b> They all say nobody makes it. Nine did. You're the tenth. The line doesn't stop, and neither do the ones brave enough to climb it. Keep going — see how high a broken thing can get.</div>`:'')+
     tLine+
     `<div class="rule"></div>`+
-    `<div class="sub" style="text-align:center;color:#8a8796;">— the marquee flickers: EVERYBODY GOES HOME —</div>`;
+    `<div class="sub" style="text-align:center;color:#8a8796;">— the Foreman, quietly, to no one: &ldquo;recount.&rdquo; —</div>`;
   el('p_win').classList.add('on');
   const brag = location.origin + location.pathname;
   el('b_winshare').onclick = ()=>{
-    const txt = 'i left machine no. 7 on my own. 100%. what % are you?';
+    const txt = 'a broken toy climbed the whole factory and got kept. 100%. what % are you?';
     if(navigator.share){ navigator.share({text:txt, url:brag}).catch(()=>{}); }
     else if(navigator.clipboard){ navigator.clipboard.writeText(txt+' '+brag).then(()=>{ el('b_winshare').textContent='COPIED — go flex'; },()=>{}); }
     else prompt('copy this', txt+' '+brag);
@@ -2566,7 +2581,7 @@ function showReceivedVerdict(pl){
 
 /* ---------- reset ---------- */
 function resetToPit(){
-  zonesThisRun=[]; foundThisRun=false; combo=0; softUsed=false;
+  zonesThisRun=[]; foundThisRun=false; combo=0; softUsed=false; heatClearedThisRun=false;
   const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
