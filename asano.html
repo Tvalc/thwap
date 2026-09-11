@@ -1211,13 +1211,8 @@ function drawHand(){
   // the sticky hand, wearing its finish
   paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
   // (removed: the carried "eye" was a leftover from the Moose story)
-  // charge as a warming rim — finish stays visible the whole wind
-  if(HAND.mode==='attach' && HAND.charge>0.02){
-    const c2=HAND.charge;
-    ctx.strokeStyle = c2>0.7 ? '#e7c04b' : `rgba(240,${180-c2*70|0},${120-c2*50|0},${0.45+c2*0.55})`;
-    ctx.lineWidth = 1.5 + c2*3;
-    ctx.beginPath(); ctx.arc(X,Y,11*S+2+c2*2,0,7); ctx.stroke();
-  }
+  // (removed the gold "charge warming rim" — an ugly hard UI ring around the hero every wind;
+  //  the wind reads from the hand swinging on its tether, and the launch window has its own gold tick)
   if(dusty && !HAND._wiped){ ctx.fillStyle='rgba(200,190,150,.25)'; ctx.beginPath(); ctx.arc(X,Y,12*S,0,7); ctx.fill(); }
   ctx.restore();
 }
