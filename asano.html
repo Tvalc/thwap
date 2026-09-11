@@ -1604,7 +1604,7 @@ const ASANO_ANIM = { painterly:{}, pixel:{} };   // skin -> state -> frame array
 let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size vs r, vertical anchor of the grab-hand at (X,Y))
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
 (function(){
-  const SETS = { idle:{n:12,fps:14}, fling:{n:12,fps:20}, wind:{n:12,fps:20}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
+  const SETS = { idle:{n:12,fps:14}, flying:{n:12,fps:20}, swinging:{n:12,fps:20}, reaching:{n:12,fps:20}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
   const SKINS = { painterly:{dir:'assets/hero_anim/'}, pixel:{dir:'assets/hero_anim_pixel/', n:1, fps:1} };  // pixel = 1 crisp frame per state
   for(const sk in SKINS){ const skin=SKINS[sk]; for(const k in SETS){ const s=SETS[k], n=skin.n||s.n, arr=[]; arr.fps=skin.fps||s.fps;
     for(let i=0;i<n;i++){ const im=new Image(); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png'; arr.push(im); }
@@ -1614,8 +1614,11 @@ function _animReady(arr){ return arr && arr.length && arr.every(im=>im.complete 
 let _heroAnimT = 0, _heroAnimLast = 0, _thwapT = 0;   // _thwapT: brief grab-impact override timer
 function heroAnimKey(){
   if(_thwapT > 0) return 'thwap';                                   // brief squash flourish on a fresh grab
-  if(HAND.mode==='fly') return (HAND.vy < 0) ? 'fall' : 'fling';    // engine: up is +vy, so vy<0 = falling
-  if(HAND.mode==='attach') return (held && HAND.charge>0.05) ? 'wind' : 'idle';
+  if(HAND.mode==='fly'){
+    if(nearestStud(HAND.x, HAND.y, REACH*1.7)) return 'reaching';   // a grabbable knob is close → stretch toward it
+    return (HAND.vy < 0) ? 'fall' : 'flying';                       // engine: up is +vy, so rising = flying, vy<0 = tumble-fall
+  }
+  if(HAND.mode==='attach') return (held && HAND.charge>0.05) ? 'swinging' : 'idle';  // gripping + winding around the knob = swing
   return 'idle';
 }
 // which art-medium the hero wears, by the floor it's in — SPILL (8-30%) is the 8-bit PIXEL floor.
