@@ -1009,41 +1009,41 @@ function studPath(X, Y, r, shape){
   else if(shape==='bolt'){ ctx.moveTo(X,Y-r); ctx.lineTo(X+r*0.9,Y+r*0.5); ctx.lineTo(X-r*0.9,Y+r*0.5); ctx.closePath(); }
   else { ctx.arc(X,Y,r,0,7); }
 }
-// per-section grab-stud silhouette — only the grippable PLASTIC stud changes shape by floor genre
-// (glass stays a translucent diamond, plush stays a soft pom, per the material-legibility law).
-function studShapeFor(pct){
-  if(pct < 8)  return 'gem';      // PIT — prize gem
-  if(pct < 30) return 'button';   // SPILL — 8-bit arcade button
-  if(pct < 55) return 'coral';    // REEF — round coral knob
-  if(pct < 75) return 'target';   // GALLERY — shooting-gallery bullseye
-  if(pct < 92) return 'bolt';     // CLAW COUNTRY — turnbuckle bolt
-  return 'star';                  // CORNICE — space star
+// the factory has two kinds of handhold you climb: a gold HEX-BOLT and a red spoked VALVE-WHEEL.
+// which one a peg is is fixed by its position (deterministic, no RNG) so the wall is stable every run.
+function factoryHoldFor(s){
+  const h = Math.abs(((Math.round(s.x)*73856093) ^ (Math.round(s.y)*19349663)) >>> 0);
+  return (h % 100) < 34 ? 'valve' : 'bolt';
 }
-function _studShapePath(X,Y,r,shape){
-  ctx.beginPath();
-  if(shape==='button'){ const q=r*0.44; ctx.moveTo(X-r+q,Y-r); ctx.arcTo(X+r,Y-r,X+r,Y+r,q); ctx.arcTo(X+r,Y+r,X-r,Y+r,q); ctx.arcTo(X-r,Y+r,X-r,Y-r,q); ctx.arcTo(X-r,Y-r,X+r,Y-r,q); ctx.closePath(); }
-  else if(shape==='coral'||shape==='target'){ ctx.arc(X,Y,r,0,7); }
-  else if(shape==='bolt'){ for(let i=0;i<6;i++){ const a=Math.PI/6 + i*Math.PI/3, px=X+Math.cos(a)*r, py=Y+Math.sin(a)*r; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); }
-  else if(shape==='star'){ for(let i=0;i<10;i++){ const rr=i%2?r*0.46:r, a=-Math.PI/2 + i*Math.PI/5, px=X+Math.cos(a)*rr, py=Y+Math.sin(a)*rr; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); }
-  else { ctx.moveTo(X,Y-r); ctx.lineTo(X+r,Y); ctx.lineTo(X,Y+r); ctx.lineTo(X-r,Y); ctx.closePath(); } // gem
-}
-function drawPlasticStud(X,Y,r,shape,cc,hi,base,lo){
-  _studShapePath(X,Y,r,shape);
-  const g=ctx.createLinearGradient(X,Y-r,X,Y+r);
-  g.addColorStop(0,hi); g.addColorStop(0.45,base); g.addColorStop(1,lo);
-  ctx.fillStyle=g; ctx.fill();
-  ctx.strokeStyle=hexA(hexLerp(cc,'#000000',0.5),0.7); ctx.lineWidth=1.3*S; ctx.stroke();
-  if(shape==='target'){   // bullseye rings
-    ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.5*S; ctx.beginPath(); ctx.arc(X,Y,r*0.58,0,7); ctx.stroke();
-    ctx.fillStyle=hexLerp(cc,'#ffffff',0.25); ctx.beginPath(); ctx.arc(X,Y,r*0.24,0,7); ctx.fill(); return;
+// cel-shaded hardware: flat colour regions + a hard darker step + thick outline + a glossy glint,
+// so it matches the painted anime wall and clearly reads as sticking OUT of it.
+function drawFactoryHold(X,Y,r,kind){
+  const OL = 2.1*S;
+  if(kind==='valve'){
+    const R=r*1.12, ir=R*0.5;
+    ctx.lineCap='round';
+    ctx.strokeStyle='#2a0b06'; ctx.lineWidth=R*0.42+OL; ctx.beginPath(); ctx.arc(X,Y,R,0,7); ctx.stroke();       // ring outline
+    ctx.strokeStyle='#e0432b'; ctx.lineWidth=R*0.42;    ctx.beginPath(); ctx.arc(X,Y,R,0,7); ctx.stroke();       // ring
+    ctx.strokeStyle='#f6795c'; ctx.lineWidth=R*0.15;    ctx.beginPath(); ctx.arc(X,Y,R+R*0.02,-2.5,-0.6); ctx.stroke(); // top glint
+    ctx.strokeStyle='#2a0b06'; ctx.lineWidth=R*0.30+OL*0.7;                                                       // spoke outlines
+    for(let i=0;i<4;i++){ const a=i*Math.PI/2+0.25; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+Math.cos(a)*R,Y+Math.sin(a)*R); ctx.stroke(); }
+    ctx.strokeStyle='#e0432b'; ctx.lineWidth=R*0.30;                                                             // spokes
+    for(let i=0;i<4;i++){ const a=i*Math.PI/2+0.25; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+Math.cos(a)*R,Y+Math.sin(a)*R); ctx.stroke(); }
+    ctx.fillStyle='#2a0b06'; ctx.beginPath(); ctx.arc(X,Y,ir*0.66+OL*0.5,0,7); ctx.fill();                        // hub outline
+    ctx.fillStyle='#ffcf6a'; ctx.beginPath(); ctx.arc(X,Y,ir*0.66,0,7); ctx.fill();                               // gold hub
+    ctx.fillStyle='#fff0c8'; ctx.beginPath(); ctx.arc(X-ir*0.2,Y-ir*0.22,ir*0.26,0,7); ctx.fill();                // hub glint
+    ctx.lineCap='butt';
+    return;
   }
-  if(shape==='bolt'){     // turnbuckle nut: inner ring + a corner glint
-    ctx.strokeStyle=hexA(lo,0.85); ctx.lineWidth=1.2*S; ctx.beginPath(); ctx.arc(X,Y,r*0.44,0,7); ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(X-r*0.16,Y-r*0.22,r*0.14,0,7); ctx.fill(); return;
-  }
-  // candy gloss: bright facet wedge + hard glint (used by gem / button / coral / star)
-  ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(X,Y-r*0.85); ctx.lineTo(X+r*0.42,Y-r*0.15); ctx.lineTo(X-r*0.42,Y-r*0.15); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(X-r*0.22,Y-r*0.32,r*0.16,0,7); ctx.fill();
+  // GOLD hex-bolt (flat-top nut) with a brighter raised top face.
+  const hex=(rad)=>{ ctx.beginPath(); for(let i=0;i<6;i++){ const a=Math.PI/6+i*Math.PI/3, px=X+Math.cos(a)*rad, py=Y+Math.sin(a)*rad; i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); };
+  hex(r*1.14); ctx.fillStyle='#3a2708'; ctx.fill();     // dark outline
+  hex(r*1.0);  ctx.fillStyle='#b9821f'; ctx.fill();     // bevelled dark-gold sides
+  ctx.save(); ctx.translate(0,-r*0.13);                 // raised top face, cel-stepped
+    hex(r*0.72); ctx.fillStyle='#ffd24a'; ctx.fill();
+    hex(r*0.72); ctx.strokeStyle='#7a570f'; ctx.lineWidth=1.1*S; ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.ellipse(X-r*0.26,Y-r*0.42,r*0.22,r*0.12,-0.5,0,7); ctx.fill();  // glint
 }
 function drawStud(s){
   const X=sx(s.x), Y=sy(s.y);
@@ -1051,39 +1051,35 @@ function drawStud(s){
   // depth haze: far-from-hero studs read slightly cooler + softer (tilt-shift feel)
   const depth = clamp(1 - Math.abs(s.y-HAND.y)/2600, 0.55, 1);
   const glow = asanoPal?asanoPal.glow:'#ffd27a';
-  // contact shadow — grounds the stud so it sits in the world instead of floating (offset from key light)
-  ctx.save(); ctx.globalAlpha=0.24*depth; ctx.fillStyle='#000';
-  ctx.beginPath(); ctx.ellipse(X+4*S, Y+6*S, 9*S, 3.6*S, 0,0,7); ctx.fill(); ctx.restore();
+  // cast shadow on the wall — grounds the hold so it reads as sticking OUT of the surface
+  ctx.save(); ctx.globalAlpha=0.30*depth; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(X+5*S, Y+8*S, 11*S, 4.4*S, 0,0,7); ctx.fill(); ctx.restore();
   ctx.save();
   ctx.globalAlpha = depth;
   if(s.type==='glass'){
-    // GLASS — cool crystal, clearly see-through and untouchable. faceted diamond.
-    const r=9*S+3;
-    asanoBloom(X,Y,r*1.7,'#bcd8ff',0.16*depth);
-    studPath(X,Y,r,'gem');
-    const g=ctx.createLinearGradient(X-r,Y-r,X+r,Y+r);
-    g.addColorStop(0,'rgba(200,224,255,.30)'); g.addColorStop(0.5,'rgba(150,190,240,.12)'); g.addColorStop(1,'rgba(120,160,220,.22)');
-    ctx.fillStyle=g; ctx.fill();
-    ctx.strokeStyle='rgba(210,232,255,.65)'; ctx.lineWidth=1.4*S; ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X-r*0.4,Y-r*0.2); ctx.lineTo(X,Y-r*0.7); ctx.stroke();  // facet glint
-  } else if(s.type==='plush'){
-    // PLUSH — soft glowing pom, temporary grip. round, fuzzy, warm.
-    const r=10*S+2;
-    asanoBloom(X,Y,r*1.9,'#ff9fb8',0.20*depth);
-    const g=ctx.createRadialGradient(X-r*0.3,Y-r*0.35,r*0.15,X,Y,r);
-    g.addColorStop(0,'#ffc2d2'); g.addColorStop(0.55,'#e07a94'); g.addColorStop(1,'#a84a63');
+    // GLASS — a sealed flush rivet-dome, cool and glossy. clearly NOT a grip (nothing sticks out).
+    const r=9*S+2;
+    ctx.strokeStyle='rgba(18,38,66,.55)'; ctx.lineWidth=2*S; ctx.beginPath(); ctx.arc(X,Y,r,0,7); ctx.stroke();
+    const g=ctx.createRadialGradient(X-r*0.3,Y-r*0.34,r*0.1,X,Y,r);
+    g.addColorStop(0,'rgba(214,240,255,.92)'); g.addColorStop(0.55,'rgba(150,200,236,.7)'); g.addColorStop(1,'rgba(96,146,196,.62)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,r,0,7); ctx.fill();
-    // fuzz rim
-    ctx.strokeStyle='rgba(255,190,210,.35)'; ctx.lineWidth=2.4*S; ctx.setLineDash([1.6*S,2.2*S]); ctx.beginPath(); ctx.arc(X,Y,r+1,0,7); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(X-r*0.32,Y-r*0.34,r*0.24,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(X-r*0.28,Y-r*0.3,r*0.2,0,7); ctx.fill();
+  } else if(s.type==='plush'){
+    // PLUSH — a soft rubber bumper, temporary grip. warm, matte, round.
+    const r=10*S+2;
+    asanoBloom(X,Y,r*1.7,'#ffa24a',0.16*depth);
+    ctx.strokeStyle='#5a2410'; ctx.lineWidth=2.2*S; ctx.beginPath(); ctx.arc(X,Y,r,0,7); ctx.stroke();
+    const g=ctx.createRadialGradient(X-r*0.3,Y-r*0.35,r*0.15,X,Y,r);
+    g.addColorStop(0,'#ffc27a'); g.addColorStop(0.6,'#f0873e'); g.addColorStop(1,'#c85a24');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,Y,r,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(X-r*0.3,Y-r*0.32,r*0.22,0,7); ctx.fill();
   } else {
-    // PLASTIC — a glossy candy gem, bright and grippable. per-zone colour so it pops on the backdrop.
-    const r=9*S+2, chute=!!s.chute;
-    const cc = chute ? '#ffd23a' : (asanoPal?asanoPal.stud:'#39e6d6');
-    const base=cc, hi=hexLerp(cc,'#ffffff',0.55), lo=hexLerp(cc,'#000000',0.42);
-    asanoBloom(X,Y,r*(chute?2.8:2.1), cc, (chute?0.55:0.4)*depth);
-    const shape = chute ? 'gem' : studShapeFor(pctOf(s.y));   // per-section grab-stud silhouette
-    drawPlasticStud(X,Y,r,shape,cc,hi,base,lo);
+    // PLASTIC (the main grab) — a live factory handhold: gold hex-bolt or red valve-wheel.
+    // the soft pulsing glow is what marks it GRABBABLE vs the bolts merely painted into the wall.
+    const r=9.5*S+2, chute=!!s.chute;
+    const pulse=0.82+0.18*Math.sin(simFrame*0.07 + s.y*0.05);
+    asanoBloom(X,Y,r*(chute?2.9:2.05), chute?'#ff7a2a':glow, (chute?0.52:0.34)*depth*pulse);
+    drawFactoryHold(X,Y, chute?r*1.06:r, chute?'valve':factoryHoldFor(s));
   }
   ctx.restore();
 }
@@ -1196,15 +1192,13 @@ function drawHand(){
     });
     ctx.globalAlpha=1;
   }
+  // separation halo — a soft dark pocket behind the hero so the teal hand never camouflages into a teal wall
+  { const rr=11*S; const dh=ctx.createRadialGradient(X,Y,rr*1.1,X,Y,rr*3.3);
+    dh.addColorStop(0,'rgba(6,10,16,0)'); dh.addColorStop(0.5,'rgba(6,10,16,0.32)'); dh.addColorStop(1,'rgba(6,10,16,0)');
+    ctx.fillStyle=dh; ctx.beginPath(); ctx.arc(X,Y,rr*3.3,0,7); ctx.fill(); }
   // the sticky hand, wearing its finish
   paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
-  // the eye you carry — Moose's, kept since the day the claw took him
-  if(mode==='play'){
-    const ex=X+11*S*0.66, ey=Y+11*S*0.62;
-    ctx.fillStyle='#f2efe6'; ctx.beginPath(); ctx.arc(ex,ey,3.1,0,7); ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=0.8; ctx.stroke();
-    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(ex+0.5,ey+0.4,1.35,0,7); ctx.fill();
-  }
+  // (removed: the carried "eye" was a leftover from the Moose story)
   // charge as a warming rim — finish stays visible the whole wind
   if(HAND.mode==='attach' && HAND.charge>0.02){
     const c2=HAND.charge;
@@ -1301,22 +1295,25 @@ function asanoPalette(){
 // drifting light-motes — the signature Octopath atmosphere
 let DUST=[]; let _asanoNow=0, _asanoLast=0; let asanoPal=null; let _bgCover=0;
 // alpha ramp for a painted bg across its band [lo,hi]: fade in near lo, hold, fade out near hi.
-function _bgAlpha(cp,lo,hi){ const i0=lo-2,i1=lo+5,o0=hi-6,o1=hi+3;
+function _bgAlpha(cp,lo,hi){ const i0=lo-1.2,i1=lo+2.2,o0=hi-2.2,o1=hi+1.2;
   if(cp<=i0||cp>=o1) return 0; if(cp<i1) return Math.min(1,(cp-i0)/(i1-i0)); if(cp>o0) return Math.max(0,(o1-cp)/(o1-o0)); return 1; }
 // draw painted per-zone backgrounds (floor-anchored or vertically tiled), cross-faded, clipped to each band. sets _bgCover.
 function asanoPaintedBG(){
   _bgCover=0; const cp=Math.max(0,(camY-PIT_Y)/TOWER_H*100);
   for(const z of _BGZONES){ const img=ASANO_BG[z.key]; if(!img||!img.complete||!img.naturalWidth) continue;
     const a=_bgAlpha(cp,z.lo,z.hi); if(a<=0) continue;
-    const dh=Wc*img.naturalHeight/img.naturalWidth;
-    const yTop=Hc*0.62-(_wY(z.hi)-camY)*S, yBot=Hc*0.62-(_wY(z.lo)-camY)*S;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, yTop-4, Wc, (yBot-yTop)+8); ctx.clip();   // confine to this band's on-screen slice
+    const yTop=Hc*0.62-(_wY(z.hi)-camY)*S, yBot=Hc*0.62-(_wY(z.lo)-camY)*S;   // band's on-screen slice (hi=top)
+    ctx.save(); ctx.beginPath(); ctx.rect(0, yTop-4, Wc, (yBot-yTop)+8); ctx.clip();
     ctx.globalAlpha=a;
-    if(z.mode==='floor'){ const wb=PIT_Y-30, sb=Hc*0.62-(wb-camY)*S;
-      ctx.fillStyle='#3a1826'; ctx.fillRect(0,sb-6,Wc,Hc-(sb-6)); ctx.drawImage(img,0,sb-dh,Wc,dh); }
-    else { const tW=dh/S, worldTop=camY+(Hc*0.62+80)/S, worldBot=camY-(Hc*0.38+80)/S;   // tile vertically to fill
-      for(let i=Math.floor(worldBot/tW)-1; i<=Math.ceil(worldTop/tW)+1; i++){ const sb=Hc*0.62-(i*tW-camY)*S; ctx.drawImage(img,0,sb-dh,Wc,dh); } }
-    ctx.globalAlpha=a*0.11; ctx.fillStyle='#05030f'; ctx.fillRect(0,0,Wc,Hc);   // recede for focal hierarchy
+    if(z.mode==='floor'){   // pit: bottom-anchored to the reject-bin floor so the discard pile sits on the ground
+      const dh=Wc*img.naturalHeight/img.naturalWidth, wb=PIT_Y-30, sb=Hc*0.62-(wb-camY)*S;
+      ctx.fillStyle='#12161d'; ctx.fillRect(0,sb-6,Wc,Hc-(sb-6)); ctx.drawImage(img,0,sb-dh,Wc,dh);
+    } else {                // one image scaled to COVER the whole band — no vertical tiling, no repeat seams
+      const bandH=(yBot-yTop), sc=Math.max(Wc/img.naturalWidth, bandH/img.naturalHeight);
+      const dw=img.naturalWidth*sc, dh2=img.naturalHeight*sc;
+      ctx.drawImage(img, (Wc-dw)/2, yTop+(bandH-dh2)/2, dw, dh2);
+    }
+    ctx.globalAlpha=a*0.05; ctx.fillStyle='#06040e'; ctx.fillRect(0,yTop-4,Wc,(yBot-yTop)+8);   // slight recede for focal hierarchy
     ctx.restore();
     if(a>_bgCover) _bgCover=a;
   }
@@ -1642,12 +1639,12 @@ const ASANO_BG = {};
   for(const k in B){ const im=new Image(); im.src=B[k]; ASANO_BG[k]=im; } })();
 // per-zone painted-bg config: floor = one anchored scene (bottom-locked); tile = repeats vertically to fill the band.
 const _BGZONES=[
-  { key:'pit',     lo:-6, hi:13,  mode:'floor' },   // crane / prize
-  { key:'spill',   lo:8,  hi:32,  mode:'tile'  },   // retro 8-bit
-  { key:'reef',    lo:30, hi:56,  mode:'tile'  },   // underwater shooter
-  { key:'gallery', lo:55, hi:76,  mode:'tile'  },   // shooting gallery
-  { key:'claw',    lo:75, hi:93,  mode:'tile'  },   // fighting arena
-  { key:'cornice', lo:92, hi:104, mode:'tile'  },   // space shooter
+  { key:'pit',     lo:-6, hi:12,  mode:'floor' },   // the reject bin (bottom-anchored)
+  { key:'spill',   lo:9,  hi:32,  mode:'cover' },   // the sorting belt
+  { key:'reef',    lo:29, hi:56,  mode:'cover' },   // the stamping press
+  { key:'gallery', lo:53, hi:76,  mode:'cover' },   // the regrind chute
+  { key:'claw',    lo:73, hi:93,  mode:'cover' },   // the catwalk
+  { key:'cornice', lo:90, hi:106, mode:'cover' },   // the inspection window
 ];
 const SPRITE_DEFS = {
   // the sticky hand: a soft googly blob. '.'=clear o=outline s=shadow m=mid h=highlight.
