@@ -944,8 +944,8 @@ function step(dt){
     if(nextZone!=='kept' && zoneAt(p).name===nextZone && STORY.chapters[nextZone]){
       storyIdx++;
       if(!chaptersRead.includes(nextZone)) chaptersRead.push(nextZone);
-      save(); updateFoyerBadge(); openNoteCard(nextZone);
-      return;
+      // note recorded silently — it never interrupts the climb; read it later in THE MACHINE (badge marks it new)
+      save(); updateFoyerBadge();
     }
   }
   if(p>bestPct && !dailyActive){ bestPct=p; }
@@ -1075,11 +1075,23 @@ function drawStud(s){
     ctx.fillStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(X-r*0.3,Y-r*0.32,r*0.22,0,7); ctx.fill();
   } else {
     // PLASTIC (the main grab) — a live factory handhold: gold hex-bolt or red valve-wheel.
-    // the soft pulsing glow is what marks it GRABBABLE vs the bolts merely painted into the wall.
-    const r=9.5*S+2, chute=!!s.chute;
+    // must POP boldly off the busy painted wall (which has its own painted bolts), so each live hold
+    // gets: a dark socket-vignette (separates it from any backdrop) + a colour glow + a bright pulsing
+    // "grab-me" ring. That trio is what tells the eye THIS one is grabbable vs the ones just painted on.
+    const r=12*S+2, chute=!!s.chute;
     const pulse=0.82+0.18*Math.sin(simFrame*0.07 + s.y*0.05);
-    asanoBloom(X,Y,r*(chute?2.9:2.05), chute?'#ff7a2a':glow, (chute?0.52:0.34)*depth*pulse);
-    drawFactoryHold(X,Y, chute?r*1.06:r, chute?'valve':factoryHoldFor(s));
+    // strong dark socket-pool: darkens the busy wall around the hold so the bright metal reads instantly
+    const plate=ctx.createRadialGradient(X,Y,r*0.4,X,Y,r*2.2);
+    plate.addColorStop(0,'rgba(4,8,14,0.72)'); plate.addColorStop(0.58,'rgba(4,8,14,0.44)'); plate.addColorStop(1,'rgba(4,8,14,0)');
+    ctx.fillStyle=plate; ctx.beginPath(); ctx.arc(X,Y,r*2.2,0,7); ctx.fill();
+    // colour live-glow (pulses)
+    asanoBloom(X,Y,r*(chute?2.4:1.9), chute?'#ff7a2a':glow, (chute?0.7:0.55)*depth*pulse);
+    drawFactoryHold(X,Y, chute?r*1.04:r, chute?'valve':factoryHoldFor(s));
+    // bold affordance ring: dark bezel under a bright pulsing rim — the painted bolts on the wall don't
+    // have this, so it's the single unmistakable "THIS one is grabbable" tell on a busy floor
+    ctx.strokeStyle='rgba(4,8,14,0.72)'; ctx.lineWidth=3.4*S; ctx.beginPath(); ctx.arc(X,Y,r*1.5,0,7); ctx.stroke();
+    ctx.strokeStyle = chute ? `rgba(255,170,90,${(0.72+0.28*pulse).toFixed(2)})` : `rgba(255,246,220,${(0.62+0.34*pulse).toFixed(2)})`;
+    ctx.lineWidth=1.9*S; ctx.beginPath(); ctx.arc(X,Y,r*1.5,0,7); ctx.stroke();
   }
   ctx.restore();
 }
@@ -1559,10 +1571,12 @@ function asanoBackdrop(pal){
   ctx.fillStyle=sp; ctx.fillRect(0,0,Wc,Hc);
   // PAINTED FLOOR BACKGROUND (if any for this band) — replaces the procedural depth where it covers
   asanoPaintedBG();
-  const painted = _bgCover>0.85;
-  // depth planes, far -> near, atmospherically graded (far = hazed/low-contrast, near = crisp/contrasty)
-  if(!painted){ asanoFar(pal); asanoGirders(pal); }
-  asanoSetpieces(pal);    // signature per-zone places (mid-depth, behind the gameplay plane)
+  // ANY painted floor showing (even mid cross-fade) counts as covered — so the legacy procedural
+  // parallax (far wall / girders / setpieces / arcade props) NEVER bleeds through at the seams
+  // between levels (that bleed was the "film strip" flashing between floors). Legacy layers now
+  // only appear above the painted range (the endless beyond), where there's no floor art at all.
+  const painted = _bgCover>0.03;
+  if(!painted){ asanoFar(pal); asanoGirders(pal); asanoSetpieces(pal); }
   asanoGodRays(pal);
   if(!painted) asanoNear(pal);
   asanoDust(pal);
@@ -1778,7 +1792,7 @@ function render(){
   ctx.fillStyle='rgba(180,183,200,.18)'; ctx.font=`600 ${Math.round(11)}px ui-monospace,monospace`;
   ctx.textAlign='left'; ctx.fillText(zc.name.toUpperCase(), 12, Hc-16);
 
-  drawClaw();
+  // (drawClaw removed — the ambient decorative claw did nothing and clashed with the painted floors)
   for(const s of STUDS) drawStud(s);
   for(const t of TOKENS){
     if(t.got) continue;
