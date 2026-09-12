@@ -1602,6 +1602,9 @@ const ASANO_ART = {};                 // key -> HTMLImageElement (painted art ov
 //   A missing/half-loaded set falls back to idle, so the hero always animates once idle is cached.  =====
 const ASANO_ANIM = { painterly:{}, pixel:{} };   // skin -> state -> frame array (per-floor art medium)
 let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size vs r, vertical anchor of the grab-hand at (X,Y))
+// swing/flight ORIENTATION knobs — the sprite rotates to the arc/velocity as a pure fn of sim state (never a clock).
+// tune live by bare name: SPRITE_UP_OFFSET (dial against the art), C_LEAN/MAXLEAN (centrifugal lean), C_STRETCH, SWING_FRAME.
+let SPRITE_UP_OFFSET = Math.PI/2, C_LEAN = 0.04, MAXLEAN = 0.55, C_STRETCH = 0.20, SWING_FRAME = 6;
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
 (function(){
   const SETS = { idle:{n:12,fps:14}, flying:{n:12,fps:13}, swinging:{n:12,fps:13}, reaching:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
@@ -1615,7 +1618,8 @@ let _heroAnimT = 0, _heroAnimLast = 0, _thwapT = 0;   // _thwapT: brief grab-imp
 function heroAnimKey(){
   if(_thwapT > 0) return 'thwap';                                   // brief squash flourish on a fresh grab
   if(HAND.mode==='fly'){
-    if(nearestStud(HAND.x, HAND.y, REACH*1.7)) return 'reaching';   // a grabbable knob is close → stretch toward it
+    const g = nearestStud(HAND.x, HAND.y, REACH*1.7);               // reach only when a knob is close AND we're closing on it
+    if(g && (HAND.vx*(g.x-HAND.x) + HAND.vy*(g.y-HAND.y)) > 0) return 'reaching';   // stretch toward the knob we're flying at
     return (HAND.vy < 0) ? 'fall' : 'flying';                       // engine: up is +vy, so rising = flying, vy<0 = tumble-fall
   }
   if(HAND.mode==='attach') return (held && HAND.charge>0.05) ? 'swinging' : 'idle';  // gripping + winding around the knob = swing
@@ -1635,13 +1639,35 @@ function drawHeroAnim(g, X, Y, r){
   if(!_animReady(set)) set = ASANO_ANIM.painterly[key];             // painterly of this state
   if(!_animReady(set)) set = ASANO_ANIM.painterly.idle;
   if(!_animReady(set)) return false;                               // nothing loaded yet -> caller uses static hero
-  const f = set[Math.floor(_heroAnimT*set.fps) % set.length];
+  // FRAME: the swing is driven by the ORBIT PHASE, never a clock — one held pose, rotated to HAND.ang, so the
+  // visible spin inherits the sim's wind-up acceleration (w 5->11) for free and can never desync.
+  const f = (key==='swinging') ? set[Math.min(SWING_FRAME|0, set.length-1)]
+                               : set[Math.floor(_heroAnimT*set.fps) % set.length];
   const bob = (px && key==='idle') ? Math.sin(_heroAnimT*4.5)*0.03 : 0;   // tiny life for the 1-frame pixel idle
   const bigNew = (key==='flying'||key==='swinging'||key==='reaching');   // Makko/Omni frames have more padding -> scale up to match
   const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE)*(bigNew?1.7:1);
   const yoff = (px?ANIM_YOFF_PX:(bigNew?0.5:ANIM_YOFF)) + bob;
   const sm = g.imageSmoothingEnabled; if(px) g.imageSmoothingEnabled = false;   // crisp nearest-neighbour pixels
-  g.drawImage(f, X-Sz/2, Y-Sz*yoff, Sz, Sz);
+  // ORIENTATION (pure fn of sim state): SWING = grip toward the peg + centrifugal lean/stretch; FLIGHT = lean into
+  // the launch vector so the wind-up flows into the fling with no snap. everything else draws upright as before.
+  let rot=0, st=0;
+  if(key==='swinging' && HAND.anchor){
+    const AX=sx(HAND.anchor.x), AY=sy(HAND.anchor.y);
+    rot = Math.atan2(AY-Y, AX-X) + SPRITE_UP_OFFSET + clamp(C_LEAN*HAND.w*HAND.spin, -MAXLEAN, MAXLEAN);
+    st  = clamp(C_STRETCH*HAND.w/WMAX, 0, 0.4);   // faster spin = more centrifugal stretch along the radial
+  } else if(key==='flying'){
+    rot = Math.atan2(-HAND.vy, HAND.vx) + SPRITE_UP_OFFSET;         // lean into the travel vector while streaking through air
+  } else if(key==='reaching'){
+    const t = nearestStud(HAND.x, HAND.y, REACH*1.7);               // stretch the grip toward the knob we're about to grab
+    if(t){ rot = Math.atan2(sy(t.y)-Y, sx(t.x)-X) + SPRITE_UP_OFFSET; }
+    else { rot = Math.atan2(-HAND.vy, HAND.vx) + SPRITE_UP_OFFSET; }
+  }
+  if(rot||st){
+    g.save(); g.translate(X,Y); g.rotate(rot); if(st) g.scale(1-st*0.5, 1+st);
+    g.drawImage(f, -Sz/2, -Sz*yoff, Sz, Sz); g.restore();
+  } else {
+    g.drawImage(f, X-Sz/2, Y-Sz*yoff, Sz, Sz);
+  }
   g.imageSmoothingEnabled = sm;
   return true;
 }
