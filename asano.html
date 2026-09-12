@@ -2168,6 +2168,18 @@ function render(){
   // the quarter count, then the live chain multiplier, then the heat — stacked top-left
   ctx.textAlign='left';
   let _hudY = 76;
+  if(flingCharge>0 && mode==='play'){   // FLING POWER meter: pickups fill it, a fall empties it
+    const full = flingCharge>=1;
+    ctx.fillStyle = full ? '#ffd24a' : 'rgba(231,192,75,.9)'; ctx.font='800 12px ui-monospace,monospace';
+    ctx.fillText('POWER', 12, _hudY);
+    const bx=62, bw=76, bh=9, by=_hudY-8;
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle = full ? '#ffe27a' : 'rgba(255,210,74,.9)'; ctx.fillRect(bx,by,bw*flingCharge,bh);
+    if(full){ const pu=0.5+0.5*Math.sin(simFrame*0.3); ctx.globalAlpha=pu; ctx.fillStyle='#fff'; ctx.fillRect(bx,by,bw,bh); ctx.globalAlpha=1;
+      ctx.fillStyle='#ffe27a'; ctx.fillText('MAX', bx+bw+8, _hudY); }
+    ctx.strokeStyle='rgba(231,192,75,.55)'; ctx.lineWidth=1; ctx.strokeRect(bx+.5,by+.5,bw,bh);
+    _hudY+=19;
+  }
   if(quarters>0 || finishes.length || bgOwned.length || studOwned.length){
     ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace';
     ctx.fillText('¢ '+quarters, 12, _hudY); _hudY+=19;
