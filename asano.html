@@ -798,7 +798,7 @@ function endFallAtLanding(landY){
       wraps: HAND.lastWraps||0, ceremony:ceremony,
       pts: fallTrack.pts.slice(-46),
       s0: fallTrack.lastSave,
-      line: pool[(fallCount + (HAND.lastWraps||0)) % pool.length],
+      line: pool[Math.floor(fallCount + (HAND.lastWraps||0)) % pool.length],   // lastWraps is fractional — floor before indexing or pool[x.34] is undefined
     };
     const fs0 = fallTrack.lastSave;
     fallLog.push({no:currentFall.no, name:currentFall.name, pct:currentFall.pct, from:currentFall.fromPct,
