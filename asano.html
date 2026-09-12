@@ -1402,7 +1402,24 @@ function drawHand(){
       ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
     }
   }
-  // (launch-direction tick removed — the HERO'S POSE now telegraphs the fling direction, see drawHeroAnim swing)
+  // FLIGHT-PATH PREVIEW: a dotted arc tracing the exact parabola the fling will fly if you LET GO NOW — sweeps as you
+  // spin so you can aim. Computed from the real launch physics (fling() + gravity G). Gold when it's a clean straight-up.
+  if(HAND.mode==='attach' && held && HAND.charge>0.04){
+    const side = clamp(Math.cos(HAND.ang),-1,1);
+    const dx0 = side*aimBend(), dy0 = 1.0, inv = 1/Math.hypot(dx0,dy0);
+    const spd = (LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*HAND.charge) * launchMul();
+    const vx0 = dx0*inv*spd, vy0 = dy0*inv*spd;                        // world launch velocity (up = +y)
+    const clean = Math.abs(side) < 0.19;                              // dead-vertical = clean straight-up shot
+    const x0 = HAND.x, y0 = HAND.y, N = 16;
+    for(let i=1;i<=N;i++){ const t = i*0.05;
+      const px = sx(x0 + vx0*t), py = sy(y0 + vy0*t - 0.5*G*t*t);     // projectile arc
+      const fr = i/N, a = 1 - fr*0.72, rad = Math.max(1.3,(4.4-fr*2.7)*S);
+      ctx.fillStyle = 'rgba(18,14,8,'+(a*0.55)+')';                   // dark halo -> visible on any wall
+      ctx.beginPath(); ctx.arc(px, py, rad+1.5, 0, 7); ctx.fill();
+      ctx.fillStyle = clean ? 'rgba(255,210,74,'+a+')' : 'rgba(255,247,228,'+a+')';   // gold = clean straight-up
+      ctx.beginPath(); ctx.arc(px, py, rad, 0, 7); ctx.fill();
+    }
+  }
 
   // finish trail
   const fin = FINISHES[skin] || FINISHES.factory;
