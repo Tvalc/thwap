@@ -1905,6 +1905,7 @@ let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size
 // (assets/hero_anim/fling), so size/anchor/orientation are dialed against THAT art, not the old off-model humanoid.
 let FLING_SCALE = 9.0, FLING_YOFF = 0.42;      // flight sprite size (vs r) + vertical anchor of the grab point at (X,Y). All hero states are body-normalized (same body size at equal scale), so FLING_SCALE = ANIM_SCALE keeps the flying/reaching body the SAME size as idle & fall; the bigger wound-up swing snaps back to true size on release (squash→stretch).
 let FLING_UP_OFF = Math.PI/2;                  // rotation offset: aligns the fling art's finger-forward axis with the aim (velocity / target knob)
+let FLY_HFRAC = 0.483;                          // TARGET hero fill (the flying set's avg): every frame is scaled to render the hero at THIS apparent size, so it never changes size between/within animations
 let ANIM_BIG = 1.7;                            // scale bump for the padded Makko frames (swing)
 let SWING_FRAME = 6, SWING_GY = 0.09;          // frozen grip pose + where the hero grips in the sprite box (0=top,1=bottom). 0.09 = near the top, where the creature's two up-stretched grip-arms reach the peg.
 let C_STRETCH = 0.20, SWING_LAG = 0.10, SWING_JIG = 0.06;   // centrifugal coil-stretch, coil-lag whip, gummy wobble
@@ -1914,8 +1915,17 @@ let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its spri
 (function(){
   const SETS = { idle:{n:12,fps:14}, fling:{n:12,fps:13}, wind:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };  // ON-MODEL sets only (bright splayed hand + coil, cream/gold rim). 'wind'=swing grip pose; 'fling'=launch/reach streak, worn by the flying + reaching states. The off-model humanoid flying/reaching frames are retired (no longer loaded).
   const SKINS = { painterly:{dir:'assets/hero_anim/'}, pixel:{dir:'assets/hero_anim_pixel/', n:1, fps:1} };  // pixel = 1 crisp frame per state
+  // measure each frame's hero fill (bbox height / frame) + vertical centroid, so drawHeroAnim can NORMALIZE every
+  // frame to one apparent size (the hero should never change size between — or within — animations).
+  const _mc=document.createElement('canvas'); _mc.width=_mc.height=96;
+  const _mg=_mc.getContext('2d',{willReadFrequently:true});
+  function _measure(im){ try{ _mg.clearRect(0,0,96,96); _mg.drawImage(im,0,0,96,96);
+    const d=_mg.getImageData(0,0,96,96).data; let minY=96,maxY=-1,sum=0,cnt=0;
+    for(let y=0;y<96;y++){ for(let x=0;x<96;x++){ if(d[(y*96+x)*4+3]>40){ if(y<minY)minY=y; if(y>maxY)maxY=y; sum+=y; cnt++; } } }
+    if(cnt){ im._hf=(maxY-minY)/96; im._cy=(sum/cnt)/96; } }catch(e){} }
   for(const sk in SKINS){ const skin=SKINS[sk]; for(const k in SETS){ const s=SETS[k], n=skin.n||s.n, arr=[]; arr.fps=skin.fps||s.fps;
-    for(let i=0;i<n;i++){ const im=new Image(); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png'; arr.push(im); }
+    for(let i=0;i<n;i++){ const im=new Image(); im.onload=()=>_measure(im); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png';
+      if(im.complete && im.naturalWidth) _measure(im); arr.push(im); }
     ASANO_ANIM[sk][k]=arr; } }
 })();
 function _animReady(arr){ return arr && arr.length && arr.every(im=>im.complete && im.naturalWidth); }
@@ -1955,7 +1965,7 @@ function drawHeroAnim(g, X, Y, r){
   if(key==='swinging' && HAND.anchor){
     const f = set[Math.min(SWING_FRAME|0, set.length-1)];
     const AX=sx(HAND.anchor.x), AY=sy(HAND.anchor.y);
-    const Sz = r*ANIM_SCALE*ANIM_BIG, wN = clamp(HAND.w/WMAX, 0, 1);
+    const Sz = r*FLING_SCALE*(FLY_HFRAC/(f._hf||FLY_HFRAC)), wN = clamp(HAND.w/WMAX, 0, 1);   // normalized to the flying size
     // TETHERBALL WHIRL — the hero spins around the peg (grip toward the peg, coil flung out), rotation locked to HAND.ang.
     const clw = clamp(1 - Math.abs(Math.cos(HAND.ang))/0.19, 0, 1);   // 1 at the dead-vertical clean-release window
     const drawAt = (a, alpha, pop)=>{
@@ -1977,8 +1987,10 @@ function drawHeroAnim(g, X, Y, r){
   const f = set[Math.floor(_heroAnimT*set.fps) % set.length];
   const bob = (px && key==='idle') ? Math.sin(_heroAnimT*4.5)*0.03 : 0;   // tiny life for the 1-frame pixel idle
   const flight = (key==='flying'||key==='reaching');                 // on-model fling frames (rimmed); seat + orient vs THAT art
-  const Sz = r*(px?ANIM_SCALE_PX:(flight?FLING_SCALE:ANIM_SCALE));
-  const yoff = (px?ANIM_YOFF_PX:(flight?FLING_YOFF:ANIM_YOFF)) + bob;
+  // NORMALIZE every frame to the flying apparent size (scale by its own fill), and seat it on its own centroid — so the
+  // hero never changes size between animations (idle/fall/reaching/flying/swing) or within one (reaching varied 0.37->0.74).
+  const Sz = px ? r*ANIM_SCALE_PX : r*FLING_SCALE*(FLY_HFRAC/(f._hf||FLY_HFRAC));
+  const yoff = (px?ANIM_YOFF_PX:(f._cy||FLING_YOFF)) + bob;
   const sm = g.imageSmoothingEnabled; if(px) g.imageSmoothingEnabled = false;   // crisp nearest-neighbour pixels
   let rot=0;
   if(key==='flying'){
