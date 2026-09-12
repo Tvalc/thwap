@@ -373,11 +373,12 @@ function buildTower(seed){
   for(let i=0;i<6;i++) STUDS.push({x:56+i*64, y:PIT_Y - 8 + (i%2)*12, type:'plush', pit:true});
   // the starting perch: a stable plastic block you spawn on; wind from it at your own pace, no pressure
   STUDS.push({x:CX, y:PIT_Y+40, type:'plastic', perch:true});
-  // gentle on-ramp: a centered plastic ladder. the first hops are gimmes; the machine turns mean higher up
-  STUDS.push({x:CX,    y:PIT_Y+175, type:'plastic'});
-  STUDS.push({x:CX-38, y:PIT_Y+345, type:'plastic'});
-  STUDS.push({x:CX+44, y:PIT_Y+520, type:'plastic'});
-  STUDS.push({x:CX-28, y:PIT_Y+700, type:'plastic'});
+  // gentle on-ramp: an OFFSET plastic ladder. the first hop is up + to the SIDE so a straight-up first fling clears
+  // the pit instead of colliding with a dead-centre knob every time; the machine turns mean higher up.
+  STUDS.push({x:CX+46, y:PIT_Y+250, type:'plastic'});   // first knob: moved up (was +175) and off-centre (was CX)
+  STUDS.push({x:CX-42, y:PIT_Y+410, type:'plastic'});
+  STUDS.push({x:CX+44, y:PIT_Y+570, type:'plastic'});
+  STUDS.push({x:CX-28, y:PIT_Y+730, type:'plastic'});
   let y = PIT_Y + 890;
   let side = 1;
   while(y < TOP_Y - 240){
