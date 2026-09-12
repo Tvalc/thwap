@@ -3040,6 +3040,8 @@ function boot(){
     if(!seenIntro){ playIntro(); }                 // fresh start: play the opening
     else { mode='play'; el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }
   }
+  // ?fight — jump straight into the summit showdown for playtesting (reload to replay)
+  if(/[?&]fight\b/i.test(location.search)){ setTimeout(()=>{ try{ startFight ? (function(){ beaten=false; const s=nearestStud(CX,TOP_Y-60,1200)||{x:CX,y:TOP_Y-60,type:'plastic'}; HAND.x=s.x; HAND.y=s.y; attachTo(s,0,0); startFight(); })() : 0; }catch(e){} }, 250); }
   requestAnimationFrame(frame);
 }
 
