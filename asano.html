@@ -1373,59 +1373,61 @@ function _reachTarget(){
     const dx=s.x-HAND.x, dy=s.y-HAND.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=s; } }
   return best;
 }
-// STICKY-HAND REACH = a LIVING, WRITHING kraken tentacle (Illaoi-style). A true traveling undulation wave runs
-// base->tip (crests slide, amplitude swells toward the tip), the last quarter coils into a breathing curl, and
-// the whole thing is grown from the creature's own gummy material (glossy teal ribbon, cream rim, suckers).
-// FLIGHT ONLY (gated at the call site). Root tucks under the later-painted body. _reachTarget() kept as-is above.
-// ===== TRAVELING-WAVE-WHIP: one living kraken tentacle grown from the gummy hero =====
-// Centerline = sampled polyline carrying a TRUE traveling sine wave (crests slide base->tip),
-// last quarter coils into a breathing curl. Glossy teal ribbon, cream rim, specular, underside suckers.
+// STICKY-HAND REACH = a loose, WHIPPING, SEEKING octopus/kraken tentacle (flight only). Layered traveling waves
+// down the body + a fast flutter and a curl that SWEEPS through zero at the last ~40%, so the tip waves and probes
+// the target like a real tentacle rather than holding a rigid hook. Grown from the creature's own gummy material.
+// _reachTarget() kept as-is above. Tunables live in the cfg{} inside drawReachArms.
+// ===== OCTOPUS/ILLAOI TENTACLE v2 — loose, whipping, SEEKING tip =====
+// Body carries layered traveling waves; the last ~45% whips with a fast flutter AND a curl that
+// sweeps through zero (curls one way -> uncurls -> curls back) so the end waves and probes the target.
 var _RA_TWO_PI = 6.283185307179586;
 
-// across-width gloss: highlight edge -> core -> shade
 function _raGrad(mx,my,nx,ny,w){
   var g=ctx.createLinearGradient(mx+nx*w,my+ny*w, mx-nx*w,my-ny*w);
   g.addColorStop(0.00,'#8fe6d4'); g.addColorStop(0.42,'#4fc7b3'); g.addColorStop(1.00,'#2f9d8c');
   return g;
 }
-// muscular tapered profile: bulbous base bulb -> thin tip
 function _raWidth(u, wBase, wTip){
   var w = wTip + (wBase-wTip)*Math.pow(1-u, 1.15);
-  var bl = (u-0.13)/0.12;                 // bulge peaks just past the root
-  w += (wBase*0.42)*Math.exp(-bl*bl);
+  var bl = (u-0.13)/0.12; w += (wBase*0.42)*Math.exp(-bl*bl);   // muscular base bulge
   return w;
 }
-// build the writhing centerline: straight axis + traveling wave, then coil the last quarter
-function _raSpine(B, ang, len, ampMax, kWaves, omega, t, phase, curlTotal, uCurl, N){
-  var ca=Math.cos(ang), sa=Math.sin(ang);
-  var px=-sa, py=ca;                        // perpendicular to reach axis
-  var pts=[], i;
+// build the writhing centerline: layered traveling waves + a big loose whipping/seeking tip curl.
+function _raSpine(B, ang, len, cfg, t, N){
+  var ca=Math.cos(ang), sa=Math.sin(ang), px=-sa, py=ca, i;
+  var pts=[];
   for(i=0;i<N;i++){
     var u=i/(N-1);
     var along=len*u;
-    var A=ampMax*Math.pow(u,1.15);          // amplitude grows toward the tip (spread into the mid-body too)
-    var off=A*Math.sin(kWaves*u*_RA_TWO_PI - omega*t + phase);  // -omega*t => crest travels base->tip
-    pts.push({ x:B.x+ca*along+px*off, y:B.y+sa*along+py*off, u:u });
+    var envB=Math.pow(u,1.25);                         // waves grow toward the tip (calm base)
+    // two incommensurate traveling waves = organic, not mechanical
+    var w1=cfg.a1*envB*Math.sin(cfg.k1*u*_RA_TWO_PI - cfg.w1*t);
+    var w2=cfg.a2*envB*Math.sin(cfg.k2*u*_RA_TWO_PI - cfg.w2*t + 1.7);
+    // loose TIP FLUTTER: fast, concentrated in the last ~45%
+    var tz = u<0.55 ? 0 : Math.pow((u-0.55)/0.45, 1.35);
+    var wt = cfg.at*tz*Math.sin(cfg.kt*u*_RA_TWO_PI - cfg.wt*t);
+    var perp = w1 + w2 + wt;
+    // slight along-axis shorten at the tip so the end can curl back, not just sweep sideways
+    var along2 = along - cfg.al*tz*len;
+    pts.push({ x:B.x+ca*along2+px*perp, y:B.y+sa*along2+py*perp, u:u });
   }
-  // TIP CURL: rigidly rotate everything past uCurl about that pivot, growing toward the tip
-  if(curlTotal!==0){
-    var piv=null, j;
-    for(j=0;j<N;j++){ if(pts[j].u>=uCurl){ piv=pts[j]; break; } }
-    if(piv){
-      for(j=0;j<N;j++){
-        if(pts[j].u<=uCurl) continue;
-        var uu=(pts[j].u-uCurl)/(1-uCurl);
-        var rot=curlTotal*Math.pow(uu,1.25);
-        var cr=Math.cos(rot), sr=Math.sin(rot);
-        var dx=pts[j].x-piv.x, dy=pts[j].y-piv.y;
-        pts[j].x=piv.x+dx*cr-dy*sr;
-        pts[j].y=piv.y+dx*sr+dy*cr;
-      }
+  // SEEKING CURL: rotate everything past uCurl about that pivot. curlAmt SWEEPS through a wide range
+  // (curls one way, uncurls, curls back) so the tip searches like an octopus arm, never a rigid hook.
+  var curlAmt = cfg.curl0 + cfg.curl1*Math.sin(cfg.wc*t + cfg.pc);
+  var piv=null, j;
+  for(j=0;j<N;j++){ if(pts[j].u>=cfg.uCurl){ piv=pts[j]; break; } }
+  if(piv){
+    for(j=0;j<N;j++){
+      if(pts[j].u<=cfg.uCurl) continue;
+      var uu=(pts[j].u-cfg.uCurl)/(1-cfg.uCurl);
+      var rot=curlAmt*Math.pow(uu,1.2);
+      var cr=Math.cos(rot), sr=Math.sin(rot);
+      var dx=pts[j].x-piv.x, dy=pts[j].y-piv.y;
+      pts[j].x=piv.x+dx*cr-dy*sr; pts[j].y=piv.y+dx*sr+dy*cr;
     }
   }
   return pts;
 }
-// per-sample normals from neighbor tangent (handles the curled geometry)
 function _raNormals(pts){
   var N=pts.length, nrm=[], i;
   for(i=0;i<N;i++){
@@ -1435,7 +1437,6 @@ function _raNormals(pts){
   }
   return nrm;
 }
-// filled tapered ribbon + cream rim + specular streak down the lit edge
 function _raRibbon(pts, nrm, wBase, wTip){
   var N=pts.length, i, L=[], R=[];
   for(i=0;i<N;i++){
@@ -1450,99 +1451,70 @@ function _raRibbon(pts, nrm, wBase, wTip){
   ctx.beginPath(); ctx.moveTo(L[0].x,L[0].y);
   for(i=1;i<N;i++) ctx.lineTo(L[i].x,L[i].y);
   for(i=N-1;i>=0;i--) ctx.lineTo(R[i].x,R[i].y);
-  ctx.closePath();
-  ctx.fillStyle=g; ctx.fill();
+  ctx.closePath(); ctx.fillStyle=g; ctx.fill();
   ctx.lineJoin='round'; ctx.lineCap='round';
   ctx.strokeStyle='rgba(245,230,176,0.90)'; ctx.lineWidth=Math.max(1.1,1.6*S); ctx.stroke();
-  // specular streak on the lit (+normal) edge, first ~66%
-  ctx.beginPath();
-  var lastS=(N*0.66)|0;
-  for(i=0;i<lastS;i++){
-    var ws=_raWidth(pts[i].u,wBase,wTip)*0.32;
-    var xx=pts[i].x+nrm[i].x*ws, yy=pts[i].y+nrm[i].y*ws;
-    if(i===0)ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
-  }
+  ctx.beginPath(); var lastS=(N*0.66)|0;
+  for(i=0;i<lastS;i++){ var ws=_raWidth(pts[i].u,wBase,wTip)*0.32;
+    var xx=pts[i].x+nrm[i].x*ws, yy=pts[i].y+nrm[i].y*ws; if(i===0)ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy); }
   ctx.strokeStyle='rgba(224,255,247,0.50)'; ctx.lineWidth=Math.max(0.8,1.1*S); ctx.stroke();
 }
-// row of suckers down the underside (-normal) edge; skip the very tip curl
 function _raSuckers(pts, nrm, wBase, wTip){
   var count=7, i, N=pts.length;
   for(i=0;i<count;i++){
-    var u=0.16 + 0.66*(i/(count-1));       // 0.16 .. 0.82
-    var idx=Math.round(u*(N-1));
-    var w=_raWidth(pts[idx].u,wBase,wTip);
-    var rr=w*0.30;
-    if(rr<0.6) continue;
-    var cx=pts[idx].x-nrm[idx].x*w*0.34;
-    var cy=pts[idx].y-nrm[idx].y*w*0.34;
-    ctx.beginPath(); ctx.arc(cx,cy,rr,0,7);
-    ctx.fillStyle='#3fb6a3'; ctx.fill();
+    var u=0.18 + 0.64*(i/(count-1)); var idx=Math.round(u*(N-1));
+    var w=_raWidth(pts[idx].u,wBase,wTip), rr=w*0.30; if(rr<0.6) continue;
+    var cx=pts[idx].x-nrm[idx].x*w*0.34, cy=pts[idx].y-nrm[idx].y*w*0.34;
+    ctx.beginPath(); ctx.arc(cx,cy,rr,0,7); ctx.fillStyle='#3fb6a3'; ctx.fill();
     ctx.strokeStyle='rgba(245,230,176,0.70)'; ctx.lineWidth=Math.max(0.6,0.7*S); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx-rr*0.25,cy-rr*0.25,rr*0.42,0,7);
-    ctx.fillStyle='rgba(224,255,247,0.55)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx-rr*0.25,cy-rr*0.25,rr*0.42,0,7); ctx.fillStyle='rgba(224,255,247,0.55)'; ctx.fill();
   }
 }
 function drawReachArms(X, Y, r){
   var t=simFrame*DT, tgt=_reachTarget();
   ctx.save();
-
   var ang, dTarget, kx=0, ky=0;
-  if(tgt){
-    kx=sx(tgt.x); ky=sy(tgt.y);
-    ang=Math.atan2(ky-Y, kx-X);
-    dTarget=Math.hypot(kx-X, ky-Y);
-  } else {
-    var sp=Math.hypot(HAND.vx,HAND.vy);
-    ang = sp>20 ? Math.atan2(-HAND.vy, HAND.vx) : -Math.PI/2;
-    dTarget=50*S;
-  }
+  if(tgt){ kx=sx(tgt.x); ky=sy(tgt.y); ang=Math.atan2(ky-Y, kx-X); dTarget=Math.hypot(kx-X, ky-Y); }
+  else { var sp=Math.hypot(HAND.vx,HAND.vy); ang = sp>20 ? Math.atan2(-HAND.vy, HAND.vx) : -Math.PI/2; dTarget=50*S; }
 
   var maxReach=122*S;
   var gripOn = tgt && dTarget<=maxReach;
   var reach = tgt ? Math.min(dTarget, maxReach) : dTarget;
-
-  // base tucked ~0.45r under the (later-painted) body along the reach axis
   var B={ x:X+Math.cos(ang)*0.45*r, y:Y+Math.sin(ang)*0.45*r };
   var len = reach - 0.45*r; if(len<24*S) len=24*S;
 
-  // faint warm gold root glow (tasteful)
+  // faint warm root glow
   var gg=ctx.createRadialGradient(B.x,B.y,0, B.x,B.y,24*S);
   gg.addColorStop(0.0,'rgba(245,230,176,0.15)'); gg.addColorStop(1.0,'rgba(245,230,176,0)');
   ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(B.x,B.y,24*S,0,7); ctx.fill();
 
-  // WRITHE: traveling wave + breathing coil
-  var writhe = 6.6;                                   // omega
-  var kWaves = 2.0;                                   // waves along the length (more visible body ripple)
-  var breath = 0.22*Math.sin(t*3.1);                  // coil breathes with the clock
-  var ampMax = gripOn ? 4.4*S : 5.8*S;                // reaching-onto vs eager-air whip (grip now writhes too)
-  var curlTotal = gripOn ? (1.0 + breath) : (1.55 + breath*1.6);
-  var uCurl = 0.74;
-  var N=26;
-
-  var pts=_raSpine(B, ang, len, ampMax, kWaves, writhe, t, 0, curlTotal, uCurl, N);
+  // MOTION config — loose, layered, whipping tip that seeks
+  var cfg = {
+    a1: 5.4*S, k1: 1.5, w1: 5.6,          // primary body wave
+    a2: 2.6*S, k2: 3.1, w2: 9.4,          // secondary faster ripple (organic)
+    at: (gripOn?4.2:5.6)*S, kt: 2.4, wt: 12.5,   // loose tip flutter
+    al: 0.10,                             // tip shortens a touch so it can curl back
+    uCurl: 0.60,
+    curl0: gripOn?0.35:0.55,              // curl bias
+    curl1: gripOn?1.15:1.55,              // curl SWEEP amplitude (seeks: curls/uncurls)
+    wc: 2.35, pc: 0.6
+  };
+  var N=30;
+  var pts=_raSpine(B, ang, len, cfg, t, N);
   var nrm=_raNormals(pts);
-  var wBase=7.4*S, wTip = gripOn ? 2.6*S : 1.4*S;
-
+  var wBase=7.4*S, wTip = gripOn ? 2.4*S : 1.3*S;
   _raRibbon(pts, nrm, wBase, wTip);
   _raSuckers(pts, nrm, wBase, wTip);
 
-  // rounded/curled gummy tip cap
+  // rounded gummy tip cap
   var last=pts[N-1], nl=nrm[N-1];
-  ctx.beginPath(); ctx.arc(last.x,last.y, Math.max(1.1*S, wTip*1.1), 0, 7);
+  ctx.beginPath(); ctx.arc(last.x,last.y, Math.max(1.1*S, wTip*1.15), 0, 7);
   ctx.fillStyle=_raGrad(last.x,last.y,nl.x,nl.y,wTip); ctx.fill();
   ctx.strokeStyle='rgba(245,230,176,0.90)'; ctx.lineWidth=Math.max(1,1.1*S); ctx.stroke();
 
-  if(gripOn){
-    // suction pad coiled onto the knob
-    ctx.beginPath(); ctx.arc(kx,ky, 3.0*S, 0, 7);
-    ctx.fillStyle=_raGrad(kx,ky,Math.cos(ang+1.57),Math.sin(ang+1.57),3.0*S); ctx.fill();
-    ctx.strokeStyle='rgba(245,230,176,0.92)'; ctx.lineWidth=Math.max(1,1.3*S); ctx.stroke();
-    ctx.beginPath(); ctx.arc(kx,ky, 1.4*S, 0, 7);
-    ctx.strokeStyle='rgba(47,157,140,0.80)'; ctx.lineWidth=Math.max(0.8,0.9*S); ctx.stroke();
-  }
-
   ctx.restore();
 }
+
 function paintHand(g, X, Y, r, fin, vx, vy){
   // ambient bloom — the hand is a little light source in a dark machine
   const gl = fin.glow || (asanoPal?asanoPal.glow:null);
