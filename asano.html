@@ -886,7 +886,7 @@ function step(dt){
           if(HAND.lastAnchor && (s.y-HAND.lastAnchor.y)>=340) recordMotion('skip', Math.round(s.y-HAND.lastAnchor.y));
           if(pendingStamp){ bossFlash(pendingStamp); bossLineT=2.2; pendingStamp=null; }
         }
-        if(s.chute && mode==='play' && !beaten && !dailyActive){ openWinScreen(); }   // first summit → the reunion
+        if(s.chute && mode==='play' && !beaten && !dailyActive){ startFight(); }   // first summit → the claw showdown, then KEPT
         return;
       }
     }
@@ -949,7 +949,7 @@ function step(dt){
     }
   }
   if(p>bestPct && !dailyActive){ bestPct=p; }
-  if(p>=99.5 && mode==='play' && !beaten && !dailyActive){ openWinScreen(); return; }   // first time reaching the summit
+  if(p>=99.5 && mode==='play' && !beaten && !dailyActive){ startFight(); return; }   // first time reaching the summit → the fight
   if(p>=99.5 && mode==='play' && beaten && !dailyActive && heatNow()>0 && !heatClearedThisRun){ clearHeat(); }   // a heat run, cleared
   // camera
   const targetCam = HAND.y + 60;
@@ -958,10 +958,199 @@ function step(dt){
 
 function bossFlash(t, big){ bossLine=t; bossLineT=1.1; bossBig=!!big; }
 
+/* ============================================================ THE SUMMIT FIGHT — "CATCH THE CLAW"
+   At 100% (first climb only) the wall becomes a short, winnable showdown at the inspection window.
+   It reuses the two verbs the whole game taught, turned on the claw:
+     TAP to CATCH each of the claw's grabs (the same timed grab you snag knobs with),
+     then, when Reyes opens the glass, LET GO in the window so she catches you before the claw can.
+   Deterministic + sim-locked; NO screen shake (juice = the claw and the hero jolting, never the camera). */
+let fight = null;
+const _eo = k => 1-(1-k)*(1-k), _ei = k => k*k;
+function startFight(){
+  if(mode==='fight' || mode==='win' || beaten || dailyActive) return;
+  const a = HAND.anchor || nearestStud(HAND.x, HAND.y, 900) || {x:HAND.x, y:HAND.y};
+  attachTo(a, 0, 0); held=false; HAND.charge=0;
+  fight = { phase:'intro', t:0, round:0, need:4, caught:0, misses:0,
+    anchorX:a.x, anchorY:a.y, prompt:'', tapped:false, catchWin:0, caughtFlash:0, missFlash:0,
+    released:false, releaseWin:0, gaveWin:false, reyesOpen:0, result:0,
+    hero:{shake:0, ox:0, oy:0},
+    // NOTE: in THWAP up = +y (climbing increases world y), so the claw looms from ABOVE at anchorY + offset.
+    claw:{ x:a.x, y:a.y+320, state:'wait', st:0, fromX:a.x, fromY:a.y+320, rearX:a.x, rearY:a.y+250, open:1 } };
+  camY = a.y + 30;
+  mode='fight';
+  try{ el('b_introskip').style.display='none'; el('b_archive').style.display='none'; el('b_foyer').style.display='none'; }catch(e){}
+}
+function fightStartGrab(){
+  const F=fight, C=F.claw, side=(F.round%2===0)?-1:1;
+  C.state='rear'; C.st=0; C.open=1; C.fromX=C.x; C.fromY=C.y;
+  C.rearX = clamp(F.anchorX + side*(60+F.round*10), 46, VW-46);
+  C.rearY = F.anchorY + (250 + (F.round%2)*34);   // up = +y
+  F.tapped=false; F.catchWin=0;
+  F.speed = Math.max(0.26, 0.44 - F.round*0.03);   // strikes accelerate as it gets desperate
+  F.prompt='TAP TO CATCH';
+}
+function fightStartFinal(){
+  const F=fight, C=F.claw;
+  C.state='loom'; C.st=0; C.x=F.anchorX; C.y=F.anchorY+300; C.fromY=C.y; C.open=1;   // up = +y
+  F.releaseWin=0; F.released=false; F.gaveWin=false; F.prompt='HOLD ON…';
+}
+function stepFight(dt){
+  simFrame++;
+  const F=fight; if(!F) return; const C=F.claw;
+  F.t+=dt;
+  if(F.caughtFlash>0) F.caughtFlash-=dt;
+  if(F.missFlash>0) F.missFlash-=dt;
+  if(F.hero.shake>0){ F.hero.shake-=dt; const m=F.hero.shake*46;   // the HERO jolts, never the camera
+    F.hero.ox=Math.sin(simFrame*0.9)*m; F.hero.oy=Math.cos(simFrame*1.5)*m*0.5; }
+  else { F.hero.ox=0; F.hero.oy=0; }
+  if(F.phase!=='final' || C.state!=='miss'){ HAND.x=F.anchorX+F.hero.ox; HAND.y=F.anchorY+F.hero.oy; }
+
+  if(F.phase==='intro'){
+    F.prompt='THE CLAW WINDS UP';
+    if(F.t>1.6){ F.phase='grabs'; F.t=0; fightStartGrab(); }
+    return;
+  }
+  if(F.phase==='grabs'){
+    C.st+=dt;
+    if(C.state==='rear'){
+      const e=_eo(clamp(C.st/0.55,0,1));
+      C.x=C.fromX+(C.rearX-C.fromX)*e; C.y=C.fromY+(C.rearY-C.fromY)*e; C.open=1;
+      if(C.st>0.72){ C.state='strike'; C.st=0; C.fromX=C.x; C.fromY=C.y; }
+    } else if(C.state==='strike'){
+      const k=clamp(C.st/F.speed,0,1), e=_ei(k);
+      C.x=C.fromX+(F.anchorX-C.fromX)*e; C.y=C.fromY+((F.anchorY+22)-C.fromY)*e;
+      C.open=1-clamp((k-0.55)/0.45,0,1)*0.66;
+      if(k>=1){ C.state='window'; C.st=0; F.catchWin=0.20; C.open=0.34; }
+    } else if(C.state==='window'){
+      F.catchWin-=dt; C.x=F.anchorX; C.y=F.anchorY+22;
+      if(F.tapped){ C.state='recoil'; C.st=0; C.fromX=C.x; C.fromY=C.y; C.open=1;
+        F.caught++; F.caughtFlash=0.5; slowmo=0.35; bossFlash('CAUGHT.', true); }
+      else if(F.catchWin<=0){ C.state='grab'; C.st=0; F.misses++; F.missFlash=0.5; F.hero.shake=0.55;
+        C.open=0; bossFlash('IT HAS YOU — HANG ON', false); }
+    } else if(C.state==='grab'){
+      C.x=F.anchorX; C.y=F.anchorY+22;
+      if(C.st>0.5){ C.state='recoil'; C.st=0; C.fromX=C.x; C.fromY=C.y; C.open=1; }
+    } else if(C.state==='recoil'){
+      const e=_eo(clamp(C.st/0.5,0,1));
+      C.y=C.fromY+((F.anchorY+300)-C.fromY)*e; C.x=C.fromX+(F.anchorX-C.fromX)*e*0.6; C.open=1;
+      if(C.st>=0.5){ if(F.caught>=F.need){ F.phase='final'; F.t=0; fightStartFinal(); }
+        else { F.round++; fightStartGrab(); } }
+    }
+    return;
+  }
+  if(F.phase==='final'){
+    C.st+=dt; F.reyesOpen=clamp(F.reyesOpen+dt*0.7,0,1);
+    if(C.state==='loom'){
+      const k=clamp(C.st/1.5,0,1), e=_ei(k);
+      C.y=(F.anchorY+300)+((F.anchorY+20)-(F.anchorY+300))*e; C.x=F.anchorX; C.open=1;
+      if(k>0.5 && !F.gaveWin){ F.releaseWin=0.6; F.gaveWin=true; F.prompt='LET GO — NOW'; }
+      if(F.releaseWin>0) F.releaseWin-=dt;
+      if(F.released && F.gaveWin && F.releaseWin>0){
+        C.state='miss'; C.st=0; F.result=1; F.prompt=''; slowmo=0.5; bossFlash('KEPT.', true);
+        HAND.mode='fly'; HAND.anchor=null; HAND.vx=0; HAND.vy=-30;
+      } else if(k>=1 && !F.released){        // window passed -> jolt + reset the loom (cathartic: you cannot lose)
+        F.hero.shake=0.5; F.gaveWin=false; F.releaseWin=0; C.state='loom'; C.st=0.15;
+        bossFlash('WAIT FOR HER HAND', false);
+      }
+    } else if(C.state==='miss'){
+      C.y+=560*dt; HAND.y+=200*dt;            // the claw yanks up on empty (+y); you rise into her hand
+      if(C.st>1.1){ F.phase='won'; F.t=0; }
+    }
+    return;
+  }
+  if(F.phase==='won'){ if(F.t>1.0){ fight=null; mode='play';
+    try{ el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }catch(e){}
+    openWinScreen(); } return; }
+}
+function fightDown(){ const F=fight; if(!F) return;
+  if(F.phase==='intro'){ F.t=1.6; return; }
+  if(F.phase==='grabs' && F.claw.state==='window' && F.catchWin>0) F.tapped=true;
+}
+function fightUp(){ const F=fight; if(!F) return; if(F.phase==='final') F.released=true; }
+
+/* the claw at an arbitrary world point (reuses painted Gerald if present, else a procedural talon) */
+function drawClawAt(wx, wy, open){
+  const X=sx(wx), Y=sy(wy), w=34*S;
+  const gart = ASANO_ART.claw;
+  if(gart && gart.complete && gart.naturalWidth){
+    asanoBloom(X,Y,w*1.6,'#9fd0ff',0.2);
+    const gw=w*3.4, gh=gw*(gart.naturalHeight/gart.naturalWidth), sq=0.88+open*0.14;
+    ctx.save(); ctx.translate(X,Y); ctx.scale(sq,1/sq); ctx.drawImage(gart,-gw/2,-gh*0.58,gw,gh); ctx.restore(); return;
+  }
+  const s1='#e6ebf5', s2='#7a8194', s3='#3a3f4e';
+  ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+  asanoBloom(X,Y,w*1.2,'#c8d0e6',0.14);
+  const cg=ctx.createLinearGradient(X,Y-Hc,X,Y); cg.addColorStop(0,'rgba(120,128,148,0)'); cg.addColorStop(1,'rgba(150,158,178,.55)');
+  ctx.strokeStyle=cg; ctx.lineWidth=2.5*S; ctx.beginPath(); ctx.moveTo(X,Y-Hc); ctx.lineTo(X,Y-14*S); ctx.stroke();
+  const hg=ctx.createLinearGradient(X,Y-22*S,X,Y+6*S); hg.addColorStop(0,s1); hg.addColorStop(0.5,s2); hg.addColorStop(1,s3);
+  ctx.fillStyle=hg; ctx.beginPath(); ctx.moveTo(X-14*S,Y-14*S); ctx.lineTo(X+14*S,Y-14*S); ctx.lineTo(X+9*S,Y+2*S); ctx.lineTo(X-9*S,Y+2*S); ctx.closePath(); ctx.fill();
+  const spread=0.32+open*0.68, tips=[-1,-0.05,1];
+  tips.forEach((dir,i)=>{ const bx=X+dir*10*S, tx=X+dir*(w*0.5)*spread, ty=Y+(18+open*8)*S;
+    const fg=ctx.createLinearGradient(bx,Y,tx,ty); fg.addColorStop(0,s1); fg.addColorStop(1,s3);
+    ctx.strokeStyle=fg; ctx.lineWidth=(i===1?5:6.5)*S;
+    ctx.beginPath(); ctx.moveTo(bx,Y-2*S); ctx.quadraticCurveTo(X+dir*w*0.32*spread, Y+12*S, tx, ty); ctx.stroke();
+    ctx.fillStyle=s1; ctx.beginPath(); ctx.arc(tx,ty,2.2*S,0,7); ctx.fill(); });
+  asanoBloom(X,Y-6*S,7*S,'#9fd0ff',0.6);
+  ctx.fillStyle='#dff0ff'; ctx.beginPath(); ctx.arc(X,Y-6*S,1.8*S,0,7); ctx.fill();
+  ctx.restore();
+}
+/* Reyes at the glass, top of frame — a warm-lit window and an open hand that reaches down as she opens up */
+function drawReyes(open){
+  const cxp=Wc/2, top=44*S + (1-open)*10;
+  asanoBloom(cxp, top, 120*S, '#ffdca0', 0.10+open*0.16);       // warm light spilling from the open glass
+  ctx.save();
+  // the glass frame
+  ctx.strokeStyle='rgba(255,224,160,'+(0.35+open*0.4)+')'; ctx.lineWidth=2;
+  ctx.strokeRect(cxp-70*S, 12*S, 140*S, 46*S);
+  ctx.fillStyle='rgba(255,236,196,'+(0.06+open*0.14)+')'; ctx.fillRect(cxp-70*S, 12*S, 140*S, 46*S);
+  // her open hand, reaching down toward the hero as `open` grows
+  const hy = 58*S + open*46*S, hx=cxp;
+  ctx.fillStyle='rgba(247,232,200,'+(0.55+open*0.4)+')';
+  ctx.beginPath(); ctx.ellipse(hx, hy, 13*S, 9*S, 0, 0, 7); ctx.fill();       // palm
+  for(let i=-2;i<=2;i++){ ctx.beginPath();
+    ctx.ellipse(hx+i*6*S, hy+9*S+Math.abs(i)*S, 2.4*S, 6*S, 0, 0, 7); ctx.fill(); }   // fingers reaching
+  ctx.restore();
+}
+function drawFight(){
+  const F=fight; if(!F) return; const C=F.claw;
+  const HX=sx(HAND.x), HY=sy(HAND.y);
+  if(F.phase==='final' || F.phase==='won') drawReyes(F.reyesOpen);   // her light behind the action
+  // telegraph while the claw rears back: red ring on the hero + a dashed aim line
+  if(C.state==='rear'){
+    const pulse=0.5+0.5*Math.sin(_asanoNow*11);
+    ctx.strokeStyle='rgba(255,86,86,'+(0.4+0.45*pulse)+')'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.arc(HX,HY,32*S,0,7); ctx.stroke();
+    ctx.setLineDash([4,5]); ctx.strokeStyle='rgba(255,86,86,.45)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(sx(C.x),sy(C.y)); ctx.lineTo(HX,HY); ctx.stroke(); ctx.setLineDash([]);
+  }
+  drawClawAt(C.x, C.y, C.open);
+  // catch window — drawn OVER the claw so the tell is never hidden: a bold gold+white ring cinching onto the hero
+  if(C.state==='window' && F.catchWin>0){
+    const k=F.catchWin/0.20, r=(20+k*42)*S, pulse=0.6+0.4*Math.sin(_asanoNow*30);
+    ctx.strokeStyle='rgba(255,214,90,'+(0.7+0.3*pulse)+')'; ctx.lineWidth=4.5;
+    ctx.beginPath(); ctx.arc(HX,HY,r,0,7); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(HX,HY,r,0,7); ctx.stroke();
+  }
+  // caught spark + burst ring on the hero
+  if(F.caughtFlash>0){ asanoBloom(HX,HY,48*S,'#bfe8ff',F.caughtFlash);
+    ctx.strokeStyle='rgba(191,232,255,'+F.caughtFlash+')'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(HX,HY,(18+(0.5-F.caughtFlash)*64)*S,0,7); ctx.stroke(); }
+  // prompt + progress pips
+  ctx.textAlign='center';
+  if(F.prompt){ ctx.fillStyle='rgba(242,240,246,.96)'; ctx.font='800 18px ui-monospace,monospace';
+    ctx.fillText(F.prompt, Wc/2, 96); }
+  if(F.phase==='grabs'){
+    for(let i=0;i<F.need;i++){ ctx.fillStyle=i<F.caught?'#e7c04b':'rgba(232,232,238,.25)';
+      ctx.beginPath(); ctx.arc(Wc/2 + (i-(F.need-1)/2)*20, 118, 5, 0, 7); ctx.fill(); }
+  }
+}
+
 /* ---------- input ---------- */
 function down(){
   initAudio();   // first tap unlocks the coin chime (audio needs a user gesture)
   if(mode==='intro'){ introAdvance(); return; }
+  if(mode==='fight'){ fightDown(); return; }        // the summit showdown: tap = catch
   if(mode!=='play' && mode!=='appeal_play') return;
   held=true;
   if(mode==='appeal_play'){                      // reconstructions: ONE grab per attempt, timed
@@ -978,6 +1167,7 @@ function down(){
 }
 function up(){
   held=false;
+  if(mode==='fight'){ fightUp(); return; }           // the summit showdown: let go = drop into her hand
   if((mode==='play'||mode==='appeal_play') && HAND.mode==='attach') fling('manual');
 }
 cv.addEventListener('pointerdown', e=>{ e.preventDefault(); down(); }, {passive:false});
@@ -1992,6 +2182,8 @@ function render(){
   }
 
   // boss / clutch line
+  if(mode==='fight' && fight) drawFight();   // the summit showdown draws over the world, under the boss text
+
   if(bossLineT>0){ ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,bossLineT);
     ctx.fillStyle='#e7c04b'; ctx.font=`700 ${Math.round(bossBig?26:14)}px ui-monospace,monospace`;
     ctx.fillText(bossLine, Wc/2, Hc*0.4); ctx.globalAlpha=1; }
@@ -2046,6 +2238,8 @@ function frame(t){
       else step(DT*scale);
     } else if(mode==='appeal_watch'){
       advanceGhost(DT);
+    } else if(mode==='fight' && hitstop<=0){
+      stepFight((slowmo>0?0.4:1)*DT);
     }
     acc-=DT;
   }
@@ -2867,6 +3061,7 @@ function tickOnce(){
   if(active && hitstop<=0){ const scale=slowmo>0?0.4:1;
     if(mode==='appeal_play') stepTakeover(DT*scale); else step(DT*scale); }
   else if(mode==='appeal_watch'){ advanceGhost(DT); }
+  else if(mode==='fight' && hitstop<=0){ stepFight((slowmo>0?0.4:1)*DT); }
 }
 
 /* debug hooks (like his other games: __bfe etc.) */
@@ -2875,6 +3070,10 @@ window.__thwap = {
     HAND.x=s.x;HAND.y=s.y;HAND.peakY=s.y; attachTo(s,0,0); camY=s.y+60; },
   fall:()=>{ HAND.mode='fly'; HAND.vx=120; HAND.vy=-1500; fallTrack=null; },
   press:()=>down(), release:()=>up(),
+  fight:()=>{ try{el('p_win').classList.remove('on');}catch(e){} mode='play'; fight=null; beaten=false;
+    const s=nearestStud(CX,TOP_Y-60,1200)||{x:CX,y:TOP_Y-60,type:'plastic'};
+    HAND.x=s.x; HAND.y=s.y; attachTo(s,0,0); startFight(); return {mode, phase:fight&&fight.phase}; },
+  fightState:()=>fight?JSON.parse(JSON.stringify({phase:fight.phase, round:fight.round, caught:fight.caught, need:fight.need, misses:fight.misses, clawState:fight.claw.state, catchWin:+fight.catchWin.toFixed(3)})):null,
   tick:(n=1)=>{ for(let i=0;i<n;i++) tickOnce(); return window.__thwap.state(); },
   paint:()=>{ render(); return true; },        // force a frame while headless
   studs:()=>STUDS.length,
