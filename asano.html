@@ -649,7 +649,9 @@ function load(){
   if(!myHandle) myHandle = HANDLES[(Date.now()>>8)%HANDLES.length];
 }
 function fmtT(s){ const m=Math.floor(s/60), ss=(s%60); return m+':'+(ss<10?'0':'')+ss.toFixed(1); }
+let _ptFight = false;   // ?fight playtest: don't touch the real save (it teleports to the summit)
 function save(){
+  if(_ptFight) return;
   try{ localStorage.setItem('thwap', JSON.stringify({
     best:bestPct, played:true, handle:myHandle, beaten:beaten, falls:fallCount, bestFall:bestFall,
     guide:guide, fallLog:fallLog.slice(-8), bestTime:bestTime, arch:archStatus,
@@ -1006,8 +1008,8 @@ function fightCaught(){
 }
 function fightStartFinal(){
   const F=fight, C=F.claw;
-  C.state='loom'; C.st=0; C.x=F.anchorX; C.y=F.anchorY+300; C.fromY=C.y; C.open=1;   // up = +y
-  F.releaseWin=0; F.released=false; F.gaveWin=false; F.prompt='HOLD ON…';
+  C.state='loom'; C.st=0; C.x=F.anchorX; C.y=F.anchorY+320; C.fromY=C.y; C.open=1;   // up = +y
+  F.releaseWin=0; F.released=false; F.gaveWin=false; F.finalT=0; F.prompt='SHE REACHES FOR YOU…';
 }
 function stepFight(dt){
   simFrame++;
@@ -1057,18 +1059,19 @@ function stepFight(dt){
     return;
   }
   if(F.phase==='final'){
-    C.st+=dt; F.reyesOpen=clamp(F.reyesOpen+dt*0.7,0,1);
+    C.st+=dt; F.finalT+=dt; F.reyesOpen=clamp(F.reyesOpen+dt*0.7,0,1);
     if(C.state==='loom'){
-      const k=clamp(C.st/1.5,0,1), e=_ei(k);
-      C.y=(F.anchorY+300)+((F.anchorY+20)-(F.anchorY+300))*e; C.x=F.anchorX; C.open=1;
-      if(k>0.5 && !F.gaveWin){ F.releaseWin=0.6; F.gaveWin=true; F.prompt='LET GO — NOW'; }
+      const k=clamp(C.st/1.6,0,1), e=_ei(k);
+      C.y=(F.anchorY+320)+((F.anchorY+34)-(F.anchorY+320))*e; C.x=F.anchorX; C.open=1;
+      if(k>0.30 && !F.gaveWin){ F.releaseWin=0.95; F.gaveWin=true; F.prompt='TAP!'; }   // generous window, TAP (consistent with the catches)
       if(F.releaseWin>0) F.releaseWin-=dt;
-      if(F.released && F.gaveWin && F.releaseWin>0){
-        C.state='miss'; C.st=0; F.result=1; F.prompt=''; slowmo=0.5; bossFlash('KEPT.', true);
-        HAND.mode='fly'; HAND.anchor=null; HAND.vx=0; HAND.vy=-30;
-      } else if(k>=1 && !F.released){        // window passed -> jolt + reset the loom (cathartic: you cannot lose)
-        F.hero.shake=0.5; F.gaveWin=false; F.releaseWin=0; C.state='loom'; C.st=0.15;
-        bossFlash('WAIT FOR HER HAND', false);
+      // ANY input in the window drops you to her — plus a safety net so it can NEVER get stuck
+      if((F.released && F.gaveWin && F.releaseWin>0) || F.finalT>8){
+        C.state='miss'; C.st=0; F.result=1; F.prompt=''; slowmo=0.5; bossFlash('KEPT!', true);
+        HAND.mode='fly'; HAND.anchor=null; HAND.vx=0; HAND.vy=0;
+      } else if(k>=1){                          // window missed -> clean retry (RESET released so a late tap can't jam it)
+        F.gaveWin=false; F.releaseWin=0; F.released=false; C.state='loom'; C.st=0.2; C.y=F.anchorY+320;
+        bossFlash('TAP AS SHE REACHES', false);
       }
     } else if(C.state==='miss'){
       C.y+=560*dt; HAND.y+=200*dt;            // the claw yanks up on empty (+y); you rise into her hand
@@ -1082,13 +1085,14 @@ function stepFight(dt){
 }
 function fightDown(){ const F=fight; if(!F) return;
   if(F.phase==='intro'){ F.t=1.6; return; }
+  if(F.phase==='final'){ F.released=true; return; }       // final beat: a TAP works (not just a finger-lift)
   if(F.phase==='grabs'){
     const cs=F.claw.state;
     if(cs==='dive'||cs==='grace') F.tapped=true;          // catch it any time it's diving / at you
     else if(cs==='rear' && F.claw.st>0.26) F.armed=true;  // buffer a slightly-early tap so it still lands
   }
 }
-function fightUp(){ const F=fight; if(!F) return; if(F.phase==='final') F.released=true; }
+function fightUp(){ const F=fight; if(!F) return; if(F.phase==='final') F.released=true; }   // ...or a finger-lift also works
 
 /* the claw at an arbitrary world point (reuses painted Gerald if present, else a procedural talon) */
 function drawClawAt(wx, wy, open){
@@ -1146,8 +1150,8 @@ function drawFight(){
     ctx.beginPath(); ctx.moveTo(sx(C.x),sy(C.y)); ctx.lineTo(HX,HY); ctx.stroke(); ctx.setLineDash([]);
   }
   drawClawAt(C.x, C.y, C.open);
-  // CATCHABLE (the whole dive + grace): a bold pulsing gold ring on the hero + a gold halo on the claw = grab it NOW
-  if(C.state==='dive' || C.state==='grace'){
+  // CATCHABLE (the whole dive + grace, and the final LET-GO window): a bold pulsing gold ring on the hero = tap NOW
+  if(C.state==='dive' || C.state==='grace' || (F.phase==='final' && F.gaveWin && F.releaseWin>0)){
     const pulse=0.6+0.4*Math.sin(_asanoNow*22);
     asanoBloom(sx(C.x),sy(C.y),34*S,'#ffe08a',0.35*pulse);          // the claw glows gold — grabbable
     ctx.strokeStyle='rgba(255,214,90,'+(0.78+0.22*pulse)+')'; ctx.lineWidth=5;
@@ -2920,6 +2924,8 @@ function showReceivedVerdict(pl){
 function resetToPit(){
   zonesThisRun=[]; foundThisRun=false; combo=0; softUsed=false; heatClearedThisRun=false; flingCharge=0;
   const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
+  HAND.x = pit.x; HAND.y = pit.y - RMIN;   // TELEPORT the hero onto the perch first — attachTo only sets the orbit, not the
+  HAND.vx = 0; HAND.vy = 0;                 // position, so without this a returning save (e.g. left at the summit) stays desynced
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
   camY = HAND.y+60;
@@ -3121,8 +3127,8 @@ function boot(){
     if(!seenIntro){ playIntro(); }                 // fresh start: play the opening
     else { mode='play'; el('b_archive').style.display='block'; el('b_foyer').style.display='block'; }
   }
-  // ?fight — jump straight into the summit showdown for playtesting (reload to replay)
-  if(/[?&]fight\b/i.test(location.search)){ setTimeout(()=>{ try{ startFight ? (function(){ beaten=false; const s=nearestStud(CX,TOP_Y-60,1200)||{x:CX,y:TOP_Y-60,type:'plastic'}; HAND.x=s.x; HAND.y=s.y; attachTo(s,0,0); startFight(); })() : 0; }catch(e){} }, 250); }
+  // ?fight — jump straight into the summit showdown for playtesting (reload to replay; never touches the real save)
+  if(/[?&]fight\b/i.test(location.search)){ _ptFight=true; setTimeout(()=>{ try{ beaten=false; const s=nearestStud(CX,TOP_Y-60,1200)||{x:CX,y:TOP_Y-60,type:'plastic'}; HAND.x=s.x; HAND.y=s.y; attachTo(s,0,0); startFight(); }catch(e){} }, 250); }
   requestAnimationFrame(frame);
 }
 
