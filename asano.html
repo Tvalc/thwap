@@ -7,6 +7,8 @@
 <title>THWAP</title>
 <style>
   :root { --machine:#0b0b0f; --glass:#11131a; }
+  /* bottom menu removed — the play screen is a clean full-bleed climb (the block/none toggles still run, this just wins) */
+  #b_archive, #b_daily, #b_foyer { display:none !important; }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; background:#050507; overflow:hidden; overscroll-behavior:none; }
   body { display:flex; align-items:center; justify-content:center;
@@ -1400,14 +1402,7 @@ function drawHand(){
       ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
     }
   }
-  // launch-direction tick while winding: watch it swing; it turns gold in the clean window
-  if(HAND.mode==='attach' && held && HAND.charge>0.05){
-    const sd = clamp(Math.cos(HAND.ang),-1,1);
-    let ddx=sd*AIM_BEND, ddy=1.0; const inv2=1/Math.hypot(ddx,ddy);
-    ctx.strokeStyle = Math.abs(sd)<0.19 ? '#e7c04b' : 'rgba(232,232,238,.4)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+ddx*inv2*36*S, Y-ddy*inv2*36*S); ctx.stroke();
-  }
+  // (launch-direction tick removed — the HERO'S POSE now telegraphs the fling direction, see drawHeroAnim swing)
 
   // finish trail
   const fin = FINISHES[skin] || FINISHES.factory;
@@ -1833,6 +1828,7 @@ let ANIM_BIG = 1.7;                            // scale bump for the padded Makk
 let SWING_FRAME = 6, SWING_GY = 0.09;          // frozen grip pose + where the hero grips in the sprite box (0=top,1=bottom). 0.09 = near the top, where the creature's two up-stretched grip-arms reach the peg.
 let C_STRETCH = 0.20, SWING_LAG = 0.10, SWING_JIG = 0.06;   // centrifugal coil-stretch, coil-lag whip, gummy wobble
 let SWING_GHOSTS = 2, SWING_GHOST_STEP = 0.16, SWING_CLEANPOP = 0.10;  // trailing afterimages (0=off) + squash-pop at the clean window
+let WIND_AIM_OFF = Math.PI/2;   // swing: body-facing offset so aimRot=0 points the hand STRAIGHT UP (dial vs the wind art)
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
 (function(){
   const SETS = { idle:{n:12,fps:14}, fling:{n:12,fps:13}, wind:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };  // ON-MODEL sets only (bright splayed hand + coil, cream/gold rim). 'wind'=swing grip pose; 'fling'=launch/reach streak, worn by the flying + reaching states. The off-model humanoid flying/reaching frames are retired (no longer loaded).
@@ -1877,21 +1873,27 @@ function drawHeroAnim(g, X, Y, r){
   //   so the whip visibly accelerates with the wind-up (w 5->11) and can never desync from a clock. =====
   if(key==='swinging' && HAND.anchor){
     const f = set[Math.min(SWING_FRAME|0, set.length-1)];
-    const AX=sx(HAND.anchor.x), AY=sy(HAND.anchor.y);
-    const Sz = r*ANIM_SCALE*ANIM_BIG, wN = clamp(HAND.w/WMAX, 0, 1);
-    const clw = clamp(1 - Math.abs(Math.cos(HAND.ang))/0.19, 0, 1);   // 1 at the dead-vertical clean-release window
-    const drawAt = (a, alpha, pop)=>{
-      const jig = SWING_JIG*Math.sin(a*3);                            // gummy wobble, sim-locked
-      const rot = a - Math.PI/2 - SWING_LAG*wN*HAND.spin + jig*0.5;   // hand grips peg, coil trails & lags the spin
-      const st  = clamp(C_STRETCH*wN + jig + pop, 0, 0.5);            // centrifugal coil-stretch (+ a squash-pop at the window)
-      g.save(); g.globalAlpha=alpha; g.translate(AX,AY); g.rotate(rot); g.scale(1-st*0.5, 1+st);
+    const A = HAND.anchor, Sz = r*ANIM_SCALE*ANIM_BIG, wN = clamp(HAND.w/WMAX, 0, 1);
+    // AIM: point the whole body along the LAUNCH VECTOR — the SAME transform the flying sprite uses, so wind->fling is a
+    // seamless handoff — and stretch into a bullet along it, so the silhouette shows exactly where it'll fling. Position
+    // still ORBITS the peg (winding energy) and the tether sells the grip; only the FACING carries the aim. The two
+    // straight-up (dead-vertical) clean-release moments POP so the timing is unmistakable — no UI arrow needed.
+    const aimRot = Math.atan2(-1.0, Math.cos(HAND.ang)*aimBend()) + WIND_AIM_OFF;    // cos(ang)=0 -> straight up
+    const clw = clamp(1 - Math.abs(Math.cos(HAND.ang))/0.18, 0, 1), pop = clw*clw;   // 1 at the clean release, eased
+    const jig = SWING_JIG*Math.sin(HAND.ang*3);
+    const drawAt = (px, py, alpha, extra)=>{
+      const st = clamp(C_STRETCH + 0.30*wN + jig + extra, 0, 0.6);                   // stretch runs ALONG launch = loaded spring
+      g.save(); g.globalAlpha=alpha; g.translate(px,py); g.rotate(aimRot);
+      g.scale((1 - st*0.42)*(1+0.10*pop), (1 + st)*(1+0.10*pop));                    // bullet along the aim, squares up at the window
       g.drawImage(f, -0.5*Sz, -SWING_GY*Sz, Sz, Sz); g.restore();
     };
-    for(let k=SWING_GHOSTS;k>=1;k--){                                 // afterimages trailing the spin — reads as speed
-      const ga = 0.18*wN*(1 - k/(SWING_GHOSTS+1));
-      if(ga>0.02) drawAt(HAND.ang - HAND.spin*SWING_GHOST_STEP*k, ga, 0);
-    }
-    drawAt(HAND.ang, 1, clw*SWING_CLEANPOP);                          // the hero squares up taller at the clean window
+    // afterimages: POSITION trails the whirl (shows charge/speed); FACING stays the CURRENT aim (never a fan = never an arrow)
+    for(let k=SWING_GHOSTS;k>=1;k--){ const a=HAND.ang - HAND.spin*SWING_GHOST_STEP*k, ga=0.16*wN*(1-k/(SWING_GHOSTS+1));
+      if(ga>0.02) drawAt(sx(A.x+Math.cos(a)*HAND.r), sy(A.y+Math.sin(a)*HAND.r), ga, 0); }
+    drawAt(X, Y, 1, pop*0.20);
+    // clean-window gold rim flash — reuses the deleted tick's #e7c04b so "gold = clean" survives; body-aligned, no screen shake
+    if(pop>0.06){ g.save(); g.globalAlpha=pop*0.7; g.strokeStyle='#e7c04b'; g.lineWidth=(1.5+3*pop)*S;
+      g.translate(X,Y); g.rotate(aimRot); g.beginPath(); g.ellipse(0, -SWING_GY*Sz*0.08, 0.4*Sz, 0.52*Sz, 0, 0, 7); g.stroke(); g.restore(); }
     return true;
   }
 
