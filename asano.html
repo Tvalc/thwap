@@ -1603,8 +1603,11 @@ function drawHand(){
   { const rr=11*S; const dh=ctx.createRadialGradient(X,Y,rr*1.1,X,Y,rr*3.3);
     dh.addColorStop(0,'rgba(6,10,16,0)'); dh.addColorStop(0.5,'rgba(6,10,16,0.32)'); dh.addColorStop(1,'rgba(6,10,16,0)');
     ctx.fillStyle=dh; ctx.beginPath(); ctx.arc(X,Y,rr*3.3,0,7); ctx.fill(); }
-  // sticky-hand reaching arms: wave wildly + stretch toward the nearest knob while spinning or flying (behind the body)
-  if(HAND.mode==='fly' || (HAND.mode==='attach' && held)) drawReachArms(X, Y, 11*S);
+  // sticky-hand reaching arm: stretches toward the next knob while flying (behind the body).
+  // FLIGHT ONLY — during a swing the body is pinned to the PEG (drawHeroAnim tetherball transform), NOT at
+  // sx(HAND.x)/sy(HAND.y), so a reach anchored here detached from the whirling body; and the creature's own two
+  // arms already grip the peg, so an extra reach fights the tetherball read. The whirl carries the wind-up on its own.
+  if(HAND.mode==='fly') drawReachArms(X, Y, 11*S);
   // the sticky hand, wearing its finish
   paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
   // (removed: the carried "eye" was a leftover from the Moose story)
