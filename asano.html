@@ -1605,14 +1605,17 @@ let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size
 // hero ORIENTATION knobs — orientation/frame are pure fns of sim state (ang/w), never a clock.
 // SWING is a TETHERBALL: pivot the GRIP pinned AT the peg so the body sweeps a big readable arc (not a pinwheel
 // around a point inside itself). tune any of these live by bare name via the console.
-let SPRITE_UP_OFFSET = Math.PI/2;              // flight/reach: which way the sprite's grip points (dial vs the art)
-let ANIM_BIG = 1.7;                            // scale bump for the padded Makko frames (fly/swing/reach)
+// ON-MODEL FLIGHT/REACH seating — the flying + reaching states now wear the rimmed on-model fling frames
+// (assets/hero_anim/fling), so size/anchor/orientation are dialed against THAT art, not the old off-model humanoid.
+let FLING_SCALE = 8.5, FLING_YOFF = 0.42;      // flight sprite size (vs r) + vertical anchor of the grab-hand at (X,Y). 8.5 makes the flying/reaching hand the SAME visual size as idle & fall (the fling art fills its frame a touch more than idle) — one hand, one size across the whole arc; the bigger wound-up swing snaps back to true size on release (squash→stretch).
+let FLING_UP_OFF = Math.PI/2;                  // rotation offset: aligns the fling art's finger-forward axis with the aim (velocity / target knob)
+let ANIM_BIG = 1.7;                            // scale bump for the padded Makko frames (swing)
 let SWING_FRAME = 6, SWING_GY = 0.28;          // frozen grip pose + where the splayed hand grips in the sprite box (0=top,1=bottom)
 let C_STRETCH = 0.20, SWING_LAG = 0.10, SWING_JIG = 0.06;   // centrifugal coil-stretch, coil-lag whip, gummy wobble
 let SWING_GHOSTS = 2, SWING_GHOST_STEP = 0.16, SWING_CLEANPOP = 0.10;  // trailing afterimages (0=off) + squash-pop at the clean window
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
 (function(){
-  const SETS = { idle:{n:12,fps:14}, flying:{n:12,fps:13}, wind:{n:12,fps:13}, reaching:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };  // 'wind' = the on-model splayed-hand-on-a-coil grip pose (used for the swing state)
+  const SETS = { idle:{n:12,fps:14}, fling:{n:12,fps:13}, wind:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };  // ON-MODEL sets only (bright splayed hand + coil, cream/gold rim). 'wind'=swing grip pose; 'fling'=launch/reach streak, worn by the flying + reaching states. The off-model humanoid flying/reaching frames are retired (no longer loaded).
   const SKINS = { painterly:{dir:'assets/hero_anim/'}, pixel:{dir:'assets/hero_anim_pixel/', n:1, fps:1} };  // pixel = 1 crisp frame per state
   for(const sk in SKINS){ const skin=SKINS[sk]; for(const k in SETS){ const s=SETS[k], n=skin.n||s.n, arr=[]; arr.fps=skin.fps||s.fps;
     for(let i=0;i<n;i++){ const im=new Image(); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png'; arr.push(im); }
@@ -1639,7 +1642,9 @@ function _heroAnimAdvance(){ const now=(typeof performance!=='undefined'?perform
 function drawHeroAnim(g, X, Y, r){
   _heroAnimAdvance();
   const skin = heroSkin(), key = heroAnimKey(), px = (skin==='pixel');
-  const artKey = (key==='swinging') ? 'wind' : key;                 // swing state wears the on-model splayed-hand+coil grip pose
+  const artKey = (key==='swinging') ? 'wind'                        // swing wears the on-model splayed-hand+coil grip pose
+               : (key==='flying'||key==='reaching') ? 'fling'       // flight/reach wear the on-model rimmed launch/reach streak (off-model humanoid retired)
+               : key;
   let set = ASANO_ANIM[skin][artKey];
   if(!_animReady(set)) set = ASANO_ANIM[skin].idle;                 // this skin's idle
   if(!_animReady(set)) set = ASANO_ANIM.painterly[artKey];          // painterly of this state
@@ -1673,16 +1678,16 @@ function drawHeroAnim(g, X, Y, r){
   // ===== FLIGHT / REACH / IDLE: frame off the clock; lean the sprite into travel or toward the next knob =====
   const f = set[Math.floor(_heroAnimT*set.fps) % set.length];
   const bob = (px && key==='idle') ? Math.sin(_heroAnimT*4.5)*0.03 : 0;   // tiny life for the 1-frame pixel idle
-  const bigNew = (key==='flying'||key==='reaching');                 // Makko frames have more padding -> scale up to match
-  const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE)*(bigNew?ANIM_BIG:1);
-  const yoff = (px?ANIM_YOFF_PX:(bigNew?0.5:ANIM_YOFF)) + bob;
+  const flight = (key==='flying'||key==='reaching');                 // on-model fling frames (rimmed); seat + orient vs THAT art
+  const Sz = r*(px?ANIM_SCALE_PX:(flight?FLING_SCALE:ANIM_SCALE));
+  const yoff = (px?ANIM_YOFF_PX:(flight?FLING_YOFF:ANIM_YOFF)) + bob;
   const sm = g.imageSmoothingEnabled; if(px) g.imageSmoothingEnabled = false;   // crisp nearest-neighbour pixels
   let rot=0;
   if(key==='flying'){
-    rot = Math.atan2(-HAND.vy, HAND.vx) + SPRITE_UP_OFFSET;         // lean into the travel vector while streaking through air
+    rot = Math.atan2(-HAND.vy, HAND.vx) + FLING_UP_OFF;            // fingers lead the travel vector while streaking through air
   } else if(key==='reaching'){
-    const t = nearestStud(HAND.x, HAND.y, REACH*1.7);               // stretch the grip toward the knob we're about to grab
-    rot = (t ? Math.atan2(sy(t.y)-Y, sx(t.x)-X) : Math.atan2(-HAND.vy, HAND.vx)) + SPRITE_UP_OFFSET;
+    const t = nearestStud(HAND.x, HAND.y, REACH*1.7);               // splayed fingers stretch toward the knob we're about to grab
+    rot = (t ? Math.atan2(sy(t.y)-Y, sx(t.x)-X) : Math.atan2(-HAND.vy, HAND.vx)) + FLING_UP_OFF;
   }
   if(rot){
     g.save(); g.translate(X,Y); g.rotate(rot); g.drawImage(f, -Sz/2, -Sz*yoff, Sz, Sz); g.restore();
@@ -2926,6 +2931,9 @@ window.__thwap = {
   motion:(k,m)=>{ recordMotion(k,m); return {guide:guide[k], pending:pendingStamp}; },
   record:()=>JSON.parse(JSON.stringify({guide:guide, fallLog:fallLog, arch:archStatus})),
   parse:(link)=>{ const m=link.match(/[#&]a=([^&]+)/); return m?b64urlDecode(m[1]):null; },
+  flyDial:(o)=>{ o=o||{}; if(o.scale!=null)FLING_SCALE=o.scale; if(o.yoff!=null)FLING_YOFF=o.yoff;
+    if(o.off!=null)FLING_UP_OFF=o.off; return {FLING_SCALE,FLING_YOFF,FLING_UP_OFF:+FLING_UP_OFF.toFixed(3)}; },
+  scr:()=>({X:Math.round(sx(HAND.x)), Y:Math.round(sy(HAND.y)), S:+S.toFixed(3), key:heroAnimKey(), cw:cv.width, ch:cv.height}),
   hand:()=>({mode:HAND.mode,x:Math.round(HAND.x),y:Math.round(HAND.y),vx:Math.round(HAND.vx),vy:Math.round(HAND.vy),
     charge:+HAND.charge.toFixed(2),wraps:+HAND.wraps.toFixed(2),anchor:HAND.anchor?HAND.anchor.type:null,cause:HAND.lastCause||null,
     side:HAND.mode==='attach'?+Math.cos(HAND.ang).toFixed(2):null}),
