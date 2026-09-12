@@ -2424,12 +2424,44 @@ function heatRow(i){
     `<div class="friddle" style="font-style:normal;">${i===0?'the baseline — no modifiers.':'+ '+esc(lv.mod)}</div>`+action+`</div>`;
 }
 window.__setHeat = (i)=>{ if(mode!=='foyer' || !beaten || i<0 || i>heatMax) return; heat=i; save(); mode='play'; openFoyer(); };
+// THE COLLECTION — one completion number across everything the machine can give you.
+// Aggregates cosmetics + skill feats + heat clears + story notes so there's always a next thing to chase.
+function collectionStats(){
+  const nonStock = (obj, free, owned)=>{ const ids=Object.keys(obj).filter(id=>id!==free);
+    return { t:ids.length, o:ids.filter(id=>owned.includes(id)).length }; };
+  const holds = nonStock(STUDSETS, 'stock', studOwned);
+  const bgs   = nonStock(BACKDROPS, 'stock', bgOwned);
+  const fins  = nonStock(FINISHES, 'factory', finishes);
+  const feats = { t:FEATS.length, o:FEATS.filter(f=>guide[f.k].n>=f.target).length };
+  const heat  = { t:5, o:clamp((heatMax-1) + (heatBeaten5?1:0), 0, 5) };   // heat 1..5 cleared
+  const notes = { t:CHAPTER_ORDER.length, o:Math.min(storyIdx, CHAPTER_ORDER.length) };
+  const cats = [ {k:'HOLDS',...holds},{k:'BACKDROPS',...bgs},{k:'HANDS',...fins},
+    {k:'FEATS',...feats},{k:'HEAT',...heat},{k:'NOTES',...notes} ];
+  const o=cats.reduce((s,c)=>s+c.o,0), t=cats.reduce((s,c)=>s+c.t,0);
+  return { cats, owned:o, total:t, pct: t?Math.round(o/t*100):0 };
+}
+function collectionMeter(){
+  const s=collectionStats(), done=s.owned>=s.total;
+  const chips = s.cats.map(c=>{ const full=c.o>=c.t;
+    return `<span style="display:inline-block;padding:3px 8px;margin:4px 5px 0 0;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.03em;`+
+      `background:${full?'#dff0e2':'#efe9d8'};color:${full?'#2f6a3d':'#6b6455'};border:1px solid ${full?'#a9d3b4':'#d8cfb8'};">${c.k} ${c.o}/${c.t}${full?' ✓':''}</span>`; }).join('');
+  return `<div style="margin:12px 0 2px;padding:13px 14px;background:linear-gradient(180deg,#f4efdf,#eae4d2);border:1px solid #d8cfb8;border-radius:10px;">`+
+    `<div style="display:flex;align-items:baseline;justify-content:space-between;">`+
+      `<div style="font-size:11px;letter-spacing:.16em;font-weight:700;color:#8a6510;">THE COLLECTION</div>`+
+      `<div style="font-size:27px;font-weight:800;color:${done?'#2f6a3d':'#14140f'};font-variant-numeric:tabular-nums;line-height:1;">${s.pct}%</div></div>`+
+    `<div style="height:9px;margin:8px 0 5px;border:1px solid #c7bda1;border-radius:3px;background:#e2dcc8;overflow:hidden;">`+
+      `<div style="height:100%;width:${s.pct}%;background:${done?'#2f6a3d':'#b6851b'};transition:width .4s;"></div></div>`+
+    `<div style="font-size:10px;color:#6b6455;">${s.owned} of ${s.total} filed`+
+      (done?` — <b style="color:#2f6a3d;">the machine is yours, every inch of it.</b>`:'')+`</div>`+
+    `<div style="margin-top:5px;">${chips}</div></div>`;
+}
 function openFoyer(){
   if(mode!=='play' || dailyActive) return;
   mode='foyer';
   let h = `<div class="kick" style="letter-spacing:.18em;font-size:11px;margin-bottom:6px;color:#5b584c;">THE MACHINE</div>`+
     `<h1>¢ ${quarters}</h1>`+
     `<div class="sub">quarters, prised out of the machine on the way up. spend them on the machine. mix any holds with any backdrop — you'll be looking at it the whole climb.</div>`;
+  h += collectionMeter();
   h += moveSection();
   h += heatSection();
   h += `<div class="rule"></div><div class="big" style="font-size:13px;">${esc(STORY.title)}</div>`+
