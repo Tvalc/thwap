@@ -1822,10 +1822,10 @@ let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size
 // around a point inside itself). tune any of these live by bare name via the console.
 // ON-MODEL FLIGHT/REACH seating — the flying + reaching states now wear the rimmed on-model fling frames
 // (assets/hero_anim/fling), so size/anchor/orientation are dialed against THAT art, not the old off-model humanoid.
-let FLING_SCALE = 8.5, FLING_YOFF = 0.42;      // flight sprite size (vs r) + vertical anchor of the grab-hand at (X,Y). 8.5 makes the flying/reaching hand the SAME visual size as idle & fall (the fling art fills its frame a touch more than idle) — one hand, one size across the whole arc; the bigger wound-up swing snaps back to true size on release (squash→stretch).
+let FLING_SCALE = 9.0, FLING_YOFF = 0.42;      // flight sprite size (vs r) + vertical anchor of the grab point at (X,Y). All hero states are body-normalized (same body size at equal scale), so FLING_SCALE = ANIM_SCALE keeps the flying/reaching body the SAME size as idle & fall; the bigger wound-up swing snaps back to true size on release (squash→stretch).
 let FLING_UP_OFF = Math.PI/2;                  // rotation offset: aligns the fling art's finger-forward axis with the aim (velocity / target knob)
 let ANIM_BIG = 1.7;                            // scale bump for the padded Makko frames (swing)
-let SWING_FRAME = 6, SWING_GY = 0.28;          // frozen grip pose + where the splayed hand grips in the sprite box (0=top,1=bottom)
+let SWING_FRAME = 6, SWING_GY = 0.09;          // frozen grip pose + where the hero grips in the sprite box (0=top,1=bottom). 0.09 = near the top, where the creature's two up-stretched grip-arms reach the peg.
 let C_STRETCH = 0.20, SWING_LAG = 0.10, SWING_JIG = 0.06;   // centrifugal coil-stretch, coil-lag whip, gummy wobble
 let SWING_GHOSTS = 2, SWING_GHOST_STEP = 0.16, SWING_CLEANPOP = 0.10;  // trailing afterimages (0=off) + squash-pop at the clean window
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
