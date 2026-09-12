@@ -1490,14 +1490,14 @@ function drawReachArms(X, Y, r){
 
   // MOTION config — loose, layered, whipping tip that seeks
   var cfg = {
-    a1: 5.4*S, k1: 1.5, w1: 5.6,          // primary body wave
-    a2: 2.6*S, k2: 3.1, w2: 9.4,          // secondary faster ripple (organic)
-    at: (gripOn?4.2:5.6)*S, kt: 2.4, wt: 12.5,   // loose tip flutter
-    al: 0.10,                             // tip shortens a touch so it can curl back
-    uCurl: 0.60,
-    curl0: gripOn?0.35:0.55,              // curl bias
-    curl1: gripOn?1.15:1.55,              // curl SWEEP amplitude (seeks: curls/uncurls)
-    wc: 2.35, pc: 0.6
+    a1: 6.2*S, k1: 1.5, w1: 6.8,          // primary body wave (faster)
+    a2: 3.0*S, k2: 3.1, w2: 12.0,         // secondary faster ripple (organic)
+    at: (gripOn?5.2:6.8)*S, kt: 2.4, wt: 16.0,   // loose tip flutter (bigger + faster)
+    al: 0.12,                             // tip shortens a touch so it can curl back
+    uCurl: 0.58,
+    curl0: gripOn?0.30:0.50,              // curl bias
+    curl1: gripOn?1.75:2.25,              // curl SWEEP amplitude (MORE seek: curls/uncurls wider)
+    wc: 3.3, pc: 0.6                      // curl sweeps FASTER (whips harder)
   };
   var N=30;
   var pts=_raSpine(B, ang, len, cfg, t, N);
@@ -1515,6 +1515,53 @@ function drawReachArms(X, Y, r){
   ctx.restore();
 }
 
+// FLING-PATH PREVIEW rendered as a WAVING TENTACLE along the projectile parabola (replaces the old dotted arc).
+// Base at the hand, tip at the landing point; undulates + a loose tip flutter so it waves as you aim. Gold=clean shot.
+function _raFlingTentacle(x0,y0, vx0,vy0, clean){
+  var T=simFrame*DT, N=22, dtA=0.05, i;
+  var arc=[];
+  for(i=0;i<=N;i++){ var tt=i*dtA; arc.push({x:sx(x0+vx0*tt), y:sy(y0+vy0*tt-0.5*G*tt*tt)}); }
+  var pts=[];
+  for(i=0;i<=N;i++){
+    var u=i/N;
+    var a=arc[Math.max(0,i-1)], b=arc[Math.min(N,i+1)];
+    var tx=b.x-a.x, ty=b.y-a.y, m=Math.hypot(tx,ty)||1, nx=-ty/m, ny=tx/m;   // arc normal
+    var env=Math.pow(u,1.1);
+    var off=(4.6*env)*Math.sin(2.0*u*_RA_TWO_PI - 7.5*T) + (2.2*env)*Math.sin(3.4*u*_RA_TWO_PI - 12.0*T + 1.3);
+    var tz = u<0.5 ? 0 : Math.pow((u-0.5)/0.5, 1.4);
+    off += (3.0*tz)*Math.sin(2.4*u*_RA_TWO_PI - 15.0*T);                       // loose tip flutter
+    pts.push({ x:arc[i].x+nx*off*S, y:arc[i].y+ny*off*S, u:u });
+  }
+  var nrm=_raNormals(pts);
+  var wF=function(u){ return (1.2 + 4.0*Math.pow(1-u,1.1))*S; };               // moderate base -> thin tip
+  ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
+  // dark underlay so it reads on any wall (the old dotted arc had a per-dot dark halo)
+  ctx.strokeStyle='rgba(14,10,6,0.45)'; ctx.lineWidth=6.0*S;
+  ctx.beginPath(); for(i=0;i<=N;i++){ if(i===0)ctx.moveTo(pts[i].x,pts[i].y); else ctx.lineTo(pts[i].x,pts[i].y);} ctx.stroke();
+  // tapered ribbon
+  var L=[],R=[];
+  for(i=0;i<=N;i++){ var ww=wF(pts[i].u)*0.5; L.push({x:pts[i].x+nrm[i].x*ww,y:pts[i].y+nrm[i].y*ww}); R.push({x:pts[i].x-nrm[i].x*ww,y:pts[i].y-nrm[i].y*ww}); }
+  var hi,co,sh,rim;
+  if(clean){ hi='#ffe9a8'; co='#f4c64f'; sh='#c98a20'; rim='rgba(255,241,196,0.95)'; }
+  else     { hi='#8fe6d4'; co='#4fc7b3'; sh='#2f9d8c'; rim='rgba(245,230,176,0.90)'; }
+  var k=(N*0.35)|0, mw=wF(pts[k].u)*0.5;
+  var g=ctx.createLinearGradient(pts[k].x+nrm[k].x*mw,pts[k].y+nrm[k].y*mw, pts[k].x-nrm[k].x*mw,pts[k].y-nrm[k].y*mw);
+  g.addColorStop(0,hi); g.addColorStop(0.45,co); g.addColorStop(1,sh);
+  ctx.beginPath(); ctx.moveTo(L[0].x,L[0].y);
+  for(i=1;i<=N;i++)ctx.lineTo(L[i].x,L[i].y);
+  for(i=N;i>=0;i--)ctx.lineTo(R[i].x,R[i].y);
+  ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+  ctx.strokeStyle=rim; ctx.lineWidth=Math.max(1,1.4*S); ctx.stroke();
+  // glowing gummy tip at the landing point
+  var tip=pts[N];
+  if(clean){ var bg=ctx.createRadialGradient(tip.x,tip.y,0,tip.x,tip.y,11*S);
+    bg.addColorStop(0,'rgba(255,210,74,0.55)'); bg.addColorStop(1,'rgba(255,210,74,0)');
+    ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(tip.x,tip.y,11*S,0,7); ctx.fill(); }
+  ctx.beginPath(); ctx.arc(tip.x,tip.y, 2.7*S,0,7);
+  ctx.fillStyle=clean?'#ffe9a8':'#8fe6d4'; ctx.fill();
+  ctx.strokeStyle=rim; ctx.lineWidth=Math.max(1,1.2*S); ctx.stroke();
+  ctx.restore();
+}
 function paintHand(g, X, Y, r, fin, vx, vy){
   // ambient bloom — the hand is a little light source in a dark machine
   const gl = fin.glow || (asanoPal?asanoPal.glow:null);
@@ -1578,23 +1625,16 @@ function drawHand(){
       ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
     }
   }
-  // FLIGHT-PATH PREVIEW: a dotted arc tracing the exact parabola the fling will fly if you LET GO NOW — sweeps as you
-  // spin so you can aim. Computed from the real launch physics (fling() + gravity G). Gold when it's a clean straight-up.
+  // FLING-PATH PREVIEW: a WAVING TENTACLE tracing the exact parabola the fling will fly if you LET GO NOW —
+  // sweeps as you aim, undulating along the trajectory. Computed from the real launch physics (fling()+gravity G).
+  // Turns GOLD when it's a clean straight-up shot (max height).
   if(HAND.mode==='attach' && held && HAND.charge>0.04){
     const side = clamp(Math.cos(HAND.ang),-1,1);
     const dx0 = side*aimBend(), dy0 = 1.0, inv = 1/Math.hypot(dx0,dy0);
     const spd = (LAUNCH_MIN + (LAUNCH_MAX-LAUNCH_MIN)*HAND.charge) * launchMul();
     const vx0 = dx0*inv*spd, vy0 = dy0*inv*spd;                        // world launch velocity (up = +y)
     const clean = Math.abs(side) < 0.19;                              // dead-vertical = clean straight-up shot
-    const x0 = HAND.x, y0 = HAND.y, N = 16;
-    for(let i=1;i<=N;i++){ const t = i*0.05;
-      const px = sx(x0 + vx0*t), py = sy(y0 + vy0*t - 0.5*G*t*t);     // projectile arc
-      const fr = i/N, a = 1 - fr*0.72, rad = Math.max(1.3,(4.4-fr*2.7)*S);
-      ctx.fillStyle = 'rgba(18,14,8,'+(a*0.55)+')';                   // dark halo -> visible on any wall
-      ctx.beginPath(); ctx.arc(px, py, rad+1.5, 0, 7); ctx.fill();
-      ctx.fillStyle = clean ? 'rgba(255,210,74,'+a+')' : 'rgba(255,247,228,'+a+')';   // gold = clean straight-up
-      ctx.beginPath(); ctx.arc(px, py, rad, 0, 7); ctx.fill();
-    }
+    _raFlingTentacle(HAND.x, HAND.y, vx0, vy0, clean);
   }
 
   // finish trail
