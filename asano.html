@@ -2167,17 +2167,29 @@ function render(){
   // the quarter count, then the live chain multiplier, then the heat — stacked top-left
   ctx.textAlign='left';
   let _hudY = 76;
-  if(flingCharge>0 && mode==='play'){   // FLING POWER meter: pickups fill it, a fall empties it
-    const full = flingCharge>=1;
-    ctx.fillStyle = full ? '#ffd24a' : 'rgba(231,192,75,.9)'; ctx.font='800 12px ui-monospace,monospace';
-    ctx.fillText('POWER', 12, _hudY);
-    const bx=62, bw=76, bh=9, by=_hudY-8;
-    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(bx,by,bw,bh);
-    ctx.fillStyle = full ? '#ffe27a' : 'rgba(255,210,74,.9)'; ctx.fillRect(bx,by,bw*flingCharge,bh);
+  // ===== FLING POWER: pickups fill it, a fall empties it. Shown on the HERO (a growing aura you can feel) + a bold bar. =====
+  if(flingCharge>0 && mode==='play'){
+    const full = flingCharge>=1, HX=sx(HAND.x), HY=sy(HAND.y);
+    // (a) HERO AURA — the toy visibly powers up as you hoard coins; pops + pulses at MAX
+    const pulse=0.5+0.5*Math.sin(simFrame*0.18);
+    const rad=(22 + flingCharge*30 + (full?pulse*8:0))*S;   // a wider, softer halo that rings the hero rather than covering it
+    asanoBloom(HX, HY, rad, full?'#fff3b0':'#ffd24a', 0.13 + flingCharge*0.22 + (full?pulse*0.12:0));
+    ctx.strokeStyle='rgba(255,226,120,'+(0.22+flingCharge*0.55)+')'; ctx.lineWidth=full?3:2;
+    ctx.beginPath(); ctx.arc(HX,HY,rad*0.58,0,7); ctx.stroke();
+    // (b) BOLD segmented bar, top-left
+    ctx.textAlign='left';
+    ctx.fillStyle = full?'#ffe27a':'rgba(231,192,75,.95)'; ctx.font='800 11px ui-monospace,monospace';
+    ctx.fillText('FLING POWER', 12, _hudY);
+    const bx=12, by=_hudY+5, bw=128, bh=12, segs=Math.round(1/POWER_PER_PICK);
+    ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(bx,by,bw,bh);
+    const grad=ctx.createLinearGradient(bx,0,bx+bw,0); grad.addColorStop(0,'#ffb43a'); grad.addColorStop(1,full?'#fff3b0':'#ffe27a');
+    ctx.fillStyle=grad; ctx.fillRect(bx,by,bw*flingCharge,bh);
+    ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=1;
+    for(let i=1;i<segs;i++){ const x=Math.round(bx+bw*i/segs)+.5; ctx.beginPath(); ctx.moveTo(x,by); ctx.lineTo(x,by+bh); ctx.stroke(); }
+    ctx.strokeStyle='rgba(231,192,75,.7)'; ctx.lineWidth=1.5; ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
     if(full){ const pu=0.5+0.5*Math.sin(simFrame*0.3); ctx.globalAlpha=pu; ctx.fillStyle='#fff'; ctx.fillRect(bx,by,bw,bh); ctx.globalAlpha=1;
-      ctx.fillStyle='#ffe27a'; ctx.fillText('MAX', bx+bw+8, _hudY); }
-    ctx.strokeStyle='rgba(231,192,75,.55)'; ctx.lineWidth=1; ctx.strokeRect(bx+.5,by+.5,bw,bh);
-    _hudY+=19;
+      ctx.fillStyle='#ffe27a'; ctx.font='900 11px ui-monospace,monospace'; ctx.fillText('MAX — LET IT RIP', bx+bw+8, by+bh-1); }
+    _hudY += 30;
   }
   if(quarters>0 || finishes.length || bgOwned.length || studOwned.length){
     ctx.fillStyle='rgba(231,192,75,.85)'; ctx.font='700 13px ui-monospace,monospace';
