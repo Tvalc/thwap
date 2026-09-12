@@ -377,10 +377,12 @@ function buildTower(seed){
   STUDS.push({x:CX, y:PIT_Y+40, type:'plastic', perch:true});
   // gentle on-ramp: an OFFSET plastic ladder. the first hop is up + to the SIDE so a straight-up first fling clears
   // the pit instead of colliding with a dead-centre knob every time; the machine turns mean higher up.
-  STUDS.push({x:CX+46, y:PIT_Y+250, type:'plastic'});   // first knob: moved up (was +175) and off-centre (was CX)
-  STUDS.push({x:CX-42, y:PIT_Y+410, type:'plastic'});
-  STUDS.push({x:CX+44, y:PIT_Y+570, type:'plastic'});
-  STUDS.push({x:CX-28, y:PIT_Y+730, type:'plastic'});
+  STUDS.push({x:CX,    y:PIT_Y+225, type:'plastic'});   // first knob: CENTERED so a straight-up fling always reaches it (no
+                                                        // aiming, no dying), but moved up from +175 so you fling up a bit
+                                                        // first instead of grabbing it the instant you launch (the old bug).
+  STUDS.push({x:CX-34, y:PIT_Y+380, type:'plastic'});
+  STUDS.push({x:CX+42, y:PIT_Y+540, type:'plastic'});
+  STUDS.push({x:CX-26, y:PIT_Y+710, type:'plastic'});
   let y = PIT_Y + 890;
   let side = 1;
   while(y < TOP_Y - 240){
