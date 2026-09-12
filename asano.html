@@ -1602,12 +1602,17 @@ const ASANO_ART = {};                 // key -> HTMLImageElement (painted art ov
 //   A missing/half-loaded set falls back to idle, so the hero always animates once idle is cached.  =====
 const ASANO_ANIM = { painterly:{}, pixel:{} };   // skin -> state -> frame array (per-floor art medium)
 let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size vs r, vertical anchor of the grab-hand at (X,Y))
-// swing/flight ORIENTATION knobs — the sprite rotates to the arc/velocity as a pure fn of sim state (never a clock).
-// tune live by bare name: SPRITE_UP_OFFSET (dial against the art), C_LEAN/MAXLEAN (centrifugal lean), C_STRETCH, SWING_FRAME.
-let SPRITE_UP_OFFSET = Math.PI/2, C_LEAN = 0.04, MAXLEAN = 0.55, C_STRETCH = 0.20, SWING_FRAME = 6;
+// hero ORIENTATION knobs — orientation/frame are pure fns of sim state (ang/w), never a clock.
+// SWING is a TETHERBALL: pivot the GRIP pinned AT the peg so the body sweeps a big readable arc (not a pinwheel
+// around a point inside itself). tune any of these live by bare name via the console.
+let SPRITE_UP_OFFSET = Math.PI/2;              // flight/reach: which way the sprite's grip points (dial vs the art)
+let ANIM_BIG = 1.7;                            // scale bump for the padded Makko frames (fly/swing/reach)
+let SWING_FRAME = 6, SWING_GY = 0.28;          // frozen grip pose + where the splayed hand grips in the sprite box (0=top,1=bottom)
+let C_STRETCH = 0.20, SWING_LAG = 0.10, SWING_JIG = 0.06;   // centrifugal coil-stretch, coil-lag whip, gummy wobble
+let SWING_GHOSTS = 2, SWING_GHOST_STEP = 0.16, SWING_CLEANPOP = 0.10;  // trailing afterimages (0=off) + squash-pop at the clean window
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
 (function(){
-  const SETS = { idle:{n:12,fps:14}, flying:{n:12,fps:13}, swinging:{n:12,fps:13}, reaching:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
+  const SETS = { idle:{n:12,fps:14}, flying:{n:12,fps:13}, wind:{n:12,fps:13}, reaching:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };  // 'wind' = the on-model splayed-hand-on-a-coil grip pose (used for the swing state)
   const SKINS = { painterly:{dir:'assets/hero_anim/'}, pixel:{dir:'assets/hero_anim_pixel/', n:1, fps:1} };  // pixel = 1 crisp frame per state
   for(const sk in SKINS){ const skin=SKINS[sk]; for(const k in SETS){ const s=SETS[k], n=skin.n||s.n, arr=[]; arr.fps=skin.fps||s.fps;
     for(let i=0;i<n;i++){ const im=new Image(); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png'; arr.push(im); }
@@ -1634,37 +1639,53 @@ function _heroAnimAdvance(){ const now=(typeof performance!=='undefined'?perform
 function drawHeroAnim(g, X, Y, r){
   _heroAnimAdvance();
   const skin = heroSkin(), key = heroAnimKey(), px = (skin==='pixel');
-  let set = ASANO_ANIM[skin][key];
+  const artKey = (key==='swinging') ? 'wind' : key;                 // swing state wears the on-model splayed-hand+coil grip pose
+  let set = ASANO_ANIM[skin][artKey];
   if(!_animReady(set)) set = ASANO_ANIM[skin].idle;                 // this skin's idle
-  if(!_animReady(set)) set = ASANO_ANIM.painterly[key];             // painterly of this state
+  if(!_animReady(set)) set = ASANO_ANIM.painterly[artKey];          // painterly of this state
   if(!_animReady(set)) set = ASANO_ANIM.painterly.idle;
   if(!_animReady(set)) return false;                               // nothing loaded yet -> caller uses static hero
-  // FRAME: the swing is driven by the ORBIT PHASE, never a clock — one held pose, rotated to HAND.ang, so the
-  // visible spin inherits the sim's wind-up acceleration (w 5->11) for free and can never desync.
-  const f = (key==='swinging') ? set[Math.min(SWING_FRAME|0, set.length-1)]
-                               : set[Math.floor(_heroAnimT*set.fps) % set.length];
+
+  // ===== SWING = a TETHERBALL wind. Pivot the GRIP pinned AT the peg (NOT the hero's own centre — that made it
+  //   pinwheel around a point inside itself) so the splayed hand stays glued to the knob while the coil-tail whips
+  //   around it in a big, legible arc. Orientation, stretch and the motion-blur ghosts are pure fns of HAND.ang/w,
+  //   so the whip visibly accelerates with the wind-up (w 5->11) and can never desync from a clock. =====
+  if(key==='swinging' && HAND.anchor){
+    const f = set[Math.min(SWING_FRAME|0, set.length-1)];
+    const AX=sx(HAND.anchor.x), AY=sy(HAND.anchor.y);
+    const Sz = r*ANIM_SCALE*ANIM_BIG, wN = clamp(HAND.w/WMAX, 0, 1);
+    const clw = clamp(1 - Math.abs(Math.cos(HAND.ang))/0.19, 0, 1);   // 1 at the dead-vertical clean-release window
+    const drawAt = (a, alpha, pop)=>{
+      const jig = SWING_JIG*Math.sin(a*3);                            // gummy wobble, sim-locked
+      const rot = a - Math.PI/2 - SWING_LAG*wN*HAND.spin + jig*0.5;   // hand grips peg, coil trails & lags the spin
+      const st  = clamp(C_STRETCH*wN + jig + pop, 0, 0.5);            // centrifugal coil-stretch (+ a squash-pop at the window)
+      g.save(); g.globalAlpha=alpha; g.translate(AX,AY); g.rotate(rot); g.scale(1-st*0.5, 1+st);
+      g.drawImage(f, -0.5*Sz, -SWING_GY*Sz, Sz, Sz); g.restore();
+    };
+    for(let k=SWING_GHOSTS;k>=1;k--){                                 // afterimages trailing the spin — reads as speed
+      const ga = 0.18*wN*(1 - k/(SWING_GHOSTS+1));
+      if(ga>0.02) drawAt(HAND.ang - HAND.spin*SWING_GHOST_STEP*k, ga, 0);
+    }
+    drawAt(HAND.ang, 1, clw*SWING_CLEANPOP);                          // the hero squares up taller at the clean window
+    return true;
+  }
+
+  // ===== FLIGHT / REACH / IDLE: frame off the clock; lean the sprite into travel or toward the next knob =====
+  const f = set[Math.floor(_heroAnimT*set.fps) % set.length];
   const bob = (px && key==='idle') ? Math.sin(_heroAnimT*4.5)*0.03 : 0;   // tiny life for the 1-frame pixel idle
-  const bigNew = (key==='flying'||key==='swinging'||key==='reaching');   // Makko/Omni frames have more padding -> scale up to match
-  const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE)*(bigNew?1.7:1);
+  const bigNew = (key==='flying'||key==='reaching');                 // Makko frames have more padding -> scale up to match
+  const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE)*(bigNew?ANIM_BIG:1);
   const yoff = (px?ANIM_YOFF_PX:(bigNew?0.5:ANIM_YOFF)) + bob;
   const sm = g.imageSmoothingEnabled; if(px) g.imageSmoothingEnabled = false;   // crisp nearest-neighbour pixels
-  // ORIENTATION (pure fn of sim state): SWING = grip toward the peg + centrifugal lean/stretch; FLIGHT = lean into
-  // the launch vector so the wind-up flows into the fling with no snap. everything else draws upright as before.
-  let rot=0, st=0;
-  if(key==='swinging' && HAND.anchor){
-    const AX=sx(HAND.anchor.x), AY=sy(HAND.anchor.y);
-    rot = Math.atan2(AY-Y, AX-X) + SPRITE_UP_OFFSET + clamp(C_LEAN*HAND.w*HAND.spin, -MAXLEAN, MAXLEAN);
-    st  = clamp(C_STRETCH*HAND.w/WMAX, 0, 0.4);   // faster spin = more centrifugal stretch along the radial
-  } else if(key==='flying'){
+  let rot=0;
+  if(key==='flying'){
     rot = Math.atan2(-HAND.vy, HAND.vx) + SPRITE_UP_OFFSET;         // lean into the travel vector while streaking through air
   } else if(key==='reaching'){
     const t = nearestStud(HAND.x, HAND.y, REACH*1.7);               // stretch the grip toward the knob we're about to grab
-    if(t){ rot = Math.atan2(sy(t.y)-Y, sx(t.x)-X) + SPRITE_UP_OFFSET; }
-    else { rot = Math.atan2(-HAND.vy, HAND.vx) + SPRITE_UP_OFFSET; }
+    rot = (t ? Math.atan2(sy(t.y)-Y, sx(t.x)-X) : Math.atan2(-HAND.vy, HAND.vx)) + SPRITE_UP_OFFSET;
   }
-  if(rot||st){
-    g.save(); g.translate(X,Y); g.rotate(rot); if(st) g.scale(1-st*0.5, 1+st);
-    g.drawImage(f, -Sz/2, -Sz*yoff, Sz, Sz); g.restore();
+  if(rot){
+    g.save(); g.translate(X,Y); g.rotate(rot); g.drawImage(f, -Sz/2, -Sz*yoff, Sz, Sz); g.restore();
   } else {
     g.drawImage(f, X-Sz/2, Y-Sz*yoff, Sz, Sz);
   }
