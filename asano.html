@@ -157,6 +157,9 @@ const W0 = 5, WMAX = 11;     // angular velocity range (rad/s) — spin is a cha
 const WRAP_CAP = 3;          // hard greed cap (wraps) → auto-release
 const R0 = 42, RMIN = 34;    // orbit radius (wound in as you charge)
 const LAUNCH_MIN = 720, LAUNCH_MAX = 1260;
+// FLING POWER: pickups stack a per-climb power charge that makes every launch stronger; a fall wipes it.
+const POWER_PER_PICK = 0.12;  // charge added per pickup (0..1 meter; ~8 coins to max)
+const POWER_MAX = 0.30;       // launch-speed bonus at full charge (+30% speed ≈ +70% apex height)
 const PLUSH_RIP = 1.5;       // plush lets go after 1.5s
 const CLAW_PERIOD = 3.0;     // claw opens every 3s
 const CLAW_OPEN = 0.55;
@@ -482,6 +485,7 @@ let bestPct = 0, dusty=false, beaten=false, fallCount=0, bestFall=0, hasFlung=fa
 let guide = {dead:{n:0,pb:null},wrap:{n:0,pb:null},snipe:{n:0,pb:null},cushion:{n:0,pb:null},skip:{n:0,pb:null}};
 let fallLog = [], pendingStamp = null, bestTime = null, runStart = null, archStatus = {};
 let quarters = 0, finishes = [], skin = 'factory', pickups = [], pitLands = 0, trail = [], bursts = [];
+let flingCharge = 0;   // FLING POWER: builds as you collect pickups this climb, boosts launchMul, reset to 0 on a fall
 // SKILL PAYS (Phase 2): the grab mints quarters; a clean unbroken chain multiplies the payout.
 let combo = 0, comboMax = 0, pops = [], audioCtx = null, muted = false;
 // THE MOVES (Phase 3): feat-unlocked verbs, equipped into a 2-slot loadout (free respec).
@@ -720,7 +724,7 @@ function movePop(label, x, y, step){ pops.push({ x, y, v:null, label, m:1, f:sim
 // THE HANDS + CHARMS (Phase 4): passives read off the worn finish and the equipped charms
 function _fin(){ return FINISHES[skin] || FINISHES.factory; }
 function grabWindow(){ return Math.max(0.09, 0.15 + (_fin().forgive||0) - heatGrabCut()); }  // GHOST widens; HEAT narrows
-function launchMul(){ return 1 + (_fin().momentum||0); }                        // EMBER runs every launch hotter
+function launchMul(){ return 1 + (_fin().momentum||0) + POWER_MAX*flingCharge; }  // EMBER + pickup FLING POWER run every launch hotter
 function payFactor(){ return _fin().pay2x ? 2 : 1; }                            // GILDED doubles quarter payouts
 function wrapRate(){ return (_fin().greedy||1) * (hasMove('steady')?0.7:1) * heatWrapMul(); }  // GILDED/HEAT wind faster · STEADY slower
 // THE HEAT (Phase 5): the selected difficulty applies while climbing (never in the daily). modifiers are cumulative.
@@ -903,7 +907,7 @@ function step(dt){
         attachTo(pit, 0, 0); held=false; HAND.charge=0;
         HAND.peakY = landY;
         if(mode==='play'){
-          resetTokens(); pitLands++; zonesThisRun=[]; foundThisRun=false;
+          resetTokens(); flingCharge=0; pitLands++; zonesThisRun=[]; foundThisRun=false;   // a fall to the pit wipes the FLING POWER charge
           if(hasMove('soft') && combo>0 && !softUsed){ softUsed=true; movePop('SOFT LANDING', HAND.x, HAND.y, 5); }  // first fall each climb keeps the chain
           else { combo=0; softUsed=false; }
           heatClearedThisRun=false;   // a fresh climb from the pit can clear the heat again
@@ -920,7 +924,11 @@ function step(dt){
       const dx=t.x-HAND.x, dy=t.y-HAND.y;
       if(dx*dx+dy*dy < TOKEN_R*TOKEN_R){
         t.got=true; quarters+=t.v; save();
+        const was = flingCharge; flingCharge = Math.min(1, flingCharge + POWER_PER_PICK);   // FLING POWER builds
         pickups.push({x:t.x, y:t.y, v:t.v, f:simFrame});
+        movePop(flingCharge>=1 ? 'MAX POWER' : 'POWER +', t.x, t.y, 6);                     // the boost tell
+        bursts.push({x:t.x,y:t.y,f:simFrame,col:'#ffd24a'});
+        if(was<1 && flingCharge>=1) bossFlash('FULL POWER', true);
       }
     }
   }
@@ -970,7 +978,7 @@ function startFight(){
   if(mode==='fight' || mode==='win' || beaten || dailyActive) return;
   const a = HAND.anchor || nearestStud(HAND.x, HAND.y, 900) || {x:HAND.x, y:HAND.y};
   attachTo(a, 0, 0); held=false; HAND.charge=0;
-  fight = { phase:'intro', t:0, round:0, need:4, caught:0, misses:0,
+  fight = { phase:'intro', t:0, round:0, need:3, caught:0, misses:0, armed:false,
     anchorX:a.x, anchorY:a.y, prompt:'', tapped:false, catchWin:0, caughtFlash:0, missFlash:0,
     released:false, releaseWin:0, gaveWin:false, reyesOpen:0, result:0,
     hero:{shake:0, ox:0, oy:0},
@@ -985,9 +993,17 @@ function fightStartGrab(){
   C.state='rear'; C.st=0; C.open=1; C.fromX=C.x; C.fromY=C.y;
   C.rearX = clamp(F.anchorX + side*(60+F.round*10), 46, VW-46);
   C.rearY = F.anchorY + (250 + (F.round%2)*34);   // up = +y
-  F.tapped=false; F.catchWin=0;
-  F.speed = Math.max(0.26, 0.44 - F.round*0.03);   // strikes accelerate as it gets desperate
-  F.prompt='TAP TO CATCH';
+  F.tapped=false; F.armed=false;
+  // the DIVE is slow and catchable the whole way down; first one extra-slow to teach the beat
+  F.speed = F.round===0 ? 0.75 : Math.max(0.34, 0.60 - F.round*0.05);
+  F.prompt='WATCH IT WIND UP…';
+}
+// a catch lands: recoil the claw, bank the pip, celebrate
+function fightCaught(){
+  const F=fight, C=F.claw;
+  C.state='recoil'; C.st=0; C.fromX=C.x; C.fromY=C.y; C.open=1;
+  F.caught++; F.caughtFlash=0.5; F.tapped=false; F.armed=false; slowmo=0.35;
+  bossFlash('CAUGHT!', true);
 }
 function fightStartFinal(){
   const F=fight, C=F.claw;
@@ -1006,8 +1022,8 @@ function stepFight(dt){
   if(F.phase!=='final' || C.state!=='miss'){ HAND.x=F.anchorX+F.hero.ox; HAND.y=F.anchorY+F.hero.oy; }
 
   if(F.phase==='intro'){
-    F.prompt='THE CLAW WINDS UP';
-    if(F.t>1.6){ F.phase='grabs'; F.t=0; fightStartGrab(); }
+    F.prompt='GRAB THE CLAW WHEN IT DIVES';
+    if(F.t>2.0){ F.phase='grabs'; F.t=0; fightStartGrab(); }
     return;
   }
   if(F.phase==='grabs'){
@@ -1015,21 +1031,24 @@ function stepFight(dt){
     if(C.state==='rear'){
       const e=_eo(clamp(C.st/0.55,0,1));
       C.x=C.fromX+(C.rearX-C.fromX)*e; C.y=C.fromY+(C.rearY-C.fromY)*e; C.open=1;
-      if(C.st>0.72){ C.state='strike'; C.st=0; C.fromX=C.x; C.fromY=C.y; }
-    } else if(C.state==='strike'){
+      if(C.st>0.28) F.prompt='HERE IT COMES…';
+      if(C.st>0.62){ C.state='dive'; C.st=0; C.fromX=C.x; C.fromY=C.y; F.prompt='TAP!';
+        if(F.armed){ F.tapped=true; F.armed=false; } }             // a slightly-early tap was buffered
+    } else if(C.state==='dive'){
+      // the claw DIVES at you and is catchable the ENTIRE way down — tap any time while it comes at you
       const k=clamp(C.st/F.speed,0,1), e=_ei(k);
       C.x=C.fromX+(F.anchorX-C.fromX)*e; C.y=C.fromY+((F.anchorY+22)-C.fromY)*e;
-      C.open=1-clamp((k-0.55)/0.45,0,1)*0.66;
-      if(k>=1){ C.state='window'; C.st=0; F.catchWin=0.20; C.open=0.34; }
-    } else if(C.state==='window'){
-      F.catchWin-=dt; C.x=F.anchorX; C.y=F.anchorY+22;
-      if(F.tapped){ C.state='recoil'; C.st=0; C.fromX=C.x; C.fromY=C.y; C.open=1;
-        F.caught++; F.caughtFlash=0.5; slowmo=0.35; bossFlash('CAUGHT.', true); }
-      else if(F.catchWin<=0){ C.state='grab'; C.st=0; F.misses++; F.missFlash=0.5; F.hero.shake=0.55;
-        C.open=0; bossFlash('IT HAS YOU — HANG ON', false); }
+      C.open=1-k*0.5; F.prompt='TAP!';
+      if(F.tapped){ fightCaught(); }
+      else if(k>=1){ C.state='grace'; C.st=0; C.open=0.32; }
+    } else if(C.state==='grace'){
+      C.x=F.anchorX; C.y=F.anchorY+22; C.open=0.32; F.prompt='TAP!';
+      if(F.tapped){ fightCaught(); }
+      else if(C.st>0.16){ C.state='grab'; C.st=0; F.misses++; F.missFlash=0.5; F.hero.shake=0.5; C.open=0;
+        bossFlash('GRABBED — TAP AS IT DIVES', false); F.prompt=''; }
     } else if(C.state==='grab'){
       C.x=F.anchorX; C.y=F.anchorY+22;
-      if(C.st>0.5){ C.state='recoil'; C.st=0; C.fromX=C.x; C.fromY=C.y; C.open=1; }
+      if(C.st>0.45){ C.state='recoil'; C.st=0; C.fromX=C.x; C.fromY=C.y; C.open=1; }
     } else if(C.state==='recoil'){
       const e=_eo(clamp(C.st/0.5,0,1));
       C.y=C.fromY+((F.anchorY+300)-C.fromY)*e; C.x=C.fromX+(F.anchorX-C.fromX)*e*0.6; C.open=1;
@@ -1064,7 +1083,11 @@ function stepFight(dt){
 }
 function fightDown(){ const F=fight; if(!F) return;
   if(F.phase==='intro'){ F.t=1.6; return; }
-  if(F.phase==='grabs' && F.claw.state==='window' && F.catchWin>0) F.tapped=true;
+  if(F.phase==='grabs'){
+    const cs=F.claw.state;
+    if(cs==='dive'||cs==='grace') F.tapped=true;          // catch it any time it's diving / at you
+    else if(cs==='rear' && F.claw.st>0.26) F.armed=true;  // buffer a slightly-early tap so it still lands
+  }
 }
 function fightUp(){ const F=fight; if(!F) return; if(F.phase==='final') F.released=true; }
 
@@ -1124,22 +1147,25 @@ function drawFight(){
     ctx.beginPath(); ctx.moveTo(sx(C.x),sy(C.y)); ctx.lineTo(HX,HY); ctx.stroke(); ctx.setLineDash([]);
   }
   drawClawAt(C.x, C.y, C.open);
-  // catch window — drawn OVER the claw so the tell is never hidden: a bold gold+white ring cinching onto the hero
-  if(C.state==='window' && F.catchWin>0){
-    const k=F.catchWin/0.20, r=(20+k*42)*S, pulse=0.6+0.4*Math.sin(_asanoNow*30);
-    ctx.strokeStyle='rgba(255,214,90,'+(0.7+0.3*pulse)+')'; ctx.lineWidth=4.5;
-    ctx.beginPath(); ctx.arc(HX,HY,r,0,7); ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(HX,HY,r,0,7); ctx.stroke();
+  // CATCHABLE (the whole dive + grace): a bold pulsing gold ring on the hero + a gold halo on the claw = grab it NOW
+  if(C.state==='dive' || C.state==='grace'){
+    const pulse=0.6+0.4*Math.sin(_asanoNow*22);
+    asanoBloom(sx(C.x),sy(C.y),34*S,'#ffe08a',0.35*pulse);          // the claw glows gold — grabbable
+    ctx.strokeStyle='rgba(255,214,90,'+(0.78+0.22*pulse)+')'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(HX,HY,(30+3*pulse)*S,0,7); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.95)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(HX,HY,(30+3*pulse)*S,0,7); ctx.stroke();
   }
   // caught spark + burst ring on the hero
   if(F.caughtFlash>0){ asanoBloom(HX,HY,48*S,'#bfe8ff',F.caughtFlash);
     ctx.strokeStyle='rgba(191,232,255,'+F.caughtFlash+')'; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(HX,HY,(18+(0.5-F.caughtFlash)*64)*S,0,7); ctx.stroke(); }
-  // prompt + progress pips
+  // prompt (big gold TAP! while catchable) + progress pips
   ctx.textAlign='center';
-  if(F.prompt){ ctx.fillStyle='rgba(242,240,246,.96)'; ctx.font='800 18px ui-monospace,monospace';
-    ctx.fillText(F.prompt, Wc/2, 96); }
+  if(F.prompt){ const big=(F.prompt==='TAP!');
+    ctx.fillStyle=big?'rgba(255,226,120,1)':'rgba(242,240,246,.96)';
+    ctx.font=big?'900 30px ui-monospace,monospace':'800 18px ui-monospace,monospace';
+    ctx.fillText(F.prompt, Wc/2, big?102:96); }
   if(F.phase==='grabs'){
     for(let i=0;i<F.need;i++){ ctx.fillStyle=i<F.caught?'#e7c04b':'rgba(232,232,238,.25)';
       ctx.beginPath(); ctx.arc(Wc/2 + (i-(F.need-1)/2)*20, 118, 5, 0, 7); ctx.fill(); }
@@ -2869,7 +2895,7 @@ function showReceivedVerdict(pl){
 
 /* ---------- reset ---------- */
 function resetToPit(){
-  zonesThisRun=[]; foundThisRun=false; combo=0; softUsed=false; heatClearedThisRun=false;
+  zonesThisRun=[]; foundThisRun=false; combo=0; softUsed=false; heatClearedThisRun=false; flingCharge=0;
   const pit = STUDS.find(s=>s.perch) || STUDS.find(s=>s.pit);
   HAND.peakY = pit.y; HAND.lastAnchor=null; HAND.lastWraps=0;
   attachTo(pit,0,0); held=false; HAND.charge=0; hitstop=0; slowmo=0;
