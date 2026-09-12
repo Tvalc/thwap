@@ -1604,7 +1604,7 @@ const ASANO_ANIM = { painterly:{}, pixel:{} };   // skin -> state -> frame array
 let ANIM_SCALE = 9.0, ANIM_YOFF = 0.42;          // painterly hero seating (size vs r, vertical anchor of the grab-hand at (X,Y))
 let ANIM_SCALE_PX = 5.6, ANIM_YOFF_PX = 0.42;    // pixel hero seating (its sprite fills more of the frame)
 (function(){
-  const SETS = { idle:{n:12,fps:14}, flying:{n:5,fps:13}, swinging:{n:6,fps:16}, reaching:{n:5,fps:14}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
+  const SETS = { idle:{n:12,fps:14}, flying:{n:12,fps:13}, swinging:{n:12,fps:13}, reaching:{n:12,fps:13}, fall:{n:12,fps:16}, thwap:{n:8,fps:24} };
   const SKINS = { painterly:{dir:'assets/hero_anim/'}, pixel:{dir:'assets/hero_anim_pixel/', n:1, fps:1} };  // pixel = 1 crisp frame per state
   for(const sk in SKINS){ const skin=SKINS[sk]; for(const k in SETS){ const s=SETS[k], n=skin.n||s.n, arr=[]; arr.fps=skin.fps||s.fps;
     for(let i=0;i<n;i++){ const im=new Image(); im.src=skin.dir+k+'/f'+String(i).padStart(2,'0')+'.png'; arr.push(im); }
@@ -1637,8 +1637,8 @@ function drawHeroAnim(g, X, Y, r){
   if(!_animReady(set)) return false;                               // nothing loaded yet -> caller uses static hero
   const f = set[Math.floor(_heroAnimT*set.fps) % set.length];
   const bob = (px && key==='idle') ? Math.sin(_heroAnimT*4.5)*0.03 : 0;   // tiny life for the 1-frame pixel idle
-  const bigNew = (key==='flying'||key==='swinging'||key==='reaching');   // Makko frames have more padding -> scale up to match
-  const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE)*(bigNew?1.4:1);
+  const bigNew = (key==='flying'||key==='swinging'||key==='reaching');   // Makko/Omni frames have more padding -> scale up to match
+  const Sz = r*(px?ANIM_SCALE_PX:ANIM_SCALE)*(bigNew?1.7:1);
   const yoff = (px?ANIM_YOFF_PX:(bigNew?0.5:ANIM_YOFF)) + bob;
   const sm = g.imageSmoothingEnabled; if(px) g.imageSmoothingEnabled = false;   // crisp nearest-neighbour pixels
   g.drawImage(f, X-Sz/2, Y-Sz*yoff, Sz, Sz);
