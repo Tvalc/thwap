@@ -1373,31 +1373,132 @@ function _reachTarget(){
     const dx=s.x-HAND.x, dy=s.y-HAND.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=s; } }
   return best;
 }
-function _tendril(bx,by, cx,cy, tx,ty, w){
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.strokeStyle='rgba(245,230,176,0.85)'; ctx.lineWidth=w+2.4;   // cream rim
-  ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(cx,cy, tx,ty); ctx.stroke();
-  ctx.strokeStyle='#4fc7b3'; ctx.lineWidth=w;                      // gummy teal core
-  ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(cx,cy, tx,ty); ctx.stroke();
-  ctx.fillStyle='#4fc7b3'; ctx.beginPath(); ctx.arc(tx,ty, w*0.75,0,7); ctx.fill();   // fingertip
+// The reach is ONE gummy arm rendered in the sprite's own material (glossy tapered ribbon + cream rim +
+// specular + rounded suction tip), anchored at the body edge so its root tucks under the later-painted body.
+// The sprite's OWN painted arms already provide the "waving" — we don't add flailing tendrils on top of them.
+function _raCubic(p0,c1,c2,p3,u){
+  var v=1-u, a=v*v*v, b=3*v*v*u, c=3*v*u*u, d=u*u*u;
+  return { x:a*p0.x+b*c1.x+c*c2.x+d*p3.x, y:a*p0.y+b*c1.y+c*c2.y+d*p3.y };
+}
+function _raTan(p0,c1,c2,p3,u){
+  var v=1-u;
+  var x=3*v*v*(c1.x-p0.x)+6*v*u*(c2.x-c1.x)+3*u*u*(p3.x-c2.x);
+  var y=3*v*v*(c1.y-p0.y)+6*v*u*(c2.y-c1.y)+3*u*u*(p3.y-c2.y);
+  var m=Math.hypot(x,y)||1; return { x:x/m, y:y/m };
+}
+function _raGloss(mx,my,nx,ny,w){   // gloss ACROSS the limb: highlight edge -> core -> shade
+  var g=ctx.createLinearGradient(mx+nx*w,my+ny*w, mx-nx*w,my-ny*w);
+  g.addColorStop(0.00,'#8fe6d4'); g.addColorStop(0.45,'#4fc7b3'); g.addColorStop(1.00,'#2f9d8c');
+  return g;
+}
+// tapered gummy ribbon B->T through control pts C1,C2. fill (across-width gloss) + cream rim + specular streak.
+function _raLimb(B,C1,C2,T, wBase,wTip){
+  var N=24, L=[], R=[], Ls=[], mid=null, midN=null, midW=0, k=(N/2)|0, i;
+  for(i=0;i<N;i++){
+    var u=i/(N-1);
+    var p=_raCubic(B,C1,C2,T,u), tn=_raTan(B,C1,C2,T,u);
+    var nx=-tn.y, ny=tn.x;
+    var w=wTip+(wBase-wTip)*Math.pow(1-u,0.85);
+    L.push({x:p.x+nx*w*0.5, y:p.y+ny*w*0.5});
+    R.push({x:p.x-nx*w*0.5, y:p.y-ny*w*0.5});
+    Ls.push({x:p.x+nx*w*0.30, y:p.y+ny*w*0.30});
+    if(i===k){ mid=p; midN={x:nx,y:ny}; midW=w; }
+  }
+  var g=ctx.createLinearGradient(mid.x+midN.x*midW*0.5, mid.y+midN.y*midW*0.5,
+                                 mid.x-midN.x*midW*0.5, mid.y-midN.y*midW*0.5);
+  g.addColorStop(0.00,'#8fe6d4'); g.addColorStop(0.45,'#4fc7b3'); g.addColorStop(1.00,'#2f9d8c');
+  ctx.beginPath(); ctx.moveTo(L[0].x,L[0].y);
+  for(i=1;i<N;i++) ctx.lineTo(L[i].x,L[i].y);
+  for(i=N-1;i>=0;i--) ctx.lineTo(R[i].x,R[i].y);
+  ctx.closePath();
+  ctx.fillStyle=g; ctx.fill();
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.strokeStyle='rgba(245,230,176,0.90)'; ctx.lineWidth=Math.max(1.2,1.7*S); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(Ls[0].x,Ls[0].y);
+  var last=Math.min(N,15);
+  for(i=1;i<last;i++) ctx.lineTo(Ls[i].x,Ls[i].y);
+  ctx.strokeStyle='rgba(222,255,246,0.55)'; ctx.lineWidth=Math.max(0.8,1.15*S); ctx.stroke();
+}
+// short tapered nub from (rx,ry) toward angle na, length len -> rounded gummy fingertip.
+function _raNub(rx,ry, na, len, w0,w1){
+  var cna=Math.cos(na), sna=Math.sin(na);
+  var cx=rx+cna*len*0.55, cy=ry+sna*len*0.55, tx=rx+cna*len, ty=ry+sna*len;
+  var N=8, pts=[], nrm=[], i, s;
+  for(i=0;i<N;i++){ s=i/(N-1);
+    var u=1-s, px=u*u*rx+2*u*s*cx+s*s*tx, py=u*u*ry+2*u*s*cy+s*s*ty; pts.push([px,py]); }
+  for(i=0;i<N;i++){ var a=pts[Math.max(0,i-1)], b=pts[Math.min(N-1,i+1)];
+    var dx=b[0]-a[0], dy=b[1]-a[1], m=Math.hypot(dx,dy)||1; nrm[i]=[-dy/m, dx/m]; }
+  ctx.beginPath();
+  for(i=0;i<N;i++){ var s2=i/(N-1), w=(w0+(w1-w0)*s2)*0.5, p=pts[i], n=nrm[i];
+    var x=p[0]+n[0]*w, y=p[1]+n[1]*w; if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+  for(i=N-1;i>=0;i--){ var s3=i/(N-1), w2=(w0+(w1-w0)*s3)*0.5, p2=pts[i], n2=nrm[i];
+    ctx.lineTo(p2[0]-n2[0]*w2, p2[1]-n2[1]*w2); }
+  ctx.closePath();
+  ctx.fillStyle=_raGloss((rx+tx)/2,(ry+ty)/2, nrm[4][0],nrm[4][1], w0); ctx.fill();
   ctx.strokeStyle='rgba(245,230,176,0.9)'; ctx.lineWidth=Math.max(1,1.2*S); ctx.stroke();
+  ctx.beginPath(); ctx.arc(tx,ty, w1*1.15, 0, 7);   // rounded gummy fingertip
+  ctx.fillStyle=_raGloss(tx,ty, cna,sna, w1*1.2); ctx.fill();
+  ctx.strokeStyle='rgba(245,230,176,0.92)'; ctx.lineWidth=Math.max(1,1.1*S); ctx.stroke();
+}
+// splayed grip pad at the knob: a small palm + 3 short fingers fanning onto the ring.
+function _raGrip(cx,cy, ang, t){
+  var palmR=3.2*S;
+  ctx.beginPath(); ctx.arc(cx,cy,palmR,0,7);
+  ctx.fillStyle=_raGloss(cx,cy,Math.cos(ang+1.57),Math.sin(ang+1.57),palmR); ctx.fill();
+  ctx.strokeStyle='rgba(245,230,176,0.92)'; ctx.lineWidth=Math.max(1,1.3*S); ctx.stroke();
+  var NB=3, spread=0.66;
+  for(var i=0;i<NB;i++){
+    var f=(i/(NB-1))-0.5;                       // -0.5..0.5
+    var jig=Math.sin(t*12+i*1.9)*0.05;
+    var na=ang + f*2*spread + jig;
+    var len=(8.5 - Math.abs(f)*3.2)*S;          // center finger longest
+    var rx=cx+Math.cos(ang)*palmR*0.3, ry=cy+Math.sin(ang)*palmR*0.3;
+    _raNub(rx,ry, na, len, 2.6*S, 1.25*S);
+  }
 }
 function drawReachArms(X, Y, r){
-  const t = simFrame*DT, tgt = _reachTarget();
+  var t=simFrame*DT, tgt=_reachTarget();
   ctx.save();
-  if(tgt){   // the REACHING arm — stretches most of the way toward the nearest knob, quivering eagerly
-    const kx=sx(tgt.x), ky=sy(tgt.y), ang=Math.atan2(ky-Y, kx-X);
-    const reach=Math.min(Math.hypot(kx-X,ky-Y)*0.9, 150*S), q=Math.sin(t*16)*0.10;
-    const tx=X+Math.cos(ang+q)*reach, ty=Y+Math.sin(ang+q)*reach;
-    const px=Math.cos(ang+Math.PI/2), py=Math.sin(ang+Math.PI/2), sw=Math.sin(t*12)*8*S;  // gentle curve, not an elbow kink
-    _tendril(X,Y, (X+tx)/2+px*sw, (Y+ty)/2+py*sw, tx,ty, 5.5*S);
+
+  var ang, dTarget;
+  if(tgt){
+    var kx=sx(tgt.x), ky=sy(tgt.y);
+    ang=Math.atan2(ky-Y, kx-X);
+    dTarget=Math.hypot(kx-X, ky-Y);
+  } else {
+    var sp=Math.hypot(HAND.vx,HAND.vy);
+    ang = sp>20 ? Math.atan2(-HAND.vy, HAND.vx) : -Math.PI/2;
+    dTarget=46*S;                                   // short neutral stretch when no knob
   }
-  const away = (tgt ? Math.atan2(sy(tgt.y)-Y, sx(tgt.x)-X)+Math.PI : -Math.PI/2);   // wild arms flail away from the reach
-  for(let i=0;i<3;i++){
-    const ang=away+(i-1)*1.5+Math.sin(t*10+i*2.3)*0.85, len=(22+Math.sin(t*13+i*3.1)*13)*S;
-    const tx=X+Math.cos(ang)*len, ty=Y+Math.sin(ang)*len;
-    const px=Math.cos(ang+Math.PI/2), py=Math.sin(ang+Math.PI/2), sw=Math.sin(t*15+i)*11*S;
-    _tendril(X,Y, (X+tx)/2+px*sw, (Y+ty)/2+py*sw, tx,ty, 4.5*S);
+
+  // Graded reach: far -> a short eager reach tapering to a gummy point; close -> full extension + grip pad.
+  var maxReach = 122*S;
+  var gripOn   = tgt && dTarget <= maxReach;         // only "grab" when we can actually touch the knob
+  var reachLen = Math.min(dTarget, maxReach);
+  var pull     = gripOn ? 5.0*S : 0;                 // pull limb tip back so the pad splays ONTO the ring
+  var knobx=X+Math.cos(ang)*reachLen, knoby=Y+Math.sin(ang)*reachLen;
+  var Tx=X+Math.cos(ang)*(reachLen-pull), Ty=Y+Math.sin(ang)*(reachLen-pull);
+
+  // base anchored just inside the silhouette edge -> root tucks under the body (painted after us)
+  var B={ x:X+Math.cos(ang)*0.46*r, y:Y+Math.sin(ang)*0.46*r };
+  var T={ x:Tx, y:Ty };
+  var dx=T.x-B.x, dy=T.y-B.y, Ld=Math.hypot(dx,dy)||1;
+  var ux=dx/Ld, uy=dy/Ld, px=-uy, py=ux;
+
+  var amp=(reachLen<70*S)?1.8:3.0;                   // gentler quiver on a short reach so it isn't floppy
+  var q1=(6.5*S)+Math.sin(t*11)*amp*S;
+  var q2=-(4.5*S)+Math.sin(t*11+1.4)*amp*S;
+  var C1={ x:B.x+ux*Ld*0.33+px*q1, y:B.y+uy*Ld*0.33+py*q1 };
+  var C2={ x:B.x+ux*Ld*0.66+px*q2, y:B.y+uy*Ld*0.66+py*q2 };
+
+  var wBase = 7.0*S, wTip = gripOn ? 3.0*S : 1.6*S;
+  _raLimb(B,C1,C2,T, wBase,wTip);
+  if(gripOn){
+    _raGrip(knobx,knoby, ang, t);                    // splayed grip pad on the knob
+  } else {
+    ctx.beginPath(); ctx.arc(T.x,T.y, Math.max(1.1*S, wTip), 0, 7);   // rounded gummy point
+    ctx.fillStyle=_raGloss(T.x,T.y,px,py,wTip); ctx.fill();
+    ctx.strokeStyle='rgba(245,230,176,0.9)'; ctx.lineWidth=Math.max(1,1.1*S); ctx.stroke();
   }
   ctx.restore();
 }
