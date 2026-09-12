@@ -150,7 +150,9 @@ const VW = 430;              // world width in units
 const CX = VW/2;
 const G  = 2000;             // gravity (units/s^2)
 const DT = 1/120;            // fixed sim step
-const REACH = 112;           // grab reach ring radius — small enough that aim is real
+const REACH = 112;           // internal reach used by the climb audit + fall-save (kept fixed so the tower stays climbable)
+const GRAB_REACH = 150;      // STICKY-HAND stretch grab: an appendage reaches out this far to a knob, then reels the body in
+const REEL_SPEED = 1100;     // units/s the body snaps in along the appendage after the stretch grab sticks
 const AIM_BEND = 1.45;       // how hard a mistimed release bends the launch off vertical
 const COYOTE = 0.08;         // 80ms grab forgiveness
 const HITSTOP = 0.07;        // 70ms freeze on grab
@@ -481,7 +483,7 @@ function extendTowerTo(targetY){
 const HAND = {
   mode:'attach',            // 'attach' | 'fly'
   x:CX, y:PIT_Y, vx:0, vy:0,
-  anchor:null, ang:0, r:R0, w:W0, spin:1, charge:0, wraps:0, plush:0,
+  anchor:null, ang:0, r:R0, w:W0, spin:1, charge:0, wraps:0, plush:0, reel:0,
   peakY:PIT_Y,              // highest established point since last safe grab
 };
 let simFrame=0, hitstop=0, slowmo=0, flash=0, clawT=0;
@@ -681,8 +683,10 @@ function nearestStud(x,y,rad){
 
 /* ---------- attach / fling ---------- */
 function attachTo(s, incomingVx, incomingVy){
+  const gd = Math.hypot(HAND.x-s.x, HAND.y-s.y);       // how far the appendage stretched to reach the knob
   HAND.mode='attach'; HAND.anchor=s;
-  HAND.r = clamp(Math.hypot(HAND.x-s.x, HAND.y-s.y), RMIN, R0);
+  HAND.reel = (gd > R0+8) ? gd : 0;                    // a FAR grab reels the body in (sticky-hand snap); a close grab doesn't
+  HAND.r = HAND.reel ? gd : clamp(gd, RMIN, R0);       // start at the stretched radius, then reel down in step()
   HAND.ang = Math.atan2(HAND.y-s.y, HAND.x-s.x);
   // spin direction inherits sideways momentum so the flow feels continuous
   const tang = (-Math.sin(HAND.ang))*incomingVx + (Math.cos(HAND.ang))*incomingVy;
@@ -833,7 +837,13 @@ function step(dt){
     const s = HAND.anchor;
     // plush timer
     if(HAND.plush>=0){ HAND.plush += dt; if(HAND.plush > PLUSH_RIP){ /* rips loose */ HAND.charge*=0.4; fling('rip'); return; } }
-    if(held){
+    if(HAND.reel > R0){
+      // STICKY-HAND SNAP: the appendage stuck a distant knob — reel the body in along it before the wind starts
+      HAND.reel = Math.max(R0, HAND.reel - REEL_SPEED*dt);
+      HAND.r = HAND.reel;
+      HAND.ang += W0*dt*HAND.spin*0.5;                 // a gentle pre-spin so the snap flows into the wind
+      if(HAND.reel <= R0){ HAND.reel = 0; HAND.r = R0; }
+    } else if(held){
       HAND.charge = clamp(HAND.charge + dt/WIND_TIME, 0, 1);
       HAND.w = W0 + (WMAX-W0)*HAND.charge;
       HAND.r = R0 - (R0-RMIN)*HAND.charge;
@@ -868,7 +878,7 @@ function step(dt){
     if(whiffLock>0) whiffLock -= dt;
     if(grabWin>0){
       grabWin -= dt;
-      const s = nearestStud(HAND.x, HAND.y, REACH);
+      const s = nearestStud(HAND.x, HAND.y, GRAB_REACH);   // sticky-hand: the appendage reaches out this far
       // WALL-KICK (equipped): nothing to grab, but a stud is close enough to kick off while falling → save the fall
       if(!s && hasMove('wallkick') && !wallKickUsed && HAND.vy<-200){
         const w = nearestStud(HAND.x, HAND.y, KICK_R);
@@ -1388,17 +1398,32 @@ function drawHand(){
     ctx.strokeStyle = whiffLock>0 ? 'rgba(226,75,74,.55)' : (grabWin>0 ? 'rgba(232,232,238,.45)' : 'rgba(232,232,238,.10)');
     ctx.lineWidth = grabWin>0 ? 2.5 : 1.5;
     ctx.beginPath(); ctx.arc(X,ringY,ringR,0,7); ctx.stroke();
-    const t = nearestStud(HAND.x,HAND.y,REACH);
+    const t = nearestStud(HAND.x,HAND.y,GRAB_REACH);   // highlight any knob the sticky-hand can stretch to
     if(t){ const TX=sx(t.x),TY=sy(t.y);
-      ctx.strokeStyle='rgba(231,192,75,.9)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(TX,TY,13*S,0,7); ctx.stroke(); }
+      ctx.strokeStyle= grabWin>0 ? 'rgba(90,220,180,.95)' : 'rgba(231,192,75,.9)';   // teal when the grab window is live
+      ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(TX,TY,14*S,0,7); ctx.stroke(); }
   }
   // tether when attached
   if(HAND.mode==='attach' && HAND.anchor){
     const AX=sx(HAND.anchor.x),AY=sy(HAND.anchor.y);
-    ctx.strokeStyle= HAND.charge>0.66?'#e7c04b':'rgba(232,232,238,.5)';
-    ctx.lineWidth = 1.5 + HAND.charge*2.5;
-    ctx.beginPath(); ctx.moveTo(AX,AY); ctx.lineTo(X,Y); ctx.stroke();
+    if(HAND.reel > R0){
+      // STICKY-HAND APPENDAGE: a fat gummy tendril stretched from the body (thick) to the gripped knob (thin fingertip),
+      // while the body reels in along it. This IS the stretch-grab reach.
+      const dx=AX-X, dy=AY-Y, len=Math.hypot(dx,dy)||1, nx=-dy/len, ny=dx/len;
+      const wB=6.5*S, wT=2.6*S;
+      ctx.beginPath();
+      ctx.moveTo(X+nx*wB, Y+ny*wB); ctx.lineTo(AX+nx*wT, AY+ny*wT);
+      ctx.lineTo(AX-nx*wT, AY-ny*wT); ctx.lineTo(X-nx*wB, Y-ny*wB); ctx.closePath();
+      ctx.fillStyle='#54c9b6'; ctx.fill();
+      ctx.strokeStyle='rgba(245,230,176,0.85)'; ctx.lineWidth=Math.max(1,1.6*S); ctx.stroke();
+      ctx.fillStyle='#54c9b6'; ctx.beginPath(); ctx.arc(AX,AY,5.5*S,0,7); ctx.fill();   // grip blob on the knob
+      ctx.strokeStyle='rgba(245,230,176,0.9)'; ctx.lineWidth=Math.max(1,1.6*S); ctx.stroke();
+    } else {
+      ctx.strokeStyle= HAND.charge>0.66?'#e7c04b':'rgba(232,232,238,.5)';
+      ctx.lineWidth = 1.5 + HAND.charge*2.5;
+      ctx.beginPath(); ctx.moveTo(AX,AY); ctx.lineTo(X,Y); ctx.stroke();
+    }
     if(HAND.wraps>WRAP_CAP-0.5){ // tremble warning
       ctx.strokeStyle='rgba(231,110,75,.8)'; ctx.beginPath();
       ctx.arc(AX,AY,HAND.r*S,0,7); ctx.stroke();
