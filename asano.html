@@ -1366,6 +1366,41 @@ function paintEyes(g, X, Y, r, style, vx, vy, fin){
     catch1(cx,Y+ey,ew);
   });
 }
+// STICKY-HAND REACHING ARMS — gummy appendages that wave wildly and stretch toward the nearest knob while spinning + flying.
+function _reachTarget(){
+  let best=null, bd=380*380;
+  for(const s of STUDS){ if(!grippable(s)) continue; if(HAND.mode==='attach' && s===HAND.anchor) continue;
+    const dx=s.x-HAND.x, dy=s.y-HAND.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; best=s; } }
+  return best;
+}
+function _tendril(bx,by, cx,cy, tx,ty, w){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle='rgba(245,230,176,0.85)'; ctx.lineWidth=w+2.4;   // cream rim
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(cx,cy, tx,ty); ctx.stroke();
+  ctx.strokeStyle='#4fc7b3'; ctx.lineWidth=w;                      // gummy teal core
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(cx,cy, tx,ty); ctx.stroke();
+  ctx.fillStyle='#4fc7b3'; ctx.beginPath(); ctx.arc(tx,ty, w*0.75,0,7); ctx.fill();   // fingertip
+  ctx.strokeStyle='rgba(245,230,176,0.9)'; ctx.lineWidth=Math.max(1,1.2*S); ctx.stroke();
+}
+function drawReachArms(X, Y, r){
+  const t = simFrame*DT, tgt = _reachTarget();
+  ctx.save();
+  if(tgt){   // the REACHING arm — stretches most of the way toward the nearest knob, quivering eagerly
+    const kx=sx(tgt.x), ky=sy(tgt.y), ang=Math.atan2(ky-Y, kx-X);
+    const reach=Math.min(Math.hypot(kx-X,ky-Y)*0.9, 150*S), q=Math.sin(t*16)*0.10;
+    const tx=X+Math.cos(ang+q)*reach, ty=Y+Math.sin(ang+q)*reach;
+    const px=Math.cos(ang+Math.PI/2), py=Math.sin(ang+Math.PI/2), sw=Math.sin(t*12)*8*S;  // gentle curve, not an elbow kink
+    _tendril(X,Y, (X+tx)/2+px*sw, (Y+ty)/2+py*sw, tx,ty, 5.5*S);
+  }
+  const away = (tgt ? Math.atan2(sy(tgt.y)-Y, sx(tgt.x)-X)+Math.PI : -Math.PI/2);   // wild arms flail away from the reach
+  for(let i=0;i<3;i++){
+    const ang=away+(i-1)*1.5+Math.sin(t*10+i*2.3)*0.85, len=(22+Math.sin(t*13+i*3.1)*13)*S;
+    const tx=X+Math.cos(ang)*len, ty=Y+Math.sin(ang)*len;
+    const px=Math.cos(ang+Math.PI/2), py=Math.sin(ang+Math.PI/2), sw=Math.sin(t*15+i)*11*S;
+    _tendril(X,Y, (X+tx)/2+px*sw, (Y+ty)/2+py*sw, tx,ty, 4.5*S);
+  }
+  ctx.restore();
+}
 function paintHand(g, X, Y, r, fin, vx, vy){
   // ambient bloom — the hand is a little light source in a dark machine
   const gl = fin.glow || (asanoPal?asanoPal.glow:null);
@@ -1467,6 +1502,8 @@ function drawHand(){
   { const rr=11*S; const dh=ctx.createRadialGradient(X,Y,rr*1.1,X,Y,rr*3.3);
     dh.addColorStop(0,'rgba(6,10,16,0)'); dh.addColorStop(0.5,'rgba(6,10,16,0.32)'); dh.addColorStop(1,'rgba(6,10,16,0)');
     ctx.fillStyle=dh; ctx.beginPath(); ctx.arc(X,Y,rr*3.3,0,7); ctx.fill(); }
+  // sticky-hand reaching arms: wave wildly + stretch toward the nearest knob while spinning or flying (behind the body)
+  if(HAND.mode==='fly' || (HAND.mode==='attach' && held)) drawReachArms(X, Y, 11*S);
   // the sticky hand, wearing its finish
   paintHand(ctx, X, Y, 11*S, fin, HAND.vx, HAND.vy);
   // (removed: the carried "eye" was a leftover from the Moose story)
