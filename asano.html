@@ -926,9 +926,8 @@ function step(dt){
         t.got=true; quarters+=t.v; save();
         const was = flingCharge; flingCharge = Math.min(1, flingCharge + POWER_PER_PICK);   // FLING POWER builds
         pickups.push({x:t.x, y:t.y, v:t.v, f:simFrame});
-        movePop(flingCharge>=1 ? 'MAX POWER' : 'POWER +', t.x, t.y, 6);                     // the boost tell
-        bursts.push({x:t.x,y:t.y,f:simFrame,col:'#ffd24a'});
-        if(was<1 && flingCharge>=1) bossFlash('FULL POWER', true);
+        bursts.push({x:t.x,y:t.y,f:simFrame,col:'#ffd24a'});          // a power-gold spark; the meter is the running tell
+        if(was<1 && flingCharge>=1) bossFlash('FULL POWER', true);    // ceremony only when the bar tops out
       }
     }
   }
